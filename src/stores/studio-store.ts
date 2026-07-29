@@ -211,7 +211,7 @@ export default function App() {
           Design that feels handmade
         </h2>
         <p className="text-lg text-black/60 mb-10 max-w-xl mx-auto">
-          A starter landing page generated inside COSY Studio. Edit with AI agents and watch the preview update live.
+          A starter landing page generated inside Cozy AI Studio. Edit with AI agents and watch the preview update live.
         </p>
         <div className="flex justify-center gap-3">
           <button className="rounded-xl bg-[#D96B43] px-6 py-3 text-white font-medium shadow-[4px_4px_0_#1C1D21]">
@@ -319,7 +319,7 @@ export { buildPreviewHtml };
 const STARTER_PREVIEW = buildPreviewHtml(
   "Aurora",
   "Design that feels handmade",
-  "A starter landing page generated inside COSY Studio.",
+  "A starter landing page generated inside Cozy AI Studio.",
 );
 
 const initialFiles: Record<string, ProjectFile> = {
@@ -418,7 +418,7 @@ export const useStudioStore = create<StudioState>()(
           id: "welcome",
           role: "system",
           content:
-            "COSY multi-agent pipeline ready. Describe a UI change — G0 plans, G1 codes, G2 audits.",
+            "Cozy multi-agent pipeline ready. Describe a UI change — G0 plans, G1 codes, G2 audits.",
           timestamp: Date.now(),
         },
       ],
@@ -437,7 +437,7 @@ export const useStudioStore = create<StudioState>()(
           description: "Warm brutalist product landing with glass cards",
           author: "erik",
           remixes: 128,
-          url: "aurora.cosy.studio",
+          url: "aurora.cozy-ai.studio",
           tags: ["landing", "brutalism"],
         },
         {
@@ -446,7 +446,7 @@ export const useStudioStore = create<StudioState>()(
           description: "Finance overview with terracotta metrics",
           author: "maya",
           remixes: 84,
-          url: "ledger.cosy.studio",
+          url: "ledger.cozy-ai.studio",
           tags: ["dashboard", "fintech"],
         },
         {
@@ -455,7 +455,7 @@ export const useStudioStore = create<StudioState>()(
           description: "Editorial portfolio for product designers",
           author: "jules",
           remixes: 56,
-          url: "nomad.cosy.studio",
+          url: "nomad.cozy-ai.studio",
           tags: ["portfolio", "serif"],
         },
       ],
@@ -677,7 +677,7 @@ export const useStudioStore = create<StudioState>()(
       setProductionState: (patch) => set(patch),
     }),
     {
-      name: "cosy-studio-v1",
+      name: "cozy-ai-studio-v1",
       partialize: (s) => ({
         theme: s.theme,
         planTier: s.planTier,

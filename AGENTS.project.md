@@ -1,113 +1,91 @@
-Tu je kompletná, profesionálne štruktúrovaná **projektová zadávacia karta (Master System / Project Prompt)** pre **COSY Studio**.
+# Cozy AI Studio — Project Card
 
-Tento text môžeš priamo skopírovať a použiť ako hlavný instruktážny kontext (tzv. `.cursorrules`, `SYSTEM_PROMPT`, alebo zadanie do CLAUDE.md / README.md) pre vývojárov, projektových manažérov alebo AI kódovacích asistentov (Cursor, Windsurf, Copilot).
+**Repo slug:** `cozy-ai-studio`  
+**Product name:** Cozy AI Studio  
+**Owner org:** NEXIFY-STUDIO
 
----
-
-# 🚀 PROJECT MASTER PROMPT: COSY Studio
-
-## 1. O projekte & Vlastník (Project Overview)
-
-**Názov projektu:** COSY Studio
-
-**Typ produktu:** AI-Powered Visual IDE & Low-Code Web Builder
-
-**Cieľová skupina:** UI/UX dizajnéri, vývojári, produktoví manažéri, solopreneuri
-
-**Hlavná myšlienka:** Odstrániť priepasť medzi dizajnom a kódom pomocou AI multi-agentov, okamžitého živého náhľadu a vizuálneho porovnávania kódových zmien (Diff) v prémiovom, vizuálne odlišnom prostredí.
+Tento dokument je hlavný projektový kontext pre vývojárov a AI asistentov (Cursor, Windsurf, Claude, Copilot).
 
 ---
 
-## 2. Architektúra & Technologický Zásobník (Tech Stack)
+## 1. O projekte
 
-Prísne dodržiavaj nasledujúce technológie a knižnice:
+| Položka | Hodnota |
+| --- | --- |
+| Názov | **Cozy AI Studio** |
+| Slug | `cozy-ai-studio` |
+| Typ | AI-powered visual IDE & multi-agent builder |
+| Cieľ | Odstrániť priepasť medzi dizajnom a kódom — plan → code → audit s human-in-the-loop |
+| Estetika | Warm Brutalism · chocolate accent · canvas grey `#141414` · silver theme |
 
-* **Frontend Framework:** Next.js 14+ (App Router, Server Actions)
-* **Jazyk:** TypeScript (Strict Mode)
-* **Styling & UI:**
-* Tailwind CSS (s vlastnou konfiguráciou pre *Warm Brutalism*)
-* Lucide React (ikony)
-* Framer Motion (mikro-interakcie a plynulé prechody)
-
-
-* **Editor Kódu:** `@monaco-editor/react` (pre Diff viewer a kódovanie)
-* **Runtime & Preview:** `@webcontainer/api` (izolovaný Node.js runtime priamo v prehliadači)
-* **Orchestrácia AI:** OpenAI API (GPT-4o) / Anthropic API (Claude 3.5 Sonnet) cez `ai` (Vercel AI SDK)
-* **Database & ORM:** PostgreSQL + Prisma ORM
-* **Monetizácia & Auth:** Stripe Billing API + Clerk / NextAuth
+**Hlavná myšlienka:** Multi-agent pipeline (G0 Planner, G1 Coder, G2 Auditor), vizuálny code diff, live preview a Lab playground (Builder Kernel + Plugin SDK).
 
 ---
 
-## 3. Design System & Vizuálna Identita
+## 2. Tech stack (aktuálna implementácia)
 
-Všetky UI komponenty musia striktne rešpektovať estetikú **"Warm Brutalism & Glassmorphism"**.
+* **Framework:** TanStack Start + Vite 8 + React 19 + TypeScript (strict)
+* **Styling:** Tailwind CSS v4 · design tokens v `src/styles.css`
+* **UI:** Radix / shadcn-style · Lucide icons · Sonner
+* **Editor:** `@monaco-editor/react` (Diff)
+* **State:** Zustand (`cozy-ai-studio-v1` persist key)
+* **AI demo:** multi-agent orchestrator + retry policy (Mistral-only gateway demo in Lab)
+* **Deploy target:** Vercel (Nitro preset gated on production build)
+* **Port contract:** `0.0.0.0:8080` (`npm run dev` / `startup.sh`)
 
-### Farebná paleta
-
-* **Background Light:** Warm Cream (`#F4F1EA`)
-* **Background Dark:** Deep Slate (`#0D0E11`) / Card Slate (`#16181D`)
-* **Primary / Accent:** Terracotta (`#D96B43`) / Rust Orange (`#C85A32`)
-* **Typography & Borders:** Charcoal (`#1C1D21`) v light móde, White/Zinc v dark móde
-
-### Typografia
-
-* **Headings / Titles:** Serif Font (Playfair Display / Georgia)
-* **UI Controls & Body:** Sans-Serif (Inter / Geist)
-* **Code / Monaco:** Monospace (Fira Code)
-
-### UI Pravidlá
-
-1. **Ostré kontúry vs. zaoblenie:** Karty majú viditeľné jemné hranice (`border-charcoal/10`), výrazné tiene (`shadow-brutalist`), ale zaoblené rohy (`rounded-xl` až `rounded-2xl`).
-2. **Glassmorphism:** Pre overlay karty (Command Palette, Human-in-the-loop schvaľovanie) vždy použi `backdrop-blur-md` a polopriehľadné pozadie.
+> Poznámka: starší backlog spomínal Next.js — **canonical stack je TanStack Start**, nie Next App Router.
 
 ---
 
-## 4. Kľúčové Layouty & Komponenty (3-Column Architecture)
+## 3. Surfaces
 
-Aplikácia je rozdelená do **3 hlavných stĺpcov**:
+| Route | Účel |
+| --- | --- |
+| `/` | SK landing + prompt dock |
+| `/studio` | Hlavný builder (agenti · diff · preview) |
+| `/playground` | Cozy Lab — Kernel, plugins, AI stream, canvas, presence |
+| `/pricing` | Free / Pro |
+| `/showcase` | Galéria |
+| `/mobile` | Companion review |
 
+---
+
+## 4. Agent pipeline
+
+1. **G0** — plán a task graph  
+2. **G1** — streamovaný kód / diff  
+3. **G2** — audit + optional auto-heal  
+4. **HitL** — schválenie pred zápisom  
+5. **Retry** — exponential backoff na transient errors  
+
+Production: **Go to Production** wizard (checks → payment → credits → build → deploy → live).
+
+---
+
+## 5. Branding rules
+
+* UI copy: **Cozy AI Studio** (nie COSY)  
+* Package / GitHub: `cozy-ai-studio`  
+* Publish demo host: `*.cozy-ai.studio`  
+* CSS utility class `cosy-scroll` zostáva (interný token, nepremenovávať)  
+
+---
+
+## 6. Dev commands
+
+```bash
+npm install
+npm run dev          # 0.0.0.0:8080
+npm run typecheck
+npm run build
+npm run preview
 ```
-+------------------+------------------------------+--------------------+
-| LEFT PANEL       | CENTER PANEL                 | RIGHT PANEL        |
-| Chat & Agents    | Code Diff (AI Code Editor)   | Live Preview       |
-| - Chat threads   | - Monaco Diff Editor         | - Multi-Device     |
-| - Agent Status   | - Floating HitL Card         | - WebContainer API |
-| - Active users   | - Inline Accept/Reject       | - Hot Reload       |
-+------------------+------------------------------+--------------------+
-
-```
-
-1. **Ľavý panel (Chat & Multi-Agent Status):**
-* Prehľad správ, vlákien a status AI agentov (`G0 Planner`, `G1 Coder`, `G2 Auditor`).
-
-
-2. **Stredný panel (AI Code Diff Editor):**
-* Zobrazuje zmeny kódu v reálnom čase s farebným zvýraznením (`>>` pridané green, `<<` odobraté red).
-* Obsahuje **Human-in-the-loop (HitL)** schvaľovaciu kartu.
-
-
-3. **Pravý panel (Live Preview):**
-* Živý náhľad aplikácie v reálnom čase s možnosťou prepínania medzi zobrazeniami (Mobile / Tablet / Desktop).
-
-
 
 ---
 
-## 5. Pravidlá Pre AI Kódovanie & Vývojárov (Coding Rules)
+## 7. Definition of done
 
-Pri generovaní alebo písaní kódu pre tento projekt **vždy dodržiavaj tieto pravidlá**:
-
-* **Clean Code:** Píš modulárny, dobre typovaný kód v TypeScript. Vyhýbaj sa používaniu `any`.
-* **Component-First:** Každú funkciu rozdeľuj na samostatné znovupoužiteľné React komponenty v zložke `components/`.
-* **Tailwind Utility Classes:** Používaj výhradne štandardný Tailwind bez písania zbytočného inline CSS.
-* **Accessibility:** Nezabúdaj na podpora klávesových skratiek (`Cmd+K`, `Enter`, `Esc` pre schvaľovanie modalov).
-* **Defenzívne programovanie:** Ošetruj chybové stavy pri AI streamingu a fallbacky pri zlyhaní WebContainers runtime-u.
-
----
-
-## 6. Fázy Vývoja & Prioritizácia (Roadmap)
-
-* **Fáza 1 (MVP):** Základný 3-stĺpcový layout, integrácia Monaco Diff editora, mockovaný AI agent a live preview v iframe.
-* **Fáza 2 (AI Engine):** Integrácia Vercel AI SDK, Multi-Agent pipeline (G0, G1, G2) a HitL (Human-in-the-loop) schvaľovací systém.
-* **Fáza 3 (Monetizácia & Auth):** Stripe predplatné (Free, Pro, Team), správa tokenov a user dashboard.
-* **Fáza 4 (Mobile & Community):** Mobilná sprievodná aplikácia pre schvaľovanie push-notifikácií a 1-click publishing na vlastnú doménu.
+* [ ] Dev server na `:8080`, browser render bez console errors  
+* [ ] `npm run build` + built output renders  
+* [ ] Mobile ~390px: ľavý rail / taby použiteľné  
+* [ ] Branding Cozy AI Studio konzistentné v UI + README  

@@ -31,7 +31,7 @@ export function TopBar() {
             C
           </div>
           <div className="hidden sm:block">
-            <div className="font-serif text-base font-bold leading-none">COSY Studio</div>
+            <div className="font-serif text-base font-bold leading-none">Cozy AI Studio</div>
             <div className="text-xs text-muted-foreground font-mono mt-0.5">
               AI Visual IDE
             </div>

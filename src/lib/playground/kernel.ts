@@ -174,7 +174,7 @@ const CATALOG: PluginManifest[] = [
     version: "1.2.0",
     description: "Scans the node graph for contrast & focus traps.",
     permissions: ["document.read", "ui.overlay"],
-    author: "COSY Labs",
+    author: "Cozy Labs",
   },
   {
     id: "plg.token-sync",
@@ -182,7 +182,7 @@ const CATALOG: PluginManifest[] = [
     version: "0.9.4",
     description: "Pushes chocolate/canvas tokens into exported CSS.",
     permissions: ["document.read", "document.write"],
-    author: "COSY Labs",
+    author: "Cozy Labs",
   },
   {
     id: "plg.mistral-pack",
@@ -190,7 +190,7 @@ const CATALOG: PluginManifest[] = [
     version: "2.0.1",
     description: "Custom plan templates for G0 → G1 streaming.",
     permissions: ["ai.invoke", "document.write"],
-    author: "COSY Labs",
+    author: "Cozy Labs",
   },
   {
     id: "plg.presence",
@@ -198,7 +198,7 @@ const CATALOG: PluginManifest[] = [
     version: "1.0.0",
     description: "CRDT-style multiplayer cursors on the canvas.",
     permissions: ["network.http", "ui.overlay", "document.read"],
-    author: "COSY Labs",
+    author: "Cozy Labs",
   },
 ];
 

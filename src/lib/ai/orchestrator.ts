@@ -214,7 +214,7 @@ export class MultiAgentOrchestrator {
         agent: "ORCHESTRATOR",
         message: "ECONNRESET",
         userMessage: "Network error while contacting the model endpoint.",
-        detail: "fetch failed: ECONNRESET at api.cosy.studio/v1/agents/g0",
+        detail: "fetch failed: ECONNRESET at api.cozy-ai.studio/v1/agents/g0",
         recoverable: true,
         retryable: true,
         exampleFix: "Check connectivity and retry. Transient failures often succeed on retry.",

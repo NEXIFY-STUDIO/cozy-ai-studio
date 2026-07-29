@@ -24,7 +24,7 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       {
-        title: "COSY Studio — Od nápadu k aplikácii s AI",
+        title: "Cozy AI Studio — Od nápadu k aplikácii s AI",
       },
       {
         name: "description",
@@ -75,7 +75,7 @@ const FEATURES = [
   {
     icon: Upload,
     title: "Publikuj na jeden klik",
-    body: "Nasadenie na *.cosy.studio a galéria v Showcase.",
+    body: "Nasadenie na *.cozy-ai.studio a galéria v Showcase.",
     span: "",
   },
   {
@@ -119,7 +119,7 @@ function LandingPage() {
     const q = (value ?? prompt).trim();
     if (q) {
       try {
-        sessionStorage.setItem("cosy-landing-prompt", q);
+        sessionStorage.setItem("cozy-landing-prompt", q);
       } catch {
         /* ignore */
       }
@@ -147,7 +147,7 @@ function LandingPage() {
             </div>
             <div className="leading-none">
               <span className="font-serif text-lg font-bold tracking-tight">
-                COSY Studio
+                Cozy AI Studio
               </span>
               <span className="hidden sm:block text-[11px] text-muted-foreground mt-0.5">
                 AI visual IDE
@@ -215,7 +215,7 @@ function LandingPage() {
             </h1>
 
             <p className="text-base sm:text-xl text-muted-foreground leading-relaxed max-w-2xl mx-auto mb-8 text-pretty">
-              COSY Studio je vizuálne AI prostredie: agenti naplánujú, napíšu a
+              Cozy AI Studio je vizuálne AI prostredie: agenti naplánujú, napíšu a
               skontrolujú kód. Ty schvaľuješ zmeny, sleduješ diff a live preview —
               ako v modernom AI studio, ale s teplým, prehľadným dizajnom.
             </p>
@@ -299,7 +299,7 @@ function LandingPage() {
                 </div>
                 <div className="flex-1 text-center">
                   <span className="inline-flex rounded-md bg-muted px-3 py-1 text-xs font-mono text-muted-foreground">
-                    cosy.studio / studio
+                    cozy-ai.studio / studio
                   </span>
                 </div>
                 <div className="w-12" />
@@ -493,7 +493,7 @@ function LandingPage() {
               <div className="relative">
                 <FlaskConical className="h-8 w-8 text-choco mb-4" />
                 <h3 className="font-serif text-2xl sm:text-3xl font-bold mb-3">
-                  COSY Lab
+                  Cozy Lab
                 </h3>
                 <p className="text-[0.95rem] text-white/70 leading-relaxed max-w-md mb-6">
                   Playground s Builder Kernel, Plugin SDK, Mistral gateway a
@@ -560,7 +560,7 @@ function LandingPage() {
               <Link to="/studio">
                 <Button size="lg" className="h-12 gap-2 px-8">
                   <Sparkles className="h-4 w-4" />
-                  Spustiť COSY Studio
+                  Spustiť Cozy AI Studio
                 </Button>
               </Link>
               <Link to="/playground">
@@ -579,7 +579,7 @@ function LandingPage() {
             <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-choco text-white font-serif font-bold text-xs">
               C
             </div>
-            <span className="font-medium text-foreground">COSY Studio</span>
+            <span className="font-medium text-foreground">Cozy AI Studio</span>
             <span className="text-xs">v1.0</span>
           </div>
           <div className="flex flex-wrap justify-center gap-4">

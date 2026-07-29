@@ -14,7 +14,7 @@ export const Route = createRootRoute({
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       {
-        title: "COSY Studio — AI Visual IDE",
+        title: "Cozy AI Studio — AI Visual IDE",
       },
       {
         name: "description",

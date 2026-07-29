@@ -42,10 +42,10 @@ export function AgentPanel() {
   useEffect(() => {
     if (consumedLanding.current) return;
     try {
-      const q = sessionStorage.getItem("cosy-landing-prompt");
+      const q = sessionStorage.getItem("cozy-landing-prompt");
       if (q) {
         consumedLanding.current = true;
-        sessionStorage.removeItem("cosy-landing-prompt");
+        sessionStorage.removeItem("cozy-landing-prompt");
         setInput(q);
       }
     } catch {
@@ -64,7 +64,7 @@ export function AgentPanel() {
       {/* Scrollable middle: pipeline + errors + chat */}
       <div
         ref={scrollRef}
-        className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden cosy-scroll"
+        className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden @@Cozy_SCROLL@@"
       >
         <div className="space-y-2.5 p-2.5 sm:p-3 min-w-0">
           <AgentPipeline compact={isPipelineRunning} />
@@ -151,7 +151,7 @@ export function AgentPanel() {
           />
         </button>
         {filesOpen && (
-          <ul className="max-h-28 overflow-auto cosy-scroll px-2 pb-2 space-y-0.5 min-w-0">
+          <ul className="max-h-28 overflow-auto @@Cozy_SCROLL@@ px-2 pb-2 space-y-0.5 min-w-0">
             {Object.values(files).map((f) => (
               <li key={f.path} className="min-w-0">
                 <button

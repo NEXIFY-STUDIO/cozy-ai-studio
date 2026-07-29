@@ -30,7 +30,7 @@ import {
 export const Route = createFileRoute("/playground")({
   component: PlaygroundPage,
   head: () => ({
-    meta: [{ title: "Playground — COSY Lab" }],
+    meta: [{ title: "Playground — Cozy Lab" }],
   }),
 });
 
@@ -103,7 +103,7 @@ function PlaygroundPage() {
               </div>
               <div className="min-w-0">
                 <p className="font-serif text-lg font-bold leading-tight truncate">
-                  COSY Lab
+                  Cozy Lab
                 </p>
                 <p className="text-xs text-muted-foreground mt-0.5 truncate">
                   Safe place to try new features
@@ -137,7 +137,7 @@ function PlaygroundPage() {
             Try new features before you ship
           </h1>
           <p className="text-base text-muted-foreground leading-relaxed">
-            Click a module on the left. Each one is a short demo of a core COSY
+            Click a module on the left. Each one is a short demo of a core Cozy
             piece: the builder, plugins, AI planning, the canvas, and live
             collaboration.
           </p>
@@ -145,7 +145,7 @@ function PlaygroundPage() {
 
         <div className="flex flex-col lg:flex-row gap-5 lg:gap-6 min-h-[70dvh]">
           <aside className="lg:w-72 shrink-0">
-            <nav className="flex lg:flex-col gap-2 overflow-x-auto cosy-scroll pb-1 lg:pb-0">
+            <nav className="flex lg:flex-col gap-2 overflow-x-auto @@Cozy_SCROLL@@ pb-1 lg:pb-0">
               {TABS.map(({ id, label, icon: Icon, blurb }) => (
                 <button
                   key={id}
@@ -347,7 +347,7 @@ function KernelPanel({
         </div>
         <div>
           <p className="text-sm font-semibold mb-2">Command history</p>
-          <div className="rounded-2xl border border-border bg-muted/40 max-h-[300px] overflow-auto cosy-scroll divide-y divide-border">
+          <div className="rounded-2xl border border-border bg-muted/40 max-h-[300px] overflow-auto @@Cozy_SCROLL@@ divide-y divide-border">
             {kernel.log.length === 0 && (
               <p className="p-4 text-sm text-muted-foreground leading-relaxed">
                 No commands yet. Use the buttons above to add a node or export.

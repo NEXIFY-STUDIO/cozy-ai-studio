@@ -160,7 +160,7 @@ export function LivePreview() {
           <iframe
             key={previewKey}
             ref={iframeRef}
-            title="COSY Live Preview"
+            title="Cozy Live Preview"
             srcDoc={previewHtml}
             onLoad={onIframeLoad}
             sandbox="allow-scripts allow-same-origin allow-forms"

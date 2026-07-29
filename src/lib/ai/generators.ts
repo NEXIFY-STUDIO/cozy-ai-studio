@@ -494,7 +494,7 @@ button.add{background:#D96B43;color:#fff;border:0;border-radius:.75rem;padding:.
         code: `import React from "react";
 
 const projects = [
-  { title: "COSY Diff Engine", tag: "Product", year: "2026" },
+  { title: "Cozy Diff Engine", tag: "Product", year: "2026" },
   { title: "Ledger OS", tag: "Fintech", year: "2025" },
   { title: "Nomad Type", tag: "Brand", year: "2025" },
 ];

@@ -276,7 +276,7 @@ function ProductionLaunchModal({ onClose }: { onClose: () => void }) {
           </Button>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-auto cosy-scroll px-5 py-4 space-y-4">
+        <div className="min-h-0 flex-1 overflow-auto @@Cozy_SCROLL@@ px-5 py-4 space-y-4">
           {phase === "confirm" && (
             <ConfirmStep
               projectName={projectName}

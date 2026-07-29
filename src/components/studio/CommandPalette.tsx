@@ -72,7 +72,7 @@ export function CommandPalette() {
             ESC
           </kbd>
         </div>
-        <Command.List className="max-h-80 overflow-auto cosy-scroll p-2">
+        <Command.List className="max-h-80 overflow-auto @@Cozy_SCROLL@@ p-2">
           <Command.Empty className="py-8 text-center text-sm text-muted-foreground">
             No results.
           </Command.Empty>
@@ -124,10 +124,10 @@ export function CommandPalette() {
             />
             <Item
               icon={Upload}
-              label="Publish to cosy.studio"
+              label="Publish to cozy-ai.studio"
               onSelect={() => {
                 const slug = `app-${Math.random().toString(36).slice(2, 7)}`;
-                const url = `${slug}.cosy.studio`;
+                const url = `${slug}.cozy-ai.studio`;
                 setPublishUrl(url);
                 setCommandOpen(false);
                 toast.success(`Published: ${url}`);

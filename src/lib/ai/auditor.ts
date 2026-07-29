@@ -115,7 +115,7 @@ export function auditCode(code: string, language: string): AuditReport {
     push(
       "design-tokens",
       "warn",
-      "Purple accent detected — COSY Warm Brutalism prefers terracotta #D96B43",
+      "Purple accent detected — Cozy Warm Brutalism prefers terracotta #D96B43",
       undefined,
       true,
     );

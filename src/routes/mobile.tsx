@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/mobile")({
   component: MobileCompanionPage,
   head: () => ({
-    meta: [{ title: "Mobile Companion — COSY" }],
+    meta: [{ title: "Mobile Companion — Cozy" }],
   }),
 });
 

@@ -120,7 +120,7 @@ export async function runProductionLaunch(
   const baseSlug = slugify(
     opts.projectName ?? `cosy-${Date.now().toString(36).slice(-5)}`,
   );
-  let domain = `${baseSlug}.cosy.studio`;
+  let domain = `${baseSlug}.cozy-ai.studio`;
 
   // 1. Checks
   patch("preflight", { status: "running" });
@@ -174,7 +174,7 @@ export async function runProductionLaunch(
   patch("env", { status: "running" });
   cb.onProgress(40, "Environment…");
   await sleep(650, signal);
-  domain = plan === "ENTERPRISE" ? `${baseSlug}.app` : `${baseSlug}.cosy.studio`;
+  domain = plan === "ENTERPRISE" ? `${baseSlug}.app` : `${baseSlug}.cozy-ai.studio`;
   patch("env", {
     status: "done",
     durationMs: 650,
@@ -219,7 +219,7 @@ export async function runProductionLaunch(
   patch("publish", { status: "running" });
   cb.onProgress(90, "Publish…");
   await sleep(550, signal);
-  const publishUrl = domain.includes(".") ? domain : `${domain}.cosy.studio`;
+  const publishUrl = domain.includes(".") ? domain : `${domain}.cozy-ai.studio`;
   patch("publish", {
     status: "done",
     durationMs: 550,

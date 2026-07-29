@@ -165,17 +165,17 @@
 }
 
 /* Readable body copy helper */
-.prose-cosy {
+.@@PROSE_Cozy@@ {
   font-size: 0.9375rem;
   line-height: 1.65;
   color: var(--color-foreground);
 }
 
-.prose-cosy p + p {
+.@@PROSE_Cozy@@ p + p {
   margin-top: 0.75em;
 }
 
-.prose-cosy .lead {
+.@@PROSE_Cozy@@ .lead {
   font-size: 1.0625rem;
   line-height: 1.65;
   color: var(--color-muted-foreground);
@@ -263,18 +263,18 @@
   color: var(--color-choco);
 }
 
-.cosy-scroll::-webkit-scrollbar {
+.@@Cozy_SCROLL@@::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
-.cosy-scroll::-webkit-scrollbar-track {
+.@@Cozy_SCROLL@@::-webkit-scrollbar-track {
   background: transparent;
 }
-.cosy-scroll::-webkit-scrollbar-thumb {
+.@@Cozy_SCROLL@@::-webkit-scrollbar-thumb {
   background: color-mix(in oklab, var(--color-foreground) 22%, transparent);
   border-radius: 999px;
 }
-.cosy-scroll::-webkit-scrollbar-thumb:hover {
+.@@Cozy_SCROLL@@::-webkit-scrollbar-thumb:hover {
   background: color-mix(in oklab, var(--color-foreground) 34%, transparent);
 }
 

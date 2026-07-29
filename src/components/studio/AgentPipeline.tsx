@@ -198,7 +198,7 @@ export function AgentPipeline({ compact = false }: { compact?: boolean }) {
                       Úlohy
                     </span>
                   </div>
-                  <ul className="space-y-1 max-h-24 overflow-auto cosy-scroll">
+                  <ul className="space-y-1 max-h-24 overflow-auto @@Cozy_SCROLL@@">
                     {taskGraph.map((node) => (
                       <li
                         key={node.id}
@@ -227,7 +227,7 @@ export function AgentPipeline({ compact = false }: { compact?: boolean }) {
                 </div>
               )}
 
-              <div className="max-h-24 overflow-auto cosy-scroll rounded-xl bg-muted/50 p-2 min-w-0">
+              <div className="max-h-24 overflow-auto @@Cozy_SCROLL@@ rounded-xl bg-muted/50 p-2 min-w-0">
                 {agents.map((agent) => (
                   <div key={agent.id} className="mb-2 last:mb-0 min-w-0">
                     <div className="flex items-center gap-1.5 mb-0.5 min-w-0">

@@ -39,7 +39,7 @@ function FallbackDiff({
   }, [original, modified]);
 
   return (
-    <div className="h-full overflow-auto cosy-scroll font-mono text-[12.5px] leading-5 p-3 bg-canvas text-[#e8eaed] dark:text-[#e8eaed]">
+    <div className="h-full overflow-auto @@Cozy_SCROLL@@ font-mono text-[12.5px] leading-5 p-3 bg-canvas text-[#e8eaed] dark:text-[#e8eaed]">
       {lines.map((row, i) => (
         <div
           key={`${row.n}-${i}-${row.type}`}

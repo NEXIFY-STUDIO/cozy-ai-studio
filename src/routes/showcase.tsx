@@ -7,7 +7,7 @@ import { useStudioStore } from "@/stores/studio-store";
 export const Route = createFileRoute("/showcase")({
   component: ShowcasePage,
   head: () => ({
-    meta: [{ title: "Showcase — COSY Studio" }],
+    meta: [{ title: "Showcase — Cozy AI Studio" }],
   }),
 });
 
@@ -37,7 +37,7 @@ function ShowcasePage() {
             <p className="text-xs font-semibold tracking-wide text-terracotta uppercase mb-2">
               Community
             </p>
-            <h1 className="font-serif text-4xl font-bold">COSY Showcase</h1>
+            <h1 className="font-serif text-4xl font-bold">Cozy Showcase</h1>
             <p className="text-muted-foreground mt-2 max-w-md">
               Public gallery of projects published with 1-click. Remix any of them into your
               workspace.
