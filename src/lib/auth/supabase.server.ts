@@ -17,7 +17,9 @@ export function isSupabaseServerConfigured(): boolean {
   return Boolean(
     process.env.SUPABASE_URL?.trim() &&
       (process.env.SUPABASE_ANON_KEY?.trim() ||
-        process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()),
+        process.env.SUPABASE_PUBLISHABLE_KEY?.trim() ||
+        process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() ||
+        process.env.SUPABASE_SECRET_KEY?.trim()),
   );
 }
 
@@ -26,8 +28,10 @@ export function getSupabaseAdmin(): SupabaseClient {
   if (admin) return admin;
   const key =
     process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() ||
-    process.env.SUPABASE_ANON_KEY?.trim();
-  if (!key) throw new Error("SUPABASE_SERVICE_ROLE_KEY or SUPABASE_ANON_KEY missing");
+    process.env.SUPABASE_SECRET_KEY?.trim() ||
+    process.env.SUPABASE_ANON_KEY?.trim() ||
+    process.env.SUPABASE_PUBLISHABLE_KEY?.trim();
+  if (!key) throw new Error("SUPABASE_SERVICE_ROLE_KEY or SUPABASE_SECRET_KEY missing");
   admin = createClient(url(), key, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
@@ -36,12 +40,23 @@ export function getSupabaseAdmin(): SupabaseClient {
 
 export function getSupabaseAnonServer(): SupabaseClient {
   if (anon) return anon;
-  const key = process.env.SUPABASE_ANON_KEY?.trim();
-  if (!key) throw new Error("SUPABASE_ANON_KEY missing");
+  const key =
+    process.env.SUPABASE_ANON_KEY?.trim() ||
+    process.env.SUPABASE_PUBLISHABLE_KEY?.trim();
+  if (!key) throw new Error("SUPABASE_ANON_KEY or SUPABASE_PUBLISHABLE_KEY missing");
   anon = createClient(url(), key, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
   return anon;
+}
+
+/** JWKS URL for JWT verification (new Supabase keys). */
+export function getSupabaseJwksUrl(): string | null {
+  const explicit = process.env.SUPABASE_JWKS_URL?.trim();
+  if (explicit) return explicit;
+  const base = process.env.SUPABASE_URL?.trim();
+  if (!base) return null;
+  return `${base.replace(/\/$/, "")}/auth/v1/.well-known/jwks.json`;
 }
 
 export type SupabaseVerified = { id: string; email: string | null };

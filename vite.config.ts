@@ -12,14 +12,21 @@ import { realtimeWsPlugin } from "./src/lib/realtime/ws-plugin";
  * on import.
  */
 
-/** COOP/COEP so WebContainer can use SharedArrayBuffer */
+/** COOP/COEP for WebContainer. Use credentialless (not require-corp) so
+ *  Grok preview / third-party assets are not blocked. Skip isolation when the
+ *  page is embedded (iframe) — SAB unavailable there anyway (srcDoc fallback). */
 function webcontainerHeadersPlugin(): Plugin {
   return {
     name: "app-builder:webcontainer-headers",
     configureServer(server) {
-      server.middlewares.use((_req, res, next) => {
-        res.setHeader("Cross-Origin-Embedder-Policy", "require-corp");
-        res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
+      server.middlewares.use((req, res, next) => {
+        const dest = String(req.headers["sec-fetch-dest"] || "");
+        const isEmbed = dest === "iframe" || dest === "embed";
+        if (!isEmbed) {
+          // credentialless: allows SAB path without blocking non-CORP assets
+          res.setHeader("Cross-Origin-Embedder-Policy", "credentialless");
+          res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
+        }
         next();
       });
     },
@@ -145,9 +152,9 @@ export default defineConfig(({ command }) => ({
     host: "0.0.0.0",
     port: 8080,
     strictPort: true,
-    // Required for WebContainer SharedArrayBuffer
+    // credentialless: WebContainer-friendly without blocking Grok preview assets
     headers: {
-      "Cross-Origin-Embedder-Policy": "require-corp",
+      "Cross-Origin-Embedder-Policy": "credentialless",
       "Cross-Origin-Opener-Policy": "same-origin",
     },
   },
@@ -156,7 +163,7 @@ export default defineConfig(({ command }) => ({
     port: 8080,
     strictPort: true,
     headers: {
-      "Cross-Origin-Embedder-Policy": "require-corp",
+      "Cross-Origin-Embedder-Policy": "credentialless",
       "Cross-Origin-Opener-Policy": "same-origin",
     },
   },
@@ -169,7 +176,21 @@ export default defineConfig(({ command }) => ({
     authPopupPlugin(),
     tailwindcss(),
     tanstackStart(),
-    ...(command === "build" ? [nitro({ preset: "vercel" })] : []),
+    ...(command === "build"
+      ? [
+          nitro({
+            preset: "vercel",
+            routeRules: {
+              "/**": {
+                headers: {
+                  "Cross-Origin-Embedder-Policy": "credentialless",
+                  "Cross-Origin-Opener-Policy": "same-origin",
+                },
+              },
+            },
+          }),
+        ]
+      : []),
     viteReact(),
   ],
 }));

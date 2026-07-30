@@ -26,12 +26,14 @@ export function getPublicSupabaseConfig(): {
       ((import.meta.env.VITE_SUPABASE_URL as string | undefined)?.trim() ||
         (import.meta.env.SUPABASE_URL as string | undefined)?.trim())) ||
     null;
-  // Prefer ANON_KEY; accept dashboard alias VITE_SUPABASE_KEY (publishable)
+  // ANON JWT, publishable key, or dashboard alias VITE_SUPABASE_KEY
   const anonKey =
     (typeof import.meta !== "undefined" &&
       ((import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined)?.trim() ||
+        (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined)?.trim() ||
         (import.meta.env.VITE_SUPABASE_KEY as string | undefined)?.trim() ||
-        (import.meta.env.SUPABASE_ANON_KEY as string | undefined)?.trim())) ||
+        (import.meta.env.SUPABASE_ANON_KEY as string | undefined)?.trim() ||
+        (import.meta.env.SUPABASE_PUBLISHABLE_KEY as string | undefined)?.trim())) ||
     null;
   return { url: url || null, anonKey: anonKey || null };
 }
