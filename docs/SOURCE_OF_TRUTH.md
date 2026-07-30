@@ -36,6 +36,14 @@
 ## Freeze (post-S1)
 
 - Marketplace, CRDT host, Plugin write APIs as product, Figma product UI, Artifact Insurance pricing, Kernel-on-chat claims.
+- `/playground` is **experimental sandbox** (noindex) — not in primary nav; command palette marks it "not product".
+
+## Ship gate
+
+```bash
+npm run dev          # 0.0.0.0:8080
+npm run ship-gate    # API quota + browser truth + playground freeze
+```
 
 ## Stack (actual)
 

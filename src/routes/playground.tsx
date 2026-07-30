@@ -8,7 +8,6 @@ import {
   Cpu,
   Download,
   FileJson,
-  FlaskConical,
   GitBranch,
   Layers,
   Package,
@@ -49,7 +48,15 @@ import { useStudioStore } from "@/stores/studio-store";
 export const Route = createFileRoute("/playground")({
   component: PlaygroundPage,
   head: () => ({
-    meta: [{ title: "Playground — Cozy Lab" }],
+    meta: [
+      { title: "Experimental sandbox — Cozy AI Studio" },
+      {
+        name: "description",
+        content:
+          "Frozen library demos (Kernel / Plugin / multiplayer). Not the product path — use Studio.",
+      },
+      { name: "robots", content: "noindex,nofollow" },
+    ],
   }),
 });
 
@@ -63,39 +70,39 @@ const TABS: {
 }[] = [
   {
     id: "kernel",
-    label: "Builder Kernel",
+    label: "Kernel (lib)",
     icon: Cpu,
-    blurb: "Build UI with simple commands",
+    blurb: "Library demo — not product editor",
   },
   {
     id: "plugins",
-    label: "Plugin SDK",
+    label: "Plugins (lib)",
     icon: Plug,
-    blurb: "Turn tools on and off",
+    blurb: "SDK sandbox only",
   },
   {
     id: "ai",
-    label: "AI Gateway",
+    label: "AI plan stream",
     icon: Sparkles,
-    blurb: "Stream a plan with Mistral",
+    blurb: "Dev stream — Studio is primary",
   },
   {
     id: "canvas",
-    label: "Canvas",
+    label: "Nodes canvas",
     icon: Layers,
-    blurb: "See pieces on the stage",
+    blurb: "Internal node stage",
   },
   {
     id: "presence",
-    label: "Multiplayer",
+    label: "Presence",
     icon: Users,
-    blurb: "Who else is in the room",
+    blurb: "Experimental multiplayer",
   },
   {
     id: "blueprint",
-    label: "Kópia magie",
+    label: "Export JSON/ZIP",
     icon: Package,
-    blurb: "Ulož si projekt ako darček",
+    blurb: "Local export only",
   },
 ];
 
@@ -126,25 +133,20 @@ function PlaygroundPage() {
               <CozyLogo size="sm" variant="seal" />
               <div className="min-w-0">
                 <p className="font-serif text-lg font-bold leading-tight truncate">
-                  Cozy Lab
+                  Experimental sandbox
                 </p>
                 <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                  Hraj sa. Skúšaj. Nič sa nepokazí.
+                  Frozen · not the product path
                 </p>
               </div>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <Link to="/studio">
-              <Button size="sm" variant="secondary" className="h-9">
-                Studio
-              </Button>
-            </Link>
-            <Link to="/studio">
               <Button size="sm" className="h-9 gap-1.5">
                 <Wand2 className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Open in Studio</span>
-                <span className="sm:hidden">Open</span>
+                <span className="hidden sm:inline">Back to Studio</span>
+                <span className="sm:hidden">Studio</span>
               </Button>
             </Link>
           </div>
@@ -152,17 +154,33 @@ function PlaygroundPage() {
       </header>
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 py-6 sm:py-10">
+        <div
+          role="status"
+          className="mb-6 rounded-2xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm leading-relaxed"
+        >
+          <p className="font-semibold text-foreground">
+            Not product — library demos only
+          </p>
+          <p className="text-muted-foreground mt-1">
+            Builder Kernel, Plugin SDK, CRDT/multiplayer and marketplace are{" "}
+            <strong className="text-foreground font-medium">frozen</strong> out of
+            the Speed Studio spine. Product path is{" "}
+            <Link to="/studio" className="underline underline-offset-2 text-foreground">
+              Studio
+            </Link>{" "}
+            (brief → preview → share). Do not market these panels as shipped features.
+          </p>
+        </div>
         <div className="mb-8 max-w-2xl">
           <p className="text-xs font-semibold uppercase tracking-wide text-choco mb-2">
-            Cozy Lab · hracie pieskovisko
+            Dev sandbox · noindex
           </p>
           <h1 className="font-serif text-3xl sm:text-4xl font-bold tracking-tight leading-tight mb-3">
-            Skús nové veci skôr, než pôjdu von
+            Internal experiments (frozen for S1)
           </h1>
           <p className="text-base text-muted-foreground leading-relaxed">
-            Klikni vľavo na modul. Stavaj kocky, púšťaj AI, pozri plátno… a v{" "}
-            <strong className="text-foreground font-semibold">Kópia magie</strong>{" "}
-            si celý projekt zbalíš ako darček.
+            These modules exist for engineering exploration. They are not the
+            demo, not the CTA, and not sold. Prefer Studio for Brief → preview → share.
           </p>
         </div>
 
@@ -279,7 +297,7 @@ function KernelPanel({
 
   return (
     <PanelChrome
-      title="Builder Kernel"
+      title="Kernel (library demo)"
       subtitle="Add UI pieces with commands. Watch the graph and the command history update."
       actions={
         <>
@@ -419,8 +437,8 @@ function PluginsPanel({
 }) {
   return (
     <PanelChrome
-      title="Plugin SDK"
-      subtitle="Enable a plugin, check its permissions, then run it. Results show under each card."
+      title="Plugin SDK (library demo)"
+      subtitle="Internal sandbox only — not a marketplace or product feature."
     >
       <div className="grid gap-4 sm:grid-cols-2">
         {plugins.map((p) => (

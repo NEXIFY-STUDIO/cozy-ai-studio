@@ -70,7 +70,7 @@ export function CommandPalette() {
             ESC
           </kbd>
         </div>
-        <Command.List className="max-h-80 overflow-auto @@Cozy_SCROLL@@ p-2">
+        <Command.List className="max-h-80 overflow-auto cosy-scroll p-2">
           <Command.Empty className="py-8 text-center text-sm text-muted-foreground">
             No results.
           </Command.Empty>
@@ -79,14 +79,6 @@ export function CommandPalette() {
             heading="Actions"
             className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-2 py-1.5"
           >
-            <Item
-              icon={FlaskConical}
-              label="Open Lab playground"
-              onSelect={() => {
-                setCommandOpen(false);
-                navigate({ to: "/playground" });
-              }}
-            />
             <Item
               icon={Rocket}
               label="Deploy / limits"
@@ -128,12 +120,12 @@ export function CommandPalette() {
             />
             <Item
               icon={Upload}
-              label="Publish (preview only)"
+              label="Share preview (no live deploy)"
               onSelect={() => {
                 setCommandOpen(false);
                 toast.message("Publish is not live yet", {
                   description:
-                    "Share via showcase/export when available — no fake *.cozy-ai.studio deploy.",
+                    "Use Share in Live Preview or export — no fake deploy domain.",
                 });
               }}
             />
@@ -218,6 +210,24 @@ export function CommandPalette() {
               />
             ))}
           </Command.Group>
+
+          <Command.Group
+            heading="Experimental (not product)"
+            className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-2 py-1.5 mt-1"
+          >
+            <Item
+              icon={FlaskConical}
+              label="Sandbox — Kernel/Plugin demos (frozen)"
+              onSelect={() => {
+                setCommandOpen(false);
+                toast.message("Experimental sandbox", {
+                  description:
+                    "Library demos only — not the product path. Studio is primary.",
+                });
+                navigate({ to: "/playground" });
+              }}
+            />
+          </Command.Group>
         </Command.List>
       </Command>
       <button
@@ -235,7 +245,7 @@ function Item({
   label,
   onSelect,
 }: {
-  icon: typeof FileCode2;
+  icon: typeof Sparkles;
   label: string;
   onSelect: () => void;
 }) {
@@ -243,9 +253,9 @@ function Item({
     <Command.Item
       value={label}
       onSelect={onSelect}
-      className="flex cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm aria-selected:bg-terracotta/10 aria-selected:text-foreground data-[selected=true]:bg-terracotta/10"
+      className="flex cursor-pointer items-center gap-2 rounded-xl px-2 py-2 text-sm aria-selected:bg-muted"
     >
-      <Icon className="h-4 w-4 text-terracotta shrink-0" />
+      <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
       <span>{label}</span>
     </Command.Item>
   );

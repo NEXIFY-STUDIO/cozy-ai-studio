@@ -39,8 +39,8 @@ function ShowcasePage() {
             </p>
             <h1 className="font-serif text-4xl font-bold">Cozy Showcase</h1>
             <p className="text-muted-foreground mt-2 max-w-md">
-              Public gallery of projects published with 1-click. Remix any of them into your
-              workspace.
+              Sample gallery of demo projects. Remix opens Studio — live 1-click publish
+              is not sold as shipped yet.
             </p>
           </div>
           <Link to="/studio">

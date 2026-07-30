@@ -14,7 +14,9 @@
     "preview": "vite preview --host 0.0.0.0 --port 8080",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "ship-gate": "node scripts/ship-gate.mjs",
+    "verify": "npm run typecheck && npm run lint && npm run build && npm run ship-gate"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.3",
@@ -96,5 +98,5 @@
     "typescript-eslint": "^8.56.1",
     "vite": "^8.1.0"
   },
-  "description": "Cozy AI Studio — multi-agent visual IDE (Builder Kernel, Plugin SDK, Mistral gateway)"
+  "description": "Cozy AI Studio \u2014 multi-agent visual IDE (Builder Kernel, Plugin SDK, Mistral gateway)"
 }
