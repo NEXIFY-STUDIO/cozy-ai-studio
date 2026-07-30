@@ -30,8 +30,9 @@
 
 ## Gates (`GET /api/mvp-status`)
 
-- `mvpReady` / `sellReady` are self-reported — trust them over landing claims.
-- Missing for sell: `DATABASE_URL`, Stripe keys, real auth when required.
+- `optionBReady` / `mvpReady` = Mistral live + DATABASE_URL + studio spine (open demo may use `AUTH_PROVIDER=none`).
+- `sellReady` = above + Stripe (P4 — only after activation).
+- Free caps: 20/day · 100/month (server 429).
 
 ## Freeze (post-S1)
 
