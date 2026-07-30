@@ -25,7 +25,8 @@
 | # | Item |
 |---|---|
 | P4 | Stripe only after activation (keep UI "Not live yet") |
-| Manual | DATABASE_URL · STRIPE_* · auth redirect on Vercel |
+| Env | DATABASE_URL + Mistral + Supabase keys on Vercel prod (qyts… eu-west-1) |
+| Manual | STRIPE_* when activating (P4); optional auth redirect if enabling login |
 
 ## Check
 
