@@ -1,5 +1,5 @@
-import { useCallback, useEffect } from "react";
-import { Check, X, Code2, FileCode2 } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { Check, X, Code2, FileCode2, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { useStudioStore } from "@/stores/studio-store";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import {
   resolveServerApproval,
 } from "@/hooks/useProjectSync";
 import { saveMyProjectFiles } from "@/lib/db/functions";
+import { sharePreviewHtml } from "@/lib/share-preview";
 
 export function HitLApprovalCard() {
   const pending = useStudioStore((s) => s.pendingApproval);
@@ -19,21 +20,16 @@ export function HitLApprovalCard() {
   const isRunning = useStudioStore((s) => s.isPipelineRunning);
   const lastPrompt = useStudioStore((s) => s.lastPrompt);
   const pipelineLatencyMs = useStudioStore((s) => s.pipelineLatencyMs);
+  const setMobilePanel = useStudioStore((s) => s.setMobilePanel);
+  const [sharing, setSharing] = useState(false);
 
   const blocked = preflight ? !preflight.canAccept : false;
 
-  const onApprove = useCallback(() => {
-    if (blocked) {
-      toast.error("Preflight blocked Accept", {
-        description: "Patch contract failed — retry the pipeline.",
-      });
-      return;
-    }
+  const finishApprove = useCallback(async () => {
     approvePending();
-    // P0: writeFile + reload Live Runtime Kernel
     void pushAcceptedFilesToWebContainer().then(() => {
-      toast.success("Live Runtime updated", {
-        description: "WebContainer writeFile + reload",
+      toast.success("Changes applied", {
+        description: "Preview updated · Share when ready",
       });
     });
     void (async () => {
@@ -65,7 +61,42 @@ export function HitLApprovalCard() {
         projectId,
       });
     })();
-  }, [approvePending, blocked, lastPrompt, pipelineLatencyMs]);
+    setMobilePanel("preview");
+  }, [approvePending, lastPrompt, pipelineLatencyMs, setMobilePanel]);
+
+  const onApprove = useCallback(() => {
+    if (blocked) {
+      toast.error("Preflight blocked Accept", {
+        description: "Patch contract failed — retry the pipeline.",
+      });
+      return;
+    }
+    void finishApprove();
+  }, [blocked, finishApprove]);
+
+  const onAcceptAndShare = useCallback(async () => {
+    if (blocked) {
+      toast.error("Preflight blocked Accept", {
+        description: "Patch contract failed — retry the pipeline.",
+      });
+      return;
+    }
+    const html =
+      useStudioStore.getState().pendingApproval?.previewHtml ||
+      useStudioStore.getState().previewHtml;
+    const title =
+      useStudioStore.getState().pendingApproval?.title || "Cozy preview";
+    await finishApprove();
+    setSharing(true);
+    try {
+      await sharePreviewHtml(html, {
+        title,
+        promptPreview: lastPrompt?.slice(0, 280),
+      });
+    } finally {
+      setSharing(false);
+    }
+  }, [blocked, finishApprove, lastPrompt]);
 
   const onReject = useCallback(() => {
     rejectPending();
@@ -84,7 +115,8 @@ export function HitLApprovalCard() {
         return;
       if (e.key === "Enter" && !e.metaKey && !e.ctrlKey) {
         e.preventDefault();
-        onApprove();
+        if (e.shiftKey) void onAcceptAndShare();
+        else onApprove();
       }
       if (e.key === "Escape") {
         e.preventDefault();
@@ -93,7 +125,7 @@ export function HitLApprovalCard() {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [pending, isRunning, onApprove, onReject]);
+  }, [pending, isRunning, onApprove, onReject, onAcceptAndShare]);
 
   if (!pending || isRunning) return null;
 
@@ -130,20 +162,31 @@ export function HitLApprovalCard() {
         </div>
       )}
 
-      <div className="flex gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row">
         <Button
           type="button"
+          className="flex-1 h-10 rounded-xl gap-1.5"
+          disabled={blocked || sharing}
+          onClick={() => void onAcceptAndShare()}
+        >
+          <Share2 className="h-4 w-4" />
+          Accept + Share link
+        </Button>
+        <Button
+          type="button"
+          variant="secondary"
           className="flex-1 h-10 rounded-xl"
-          disabled={blocked}
+          disabled={blocked || sharing}
           onClick={onApprove}
         >
           <Check className="h-4 w-4" />
-          Accept
+          Accept only
         </Button>
         <Button
           type="button"
           variant="outline"
-          className="flex-1 h-10 rounded-xl"
+          className="h-10 rounded-xl sm:w-auto"
+          disabled={sharing}
           onClick={onReject}
         >
           <X className="h-4 w-4" />
@@ -151,7 +194,7 @@ export function HitLApprovalCard() {
         </Button>
       </div>
       <p className="text-[10px] text-center text-muted-foreground">
-        Enter = Accept · Esc = Reject · Accept → Live Runtime writeFile
+        Enter = Accept · Shift+Enter = Accept + Share · Esc = Reject
       </p>
     </div>
   );

@@ -21,12 +21,12 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       {
-        title: "Cozy AI Studio — Brief → preview → schválenie",
+        title: "Cozy AI Studio — Brief → preview → share",
       },
       {
         name: "description",
         content:
-          "Rýchle AI studio: napíš brief, sleduj diff a live preview, schváľ zmeny. Free daily limit. Žiadny fake Enterprise checkout.",
+          "Rýchle AI studio: brief → diff → live preview → schválenie → public share link. Free daily limit. Žiadny fake Enterprise checkout.",
       },
     ],
   }),
@@ -192,7 +192,7 @@ function LandingPage() {
             </h1>
 
             <p className="text-base sm:text-xl text-muted-foreground leading-relaxed max-w-2xl mx-auto mb-8 text-pretty">
-              Napíš brief, sleduj agentov a diff, schváľ zmeny a pozri live preview.
+              Napíš brief, sleduj agentov a diff, schváľ zmeny a zdieľaj public link (/a/…).
               Bez inštalácie. Free má reálny denný limit (server 429 pred modelom).
             </p>
 
@@ -387,7 +387,7 @@ function LandingPage() {
               </h2>
               <p className="text-base sm:text-lg text-muted-foreground leading-relaxed">
                 Žiadne Figma import, Kernel marketplace ani fake Pro checkout.
-                Len brief → pipeline → diff → preview → schválenie.
+                Brief → pipeline → diff → preview → Accept → share link.
               </p>
             </div>
 

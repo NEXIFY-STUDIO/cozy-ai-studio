@@ -110,6 +110,15 @@ export const Route = createFileRoute("/api/share")({
               { status: 413 },
             );
           }
+          if (msg === "SHARE_DAILY_LIMIT") {
+            return Response.json(
+              {
+                error: "SHARE_DAILY_LIMIT",
+                message: "Daily share limit reached. Try again tomorrow.",
+              },
+              { status: 429 },
+            );
+          }
           console.error("[api/share] POST", e);
           return Response.json(
             {

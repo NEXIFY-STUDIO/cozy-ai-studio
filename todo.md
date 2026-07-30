@@ -21,6 +21,7 @@
 | Polish | Studio TTFP: auto-run landing brief, Stop, next-step Diff→Share, share helper |
 | Env | DATABASE_URL + Mistral + Supabase on Vercel prod (pooler eu-west-1) |
 | Share | Public `/a/:id` link + POST /api/share (clipboard) |
+| HitL | Accept + Share link (Shift+Enter); daily share soft-cap |
 
 ## Next
 
