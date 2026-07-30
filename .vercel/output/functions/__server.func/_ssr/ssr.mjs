@@ -108,7 +108,7 @@ var HEADERS = { TSS_SHELL: "X-TSS_SHELL" };
 * the dev styles URL for route-scoped CSS collection.
 */
 async function getStartManifest(matchedRoutes) {
-	const { tsrStartManifest } = await import("../_tanstack-start-manifest_v-C3cft-g5.mjs");
+	const { tsrStartManifest } = await import("../_tanstack-start-manifest_v-BhFP75uz.mjs");
 	const startManifest = tsrStartManifest();
 	let routes = startManifest.routes;
 	routes[rootRouteId];
@@ -130,115 +130,115 @@ async function getStartManifest(matchedRoutes) {
 var manifest = {
 	"0038189885b344443d35a898973e277d6d1d53006470ab592fde4472b135a1ab": {
 		functionName: "listMyApprovals_createServerFn_handler",
-		importer: () => import("./functions-D7NxpdvZ.mjs")
+		importer: () => import("./functions-BJCS7oz4.mjs")
 	},
 	"08b3859d8d8e404273c256cb2d3585a29e6689a730c75d02ed0842990b051b4d": {
 		functionName: "createCheckout_createServerFn_handler",
-		importer: () => import("./functions-B-9X8QPv.mjs")
+		importer: () => import("./functions-CyYEqfIY.mjs")
 	},
 	"20b716794332d7042ffcf089a41a7745328b1c08e7676695fa43fd5ce8ee9ee1": {
 		functionName: "getMyProject_createServerFn_handler",
-		importer: () => import("./functions-D7NxpdvZ.mjs")
+		importer: () => import("./functions-BJCS7oz4.mjs")
 	},
 	"24324d2a950ad8cdc5c2768f1848f48e9b5b7bc75997798a6dc47430bccb815e": {
 		functionName: "recordMyTelemetry_createServerFn_handler",
-		importer: () => import("./functions-D7NxpdvZ.mjs")
+		importer: () => import("./functions-BJCS7oz4.mjs")
 	},
 	"28a6e0f063e473eb864c662975cdd98ece3a2eb375be3142b7a8ef80151c4267": {
 		functionName: "deleteMyProject_createServerFn_handler",
-		importer: () => import("./functions-D7NxpdvZ.mjs")
+		importer: () => import("./functions-BJCS7oz4.mjs")
 	},
 	"30fd468b063fc670b8a2dfda8ce0ebba8f0d1c082e8b8ff38a7879eba6b68a19": {
 		functionName: "listMyTelemetry_createServerFn_handler",
-		importer: () => import("./functions-D7NxpdvZ.mjs")
+		importer: () => import("./functions-BJCS7oz4.mjs")
 	},
 	"350eacecdb06f3f5e1c46ac4f6564d428bd1dec43646dd139a3e8f5972a328fd": {
 		functionName: "getMyUsageMonthly_createServerFn_handler",
-		importer: () => import("./functions-D7NxpdvZ.mjs")
+		importer: () => import("./functions-BJCS7oz4.mjs")
 	},
 	"3a31f9e33f2552f1dbf40e70d8a3eb8621d864643cb0ecfd513767bdc37896d1": {
 		functionName: "activateFreePlan_createServerFn_handler",
-		importer: () => import("./functions-B-9X8QPv.mjs")
+		importer: () => import("./functions-CyYEqfIY.mjs")
 	},
 	"3c15043211ba04bee48bd55ca5d6fdbfa72ac9de7a4d4871f4e5c6fa7db761af": {
 		functionName: "listMyProjectFiles_createServerFn_handler",
-		importer: () => import("./functions-D7NxpdvZ.mjs")
+		importer: () => import("./functions-BJCS7oz4.mjs")
 	},
 	"4751ba90ceec8e812da80d9a5b02c6ad815e8a26e46da22d668397ef40f5961c": {
 		functionName: "updateMyProject_createServerFn_handler",
-		importer: () => import("./functions-D7NxpdvZ.mjs")
+		importer: () => import("./functions-BJCS7oz4.mjs")
 	},
 	"4bfb89b4df0d6d83aeb9cc6d637fe88c4a03ae07fc30ea283ec45c8530445213": {
 		functionName: "saveMyProjectFiles_createServerFn_handler",
-		importer: () => import("./functions-D7NxpdvZ.mjs")
+		importer: () => import("./functions-BJCS7oz4.mjs")
 	},
 	"582cc95a9ca0f21080c2d9edfb63c5941e9b2f689e7d22f73c8f63bb9aad3c9b": {
 		functionName: "saveMyProjectFile_createServerFn_handler",
-		importer: () => import("./functions-D7NxpdvZ.mjs")
+		importer: () => import("./functions-BJCS7oz4.mjs")
 	},
 	"669a49fc70c9d3b19ef9bff74364d2953c37aac816b9ac5679972205c9dd02d2": {
 		functionName: "getMyProject_createServerFn_handler",
-		importer: () => import("./functions-CvpPySZx.mjs")
+		importer: () => import("./functions-BPI9sOib.mjs")
 	},
 	"68ade03b170a21c31208beb9dd0dc0acff5b79023bae32431cc8c182fbb59bb6": {
 		functionName: "createMyApproval_createServerFn_handler",
-		importer: () => import("./functions-D7NxpdvZ.mjs")
+		importer: () => import("./functions-BJCS7oz4.mjs")
 	},
 	"71f30f6557836bb820eb45913c460f9bab60246dd60094ff083bed9f06c7a149": {
 		functionName: "deleteMyProjectFile_createServerFn_handler",
-		importer: () => import("./functions-D7NxpdvZ.mjs")
+		importer: () => import("./functions-BJCS7oz4.mjs")
 	},
 	"786aad96ad624f2a3311cf19d2365e7bc6935c6b84ff109361fa7aa097e179de": {
 		functionName: "listMyUsageEvents_createServerFn_handler",
-		importer: () => import("./functions-D7NxpdvZ.mjs")
+		importer: () => import("./functions-BJCS7oz4.mjs")
 	},
 	"79aec01ba26e0fac48307d77cf51f12ae7112479aa111a03c59ad911768d9d8a": {
 		functionName: "loadMyWorkspace_createServerFn_handler",
-		importer: () => import("./functions-D7NxpdvZ.mjs")
+		importer: () => import("./functions-BJCS7oz4.mjs")
 	},
 	"81b151f914a6c29241bc62a6fc2ba7dbd15fe965a57ff4bbd4d2f7e7a9c7b063": {
 		functionName: "saveMyProject_createServerFn_handler",
-		importer: () => import("./functions-CvpPySZx.mjs")
+		importer: () => import("./functions-BPI9sOib.mjs")
 	},
 	"8803c98a0579a8875938362d9a4d7a8ac7f87fb5aef698141a842546ef98f0e4": {
 		functionName: "getMySubscription_createServerFn_handler",
-		importer: () => import("./functions-D7NxpdvZ.mjs")
+		importer: () => import("./functions-BJCS7oz4.mjs")
 	},
 	"a2f9101d819772dcd744655be4b9e23fd225bb2605dea83b481338a293e54056": {
 		functionName: "getMyBilling_createServerFn_handler",
-		importer: () => import("./functions-B-9X8QPv.mjs")
+		importer: () => import("./functions-CyYEqfIY.mjs")
 	},
 	"a71b23cc5c6be8a6ba68986698390684a8050d85cfc1cb0f8c2ce5706666dd9a": {
 		functionName: "listMyProjects_createServerFn_handler",
-		importer: () => import("./functions-D7NxpdvZ.mjs")
+		importer: () => import("./functions-BJCS7oz4.mjs")
 	},
 	"b95a7fd1746a199bf4e1a8c923f57e4e62817c926258d23a4d9b83b61b7ab315": {
 		functionName: "createPortal_createServerFn_handler",
-		importer: () => import("./functions-B-9X8QPv.mjs")
+		importer: () => import("./functions-CyYEqfIY.mjs")
 	},
 	"c48c0bd4c6eea2f7dbdfc99f80a372c68a90ad1e71d2882bcd262386bf41a8c6": {
 		functionName: "listMyProjects_createServerFn_handler",
-		importer: () => import("./functions-CvpPySZx.mjs")
+		importer: () => import("./functions-BPI9sOib.mjs")
 	},
 	"cc24b3ef6f655cd2d8e73484e2114d32893bcb80513e2a641bdd1370bcc52add": {
 		functionName: "ensureMyProject_createServerFn_handler",
-		importer: () => import("./functions-CvpPySZx.mjs")
+		importer: () => import("./functions-BPI9sOib.mjs")
 	},
 	"d01ddab0da9a272de96626a2ec7267b67c945268c78982aa9ef5ced7ae2e980c": {
 		functionName: "getMyUsage_createServerFn_handler",
-		importer: () => import("./functions-CvpPySZx.mjs")
+		importer: () => import("./functions-BPI9sOib.mjs")
 	},
 	"d158e866f81c14739b8c6de77b164d8f134d4be30003158296e287c2f4f9a47d": {
 		functionName: "resolveMyApproval_createServerFn_handler",
-		importer: () => import("./functions-D7NxpdvZ.mjs")
+		importer: () => import("./functions-BJCS7oz4.mjs")
 	},
 	"dc2ae5cfcde9c830f51d5b94d8ba662e3705d992e636c01d2fcca4d8d154d5ee": {
 		functionName: "createMyProject_createServerFn_handler",
-		importer: () => import("./functions-D7NxpdvZ.mjs")
+		importer: () => import("./functions-BJCS7oz4.mjs")
 	},
 	"feebad9aaa7c48f684d86f4f982b41ca6936b7054e267358388280126bfa4de2": {
 		functionName: "recordMyPromptUsage_createServerFn_handler",
-		importer: () => import("./functions-CvpPySZx.mjs")
+		importer: () => import("./functions-BPI9sOib.mjs")
 	}
 };
 async function getServerFnById(id, access) {
@@ -1508,7 +1508,7 @@ var getBaseManifest = getProdBaseManifest;
 var createEarlyHintsForRequest = createEarlyHintsCollector;
 async function loadEntries() {
 	const [routerEntry, startEntry, pluginAdapters] = await Promise.all([
-		import("./router-BOAyw-gp.mjs"),
+		import("./router-d-zWEnbY.mjs"),
 		import("./start-5Z2QO8AU.mjs"),
 		import("./empty-plugin-adapters-D9UWiqvJ.mjs")
 	]);

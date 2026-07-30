@@ -68,13 +68,16 @@ export async function runStudioPipeline(
   }
 
   if (store.planTier === "FREE" && store.promptsUsed >= store.promptLimit) {
-    toast.error("Free tier: 100 prompts/month used. Upgrade to Pro.");
+    toast.error("Free monthly limit reached", {
+      description: `${store.promptsUsed}/${store.promptLimit} prompts this month. Server also enforces a daily cap.`,
+    });
     store.setPipelineError({
       code: "RATE_LIMIT",
       agent: "ORCHESTRATOR",
-      userMessage: "Monthly prompt quota reached on Free tier.",
+      userMessage: "Free monthly prompt limit reached.",
       detail: `${store.promptsUsed}/${store.promptLimit} prompts used`,
-      exampleFix: "Upgrade to Pro for unlimited fair-use prompts.",
+      exampleFix:
+        "Wait for the next month, or enable Stripe billing when keys are configured.",
       retryable: false,
       recoverable: true,
     });

@@ -418,8 +418,8 @@ export const useStudioStore = create<StudioState>()(
     (set, get) => ({
             theme: "dark",
       planTier: "PRO",
-      promptsUsed: 12,
-      promptLimit: 9999,
+      promptsUsed: 0,
+      promptLimit: 100,
       device: "iphone-se",
       activeFile: "src/App.tsx",
       files: initialFiles,
@@ -520,7 +520,7 @@ export const useStudioStore = create<StudioState>()(
       setCommandOpen: (open) => set({ commandOpen: open }),
       setMobilePanel: (panel) => set({ mobilePanel: panel }),
       setPlanTier: (tier) =>
-        set({ planTier: tier, promptLimit: tier === "FREE" ? 100 : 9999 }),
+        set({ planTier: tier, promptLimit: tier === "FREE" ? 100 : tier === "PRO" ? 10_000 : 1_000_000 }),
       setAgents: (agents) => set({ agents }),
       updateAgent: (id, patch) =>
         set({

@@ -10,12 +10,12 @@ import {
   requireUserIdFromRequest,
 } from "@/lib/auth/request-user.server";
 import { UnauthorizedError } from "@/lib/auth/verify.server";
+import { authEnabledResolved } from "@/lib/auth/mode";
 import {
+  assertPromptQuota,
   ensureDefaultProject,
   recordUsageEvent,
 } from "@/lib/projects/server";
-
-const authEnabled = process.env.VITE_AUTH_ENABLED !== "false";
 
 export const Route = createFileRoute("/api/agents/run")({
   server: {
@@ -23,11 +23,20 @@ export const Route = createFileRoute("/api/agents/run")({
       GET: async ({ request }) => {
         const key = Boolean(getMistralApiKey());
         const demo = isDemoPipelineEnv();
+        const authOn = authEnabledResolved("server");
         let userId: string | null = null;
         try {
           userId = await getUserIdFromRequest(request);
         } catch {
           userId = null;
+        }
+        let quota: Awaited<ReturnType<typeof assertPromptQuota>> | null = null;
+        if (userId) {
+          try {
+            quota = await assertPromptQuota(userId);
+          } catch {
+            quota = null;
+          }
         }
         return Response.json({
           ok: true,
@@ -35,9 +44,19 @@ export const Route = createFileRoute("/api/agents/run")({
           mistralKeyPresent: key,
           demoPipeline: demo,
           buildMarker: "mistral-agent-g2-1",
-          authRequired: authEnabled,
+          authRequired: authOn,
           authenticated: Boolean(userId),
           userId: userId ? `${userId.slice(0, 8)}…` : null,
+          quota: quota
+            ? {
+                planTier: quota.planTier,
+                promptsUsed: quota.promptsUsed,
+                promptLimit: quota.promptLimit,
+                dailyUsed: quota.dailyUsed,
+                dailyLimit: quota.dailyLimit,
+                withinQuota: quota.ok,
+              }
+            : null,
         });
       },
       POST: async ({ request }) => {
@@ -80,6 +99,36 @@ export const Route = createFileRoute("/api/agents/run")({
               hint: "Set MISTRAL_API_KEY or DEMO_PIPELINE=true for offline mock",
             },
             { status: 503 },
+          );
+        }
+
+        // Hard quota BEFORE any model call (daily + monthly)
+        let quota: Awaited<ReturnType<typeof assertPromptQuota>>;
+        try {
+          quota = await assertPromptQuota(userId);
+        } catch (e) {
+          console.error("[agents/run] quota check failed", e);
+          // Fail closed on DB errors for free-tier cost control
+          return Response.json(
+            {
+              error: "QUOTA_UNAVAILABLE",
+              message: "Could not verify prompt quota. Try again shortly.",
+            },
+            { status: 503 },
+          );
+        }
+        if (!quota.ok) {
+          return Response.json(
+            {
+              error: quota.code,
+              message: quota.message,
+              planTier: quota.planTier,
+              promptsUsed: quota.promptsUsed,
+              promptLimit: quota.promptLimit,
+              dailyUsed: quota.dailyUsed,
+              dailyLimit: quota.dailyLimit,
+            },
+            { status: 429 },
           );
         }
 
@@ -135,7 +184,9 @@ export const Route = createFileRoute("/api/agents/run")({
             };
 
             try {
-              send(`: cai-agents-run user=${userId.slice(0, 8)}\n\n`);
+              send(
+                `: cai-agents-run user=${userId.slice(0, 8)} quota=${quota.promptsUsed}/${quota.promptLimit} daily=${quota.dailyUsed}/${quota.dailyLimit ?? "∞"}\n\n`,
+              );
 
               let provider: string | undefined = "mistral";
               let model: string | undefined;
@@ -201,6 +252,8 @@ export const Route = createFileRoute("/api/agents/run")({
             "Cache-Control": "no-cache, no-transform",
             Connection: "keep-alive",
             "X-Accel-Buffering": "no",
+            "X-CAI-Quota-Used": String(quota.promptsUsed),
+            "X-CAI-Quota-Limit": String(quota.promptLimit),
           },
         });
       },

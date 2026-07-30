@@ -3,6 +3,11 @@
  */
 
 import { getSql } from "@/lib/db";
+import {
+  FREE_PROMPT_LIMIT,
+  promptLimitForPlan,
+  type PlanTier,
+} from "@/lib/stripe/config";
 
 export type ProjectRow = {
   id: string;
@@ -16,12 +21,23 @@ export type ProjectRow = {
   updated_at: string;
 };
 
+/** Free-tier hard daily cap (server-enforced before any model call). */
+export const FREE_DAILY_PROMPT_LIMIT = Number(
+  process.env.FREE_DAILY_PROMPT_LIMIT ?? "20",
+);
+
 function newId(prefix: string) {
   return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
 }
 
 function yearMonth(d = new Date()) {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
+function utcDayStartIso(d = new Date()) {
+  return new Date(
+    Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()),
+  ).toISOString();
 }
 
 /** Ensure a user row exists for FK (dev-user when auth off; no-op if present). */
@@ -173,5 +189,97 @@ export async function getMonthlyUsage(userId: string): Promise<{
     yearMonth: ym,
     promptsUsed: Number(rows[0]?.prompts_used ?? 0),
     tokensUsed: Number(rows[0]?.tokens_used ?? 0),
+  };
+}
+
+export async function getDailyPromptCount(userId: string): Promise<number> {
+  const sql = await getSql();
+  const since = utcDayStartIso();
+  const rows = await sql<{ c: number }>`
+    select count(*)::int as c
+    from usage_events
+    where user_id = ${userId}
+      and kind = 'prompt'
+      and created_at >= ${since}::timestamptz
+  `;
+  return Number(rows[0]?.c ?? 0);
+}
+
+export async function resolvePlanTier(userId: string): Promise<PlanTier> {
+  const sql = await getSql();
+  const sub = await sql<{ plan_tier: string; status: string }>`
+    select plan_tier, status from subscriptions where user_id = ${userId} limit 1
+  `;
+  const status = sub[0]?.status ?? "inactive";
+  const tier = (sub[0]?.plan_tier as PlanTier) || "FREE";
+  if (status === "active" || status === "trialing") return tier;
+  return "FREE";
+}
+
+export type QuotaCheck =
+  | {
+      ok: true;
+      planTier: PlanTier;
+      promptsUsed: number;
+      promptLimit: number;
+      dailyUsed: number;
+      dailyLimit: number | null;
+    }
+  | {
+      ok: false;
+      code: "DAILY_LIMIT" | "MONTHLY_LIMIT";
+      planTier: PlanTier;
+      promptsUsed: number;
+      promptLimit: number;
+      dailyUsed: number;
+      dailyLimit: number | null;
+      message: string;
+    };
+
+/**
+ * Hard server-side quota gate — call BEFORE any Mistral / model work.
+ * FREE: daily + monthly caps. Paid: monthly only.
+ */
+export async function assertPromptQuota(userId: string): Promise<QuotaCheck> {
+  const planTier = await resolvePlanTier(userId);
+  const monthly = await getMonthlyUsage(userId);
+  const promptLimit = promptLimitForPlan(planTier);
+  const dailyUsed = await getDailyPromptCount(userId);
+  const dailyLimit =
+    planTier === "FREE" ? FREE_DAILY_PROMPT_LIMIT : null;
+
+  if (dailyLimit !== null && dailyUsed >= dailyLimit) {
+    return {
+      ok: false,
+      code: "DAILY_LIMIT",
+      planTier,
+      promptsUsed: monthly.promptsUsed,
+      promptLimit,
+      dailyUsed,
+      dailyLimit,
+      message: `Daily free limit reached (${dailyUsed}/${dailyLimit}). Try again tomorrow.`,
+    };
+  }
+
+  if (monthly.promptsUsed >= promptLimit) {
+    return {
+      ok: false,
+      code: "MONTHLY_LIMIT",
+      planTier,
+      promptsUsed: monthly.promptsUsed,
+      promptLimit,
+      dailyUsed,
+      dailyLimit,
+      message: `Monthly prompt limit reached (${monthly.promptsUsed}/${promptLimit}).`,
+    };
+  }
+
+  return {
+    ok: true,
+    planTier,
+    promptsUsed: monthly.promptsUsed,
+    promptLimit: promptLimit || FREE_PROMPT_LIMIT,
+    dailyUsed,
+    dailyLimit,
   };
 }

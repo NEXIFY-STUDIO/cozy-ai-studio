@@ -33,19 +33,65 @@ export const authEnabled = authEnabledResolved("client");
 export function useCurrentUserState(): CurrentUserState {
   const provider = resolveAuthProvider("client");
 
+  // Always call hooks (stable order) — auth-off short-circuits after.
+  const better = authClient.useSession();
+  const [sbUser, setSbUser] = useState<AppUser | null>(null);
+  const [sbPending, setSbPending] = useState(provider === "supabase");
+
+  useEffect(() => {
+    if (provider !== "supabase") {
+      setSbPending(false);
+      setSbUser(null);
+      return;
+    }
+    const sb = getSupabaseBrowser();
+    if (!sb) {
+      setSbPending(false);
+      setSbUser(null);
+      return;
+    }
+    let cancelled = false;
+    setSbPending(true);
+    void sb.auth.getSession().then(({ data }) => {
+      if (cancelled) return;
+      const u = data.session?.user;
+      setSbUser(
+        u
+          ? {
+              ...mapSupabaseUser(u),
+              isDevFallback: false,
+            }
+          : null,
+      );
+      setSbPending(false);
+    });
+    const { data: sub } = sb.auth.onAuthStateChange((_e, session) => {
+      const u = session?.user;
+      setSbUser(
+        u
+          ? {
+              ...mapSupabaseUser(u as Parameters<typeof mapSupabaseUser>[0]),
+              isDevFallback: false,
+            }
+          : null,
+      );
+      setSbPending(false);
+    });
+    return () => {
+      cancelled = true;
+      sub.subscription.unsubscribe();
+    };
+  }, [provider]);
+
   if (provider === "none") {
     return { user: DEV_USER, isPending: false };
   }
 
   if (provider === "supabase") {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    return useSupabaseUserState();
+    return { user: sbUser, isPending: sbPending };
   }
 
-  // better-auth
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  const { data, isPending } = authClient.useSession();
-  const user = data?.user;
+  const user = better.data?.user;
   return {
     user: user
       ? {
@@ -56,49 +102,12 @@ export function useCurrentUserState(): CurrentUserState {
           isDevFallback: false,
         }
       : null,
-    isPending,
+    isPending: better.isPending,
   };
-}
-
-function useSupabaseUserState(): CurrentUserState {
-  const [user, setUser] = useState<AppUser | null>(null);
-  const [isPending, setPending] = useState(true);
-
-  useEffect(() => {
-    const sb = getSupabaseBrowser();
-    if (!sb) {
-      setUser(null);
-      setPending(false);
-      return;
-    }
-    let alive = true;
-    sb.auth.getSession().then(({ data }) => {
-      if (!alive) return;
-      const u = data.session?.user;
-      setUser(
-        u
-          ? { ...mapSupabaseUser(u), isDevFallback: false }
-          : null,
-      );
-      setPending(false);
-    });
-    const { data: sub } = sb.auth.onAuthStateChange((_event, session) => {
-      const u = session?.user;
-      setUser(u ? { ...mapSupabaseUser(u), isDevFallback: false } : null);
-      setPending(false);
-    });
-    return () => {
-      alive = false;
-      sub.subscription.unsubscribe();
-    };
-  }, []);
-
-  return { user, isPending };
 }
 
 export function useCurrentUser(): AppUser | null {
   return useCurrentUserState().user;
 }
 
-// re-export for typing
 export type { SupabaseAppUser };

@@ -117,14 +117,44 @@ export async function runRemoteMultiAgentPipeline(
 
   if (!res.ok) {
     const text = await res.text().catch(() => "");
+    let userMessage = "Failed to start agent pipeline.";
+    let detail = text.slice(0, 400);
+    let retryable = true;
+    if (res.status === 429) {
+      retryable = false;
+      userMessage = "Prompt quota reached.";
+      try {
+        const j = JSON.parse(text) as {
+          message?: string;
+          promptsUsed?: number;
+          promptLimit?: number;
+          dailyUsed?: number;
+          dailyLimit?: number | null;
+        };
+        if (j.message) userMessage = j.message;
+        if (j.dailyLimit != null) {
+          detail = `Daily ${j.dailyUsed ?? "?"}/${j.dailyLimit} · Monthly ${j.promptsUsed ?? "?"}/${j.promptLimit ?? "?"}`;
+        } else if (j.promptLimit != null) {
+          detail = `${j.promptsUsed ?? "?"}/${j.promptLimit} prompts this month`;
+        } else if (j.message) {
+          detail = j.message;
+        }
+      } catch {
+        /* keep raw text */
+      }
+    }
     throw new PipelineError({
       code: res.status === 429 ? "RATE_LIMIT" : "NETWORK",
       agent: "ORCHESTRATOR",
       message: `HTTP ${res.status}`,
-      userMessage: "Failed to start agent pipeline.",
-      detail: text.slice(0, 400),
-      retryable: true,
+      userMessage,
+      detail,
+      retryable,
       recoverable: true,
+      exampleFix:
+        res.status === 429
+          ? "Wait until tomorrow (daily free cap) or next month (monthly free cap)."
+          : undefined,
     });
   }
 

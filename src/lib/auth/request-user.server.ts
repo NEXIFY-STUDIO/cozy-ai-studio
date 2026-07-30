@@ -10,15 +10,12 @@ import {
   isSupabaseServerConfigured,
 } from "./supabase.server";
 
-const databaseConfigured = Boolean(process.env.DATABASE_URL?.trim());
-
 export async function getUserIdFromRequest(
   request: Request,
 ): Promise<string | null> {
   const provider = resolveAuthProvider("server");
 
   if (provider === "none") {
-    if (databaseConfigured) return null;
     return DEV_USER_ID;
   }
 
@@ -39,7 +36,6 @@ export async function requireUserIdFromRequest(
 ): Promise<string> {
   const provider = resolveAuthProvider("server");
   if (provider === "none") {
-    if (databaseConfigured) throw new UnauthorizedError();
     return DEV_USER_ID;
   }
   const id = await getUserIdFromRequest(request);

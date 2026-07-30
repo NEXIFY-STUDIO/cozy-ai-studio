@@ -72,11 +72,6 @@ export async function getSessionUser(
 export async function requireUserId(bearerToken?: string): Promise<string> {
   const provider = resolveAuthProvider("server");
   if (provider === "none") {
-    if (databaseConfigured) {
-      throw new Error(
-        "Auth is disabled but DATABASE_URL is set — refusing shared dev user.",
-      );
-    }
     return DEV_USER_ID;
   }
   const user = await getSessionUser(bearerToken);
