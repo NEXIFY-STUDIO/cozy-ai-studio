@@ -16,11 +16,13 @@ import { Route as PlaygroundRouteImport } from './routes/playground'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as ShowcaseRouteImport } from './routes/showcase'
 import { Route as StudioRouteImport } from './routes/studio'
+import { Route as AIdRouteImport } from './routes/a.$id'
 import { Route as ApiAiStatusRouteImport } from './routes/api/ai-status'
 import { Route as ApiEnvStatusRouteImport } from './routes/api/env-status'
 import { Route as ApiMvpStatusRouteImport } from './routes/api/mvp-status'
 import { Route as ApiRtcRouteImport } from './routes/api/rtc'
 import { Route as ApiRuntimeStatusRouteImport } from './routes/api/runtime-status'
+import { Route as ApiShareRouteImport } from './routes/api/share'
 import { Route as AuthCallbackRouteImport } from './routes/auth/callback'
 import { Route as ApiAgentsRunRouteImport } from './routes/api/agents/run'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
@@ -63,6 +65,11 @@ const StudioRoute = StudioRouteImport.update({
   path: '/studio',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AIdRoute = AIdRouteImport.update({
+  id: '/a/$id',
+  path: '/a/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAiStatusRoute = ApiAiStatusRouteImport.update({
   id: '/api/ai-status',
   path: '/api/ai-status',
@@ -86,6 +93,11 @@ const ApiRtcRoute = ApiRtcRouteImport.update({
 const ApiRuntimeStatusRoute = ApiRuntimeStatusRouteImport.update({
   id: '/api/runtime-status',
   path: '/api/runtime-status',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiShareRoute = ApiShareRouteImport.update({
+  id: '/api/share',
+  path: '/api/share',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthCallbackRoute = AuthCallbackRouteImport.update({
@@ -127,11 +139,13 @@ export interface FileRoutesByFullPath {
   '/pricing': typeof PricingRoute
   '/showcase': typeof ShowcaseRoute
   '/studio': typeof StudioRoute
+  '/a/$id': typeof AIdRoute
   '/api/ai-status': typeof ApiAiStatusRoute
   '/api/env-status': typeof ApiEnvStatusRoute
   '/api/mvp-status': typeof ApiMvpStatusRoute
   '/api/rtc': typeof ApiRtcRoute
   '/api/runtime-status': typeof ApiRuntimeStatusRoute
+  '/api/share': typeof ApiShareRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/api/agents/run': typeof ApiAgentsRunRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -147,11 +161,13 @@ export interface FileRoutesByTo {
   '/pricing': typeof PricingRoute
   '/showcase': typeof ShowcaseRoute
   '/studio': typeof StudioRoute
+  '/a/$id': typeof AIdRoute
   '/api/ai-status': typeof ApiAiStatusRoute
   '/api/env-status': typeof ApiEnvStatusRoute
   '/api/mvp-status': typeof ApiMvpStatusRoute
   '/api/rtc': typeof ApiRtcRoute
   '/api/runtime-status': typeof ApiRuntimeStatusRoute
+  '/api/share': typeof ApiShareRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/api/agents/run': typeof ApiAgentsRunRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -168,11 +184,13 @@ export interface FileRoutesById {
   '/pricing': typeof PricingRoute
   '/showcase': typeof ShowcaseRoute
   '/studio': typeof StudioRoute
+  '/a/$id': typeof AIdRoute
   '/api/ai-status': typeof ApiAiStatusRoute
   '/api/env-status': typeof ApiEnvStatusRoute
   '/api/mvp-status': typeof ApiMvpStatusRoute
   '/api/rtc': typeof ApiRtcRoute
   '/api/runtime-status': typeof ApiRuntimeStatusRoute
+  '/api/share': typeof ApiShareRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/api/agents/run': typeof ApiAgentsRunRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -190,11 +208,13 @@ export interface FileRouteTypes {
     | '/pricing'
     | '/showcase'
     | '/studio'
+    | '/a/$id'
     | '/api/ai-status'
     | '/api/env-status'
     | '/api/mvp-status'
     | '/api/rtc'
     | '/api/runtime-status'
+    | '/api/share'
     | '/auth/callback'
     | '/api/agents/run'
     | '/api/auth/$'
@@ -210,11 +230,13 @@ export interface FileRouteTypes {
     | '/pricing'
     | '/showcase'
     | '/studio'
+    | '/a/$id'
     | '/api/ai-status'
     | '/api/env-status'
     | '/api/mvp-status'
     | '/api/rtc'
     | '/api/runtime-status'
+    | '/api/share'
     | '/auth/callback'
     | '/api/agents/run'
     | '/api/auth/$'
@@ -230,11 +252,13 @@ export interface FileRouteTypes {
     | '/pricing'
     | '/showcase'
     | '/studio'
+    | '/a/$id'
     | '/api/ai-status'
     | '/api/env-status'
     | '/api/mvp-status'
     | '/api/rtc'
     | '/api/runtime-status'
+    | '/api/share'
     | '/auth/callback'
     | '/api/agents/run'
     | '/api/auth/$'
@@ -251,11 +275,13 @@ export interface RootRouteChildren {
   PricingRoute: typeof PricingRoute
   ShowcaseRoute: typeof ShowcaseRoute
   StudioRoute: typeof StudioRoute
+  AIdRoute: typeof AIdRoute
   ApiAiStatusRoute: typeof ApiAiStatusRoute
   ApiEnvStatusRoute: typeof ApiEnvStatusRoute
   ApiMvpStatusRoute: typeof ApiMvpStatusRoute
   ApiRtcRoute: typeof ApiRtcRoute
   ApiRuntimeStatusRoute: typeof ApiRuntimeStatusRoute
+  ApiShareRoute: typeof ApiShareRoute
   AuthCallbackRoute: typeof AuthCallbackRoute
   ApiAgentsRunRoute: typeof ApiAgentsRunRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
@@ -315,6 +341,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StudioRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/a/$id': {
+      id: '/a/$id'
+      path: '/a/$id'
+      fullPath: '/a/$id'
+      preLoaderRoute: typeof AIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/ai-status': {
       id: '/api/ai-status'
       path: '/api/ai-status'
@@ -348,6 +381,13 @@ declare module '@tanstack/react-router' {
       path: '/api/runtime-status'
       fullPath: '/api/runtime-status'
       preLoaderRoute: typeof ApiRuntimeStatusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/share': {
+      id: '/api/share'
+      path: '/api/share'
+      fullPath: '/api/share'
+      preLoaderRoute: typeof ApiShareRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth/callback': {
@@ -403,11 +443,13 @@ const rootRouteChildren: RootRouteChildren = {
   PricingRoute: PricingRoute,
   ShowcaseRoute: ShowcaseRoute,
   StudioRoute: StudioRoute,
+  AIdRoute: AIdRoute,
   ApiAiStatusRoute: ApiAiStatusRoute,
   ApiEnvStatusRoute: ApiEnvStatusRoute,
   ApiMvpStatusRoute: ApiMvpStatusRoute,
   ApiRtcRoute: ApiRtcRoute,
   ApiRuntimeStatusRoute: ApiRuntimeStatusRoute,
+  ApiShareRoute: ApiShareRoute,
   AuthCallbackRoute: AuthCallbackRoute,
   ApiAgentsRunRoute: ApiAgentsRunRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,

@@ -80,6 +80,22 @@ if (mvp.status === 200 && mvp.body && typeof mvp.body === "object") {
 
 must(empty.status === 400 && empty.body?.error === "EMPTY_PROMPT", "empty prompt → 400 EMPTY_PROMPT");
 
+const shareHtml =
+  "<!doctype html><html><body><h1>Ship-gate share</h1></body></html>";
+const share = await jsonPost("/api/share", {
+  html: shareHtml,
+  title: "Ship-gate",
+  promptPreview: "ship-gate",
+});
+must(share.status === 200 && share.body?.ok && share.body?.id, "POST /api/share creates link");
+if (share.body?.id) {
+  const page = await fetch(`${BASE}/a/${share.body.id}`);
+  must(page.status === 200, `GET /a/:id status ${page.status}`);
+  const text = await page.text();
+  must(/Ship-gate|share|Cozy/i.test(text), "share page renders");
+}
+
+
 // Landing must not claim Figma / Kernel product
 const landHtml = await fetch(`${BASE}/`).then((r) => r.text());
 must(!/figma\s*→\s*production/i.test(landHtml), "landing no Figma→production claim");

@@ -1,0 +1,77 @@
+/**
+ * Server-only public preview shares (Option B spine).
+ */
+
+import { getSql } from "@/lib/db";
+import { ensureUserRow } from "@/lib/projects/server";
+
+export type SharedPreview = {
+  id: string;
+  user_id: string | null;
+  project_id: string | null;
+  title: string;
+  html: string;
+  prompt_preview: string | null;
+  created_at: string;
+  expires_at: string | null;
+};
+
+const MAX_HTML_BYTES = 1_500_000; // ~1.5 MB
+
+function newShareId() {
+  // short opaque id; public path is /a/{id}
+  return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+}
+
+export async function createSharedPreview(opts: {
+  userId: string;
+  html: string;
+  title?: string;
+  projectId?: string | null;
+  promptPreview?: string | null;
+}): Promise<{ id: string; path: string }> {
+  const html = opts.html?.trim() || "";
+  if (!html) {
+    throw new Error("EMPTY_HTML");
+  }
+  if (new TextEncoder().encode(html).length > MAX_HTML_BYTES) {
+    throw new Error("HTML_TOO_LARGE");
+  }
+
+  await ensureUserRow(opts.userId);
+  const id = newShareId();
+  const title = (opts.title?.trim() || "Cozy preview").slice(0, 120);
+  const promptPreview = (opts.promptPreview || "").slice(0, 280) || null;
+
+  const sql = await getSql();
+  await sql`
+    insert into shared_previews (
+      id, user_id, project_id, title, html, prompt_preview
+    ) values (
+      ${id},
+      ${opts.userId},
+      ${opts.projectId ?? null},
+      ${title},
+      ${html},
+      ${promptPreview}
+    )
+  `;
+
+  return { id, path: `/a/${id}` };
+}
+
+export async function getSharedPreview(
+  id: string,
+): Promise<SharedPreview | null> {
+  if (!id || !/^[a-z0-9]{8,40}$/i.test(id)) return null;
+  const sql = await getSql();
+  const rows = await sql<SharedPreview>`
+    select id, user_id, project_id, title, html, prompt_preview,
+           created_at::text, expires_at::text
+    from shared_previews
+    where id = ${id}
+      and (expires_at is null or expires_at > CURRENT_TIMESTAMP)
+    limit 1
+  `;
+  return rows[0] ?? null;
+}
