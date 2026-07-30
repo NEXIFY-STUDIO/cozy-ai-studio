@@ -18,6 +18,7 @@ import { Route as ShowcaseRouteImport } from './routes/showcase'
 import { Route as StudioRouteImport } from './routes/studio'
 import { Route as ApiAiStatusRouteImport } from './routes/api/ai-status'
 import { Route as ApiEnvStatusRouteImport } from './routes/api/env-status'
+import { Route as ApiMvpStatusRouteImport } from './routes/api/mvp-status'
 import { Route as ApiRtcRouteImport } from './routes/api/rtc'
 import { Route as ApiRuntimeStatusRouteImport } from './routes/api/runtime-status'
 import { Route as AuthCallbackRouteImport } from './routes/auth/callback'
@@ -72,6 +73,11 @@ const ApiEnvStatusRoute = ApiEnvStatusRouteImport.update({
   path: '/api/env-status',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiMvpStatusRoute = ApiMvpStatusRouteImport.update({
+  id: '/api/mvp-status',
+  path: '/api/mvp-status',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiRtcRoute = ApiRtcRouteImport.update({
   id: '/api/rtc',
   path: '/api/rtc',
@@ -123,6 +129,7 @@ export interface FileRoutesByFullPath {
   '/studio': typeof StudioRoute
   '/api/ai-status': typeof ApiAiStatusRoute
   '/api/env-status': typeof ApiEnvStatusRoute
+  '/api/mvp-status': typeof ApiMvpStatusRoute
   '/api/rtc': typeof ApiRtcRoute
   '/api/runtime-status': typeof ApiRuntimeStatusRoute
   '/auth/callback': typeof AuthCallbackRoute
@@ -142,6 +149,7 @@ export interface FileRoutesByTo {
   '/studio': typeof StudioRoute
   '/api/ai-status': typeof ApiAiStatusRoute
   '/api/env-status': typeof ApiEnvStatusRoute
+  '/api/mvp-status': typeof ApiMvpStatusRoute
   '/api/rtc': typeof ApiRtcRoute
   '/api/runtime-status': typeof ApiRuntimeStatusRoute
   '/auth/callback': typeof AuthCallbackRoute
@@ -162,6 +170,7 @@ export interface FileRoutesById {
   '/studio': typeof StudioRoute
   '/api/ai-status': typeof ApiAiStatusRoute
   '/api/env-status': typeof ApiEnvStatusRoute
+  '/api/mvp-status': typeof ApiMvpStatusRoute
   '/api/rtc': typeof ApiRtcRoute
   '/api/runtime-status': typeof ApiRuntimeStatusRoute
   '/auth/callback': typeof AuthCallbackRoute
@@ -183,6 +192,7 @@ export interface FileRouteTypes {
     | '/studio'
     | '/api/ai-status'
     | '/api/env-status'
+    | '/api/mvp-status'
     | '/api/rtc'
     | '/api/runtime-status'
     | '/auth/callback'
@@ -202,6 +212,7 @@ export interface FileRouteTypes {
     | '/studio'
     | '/api/ai-status'
     | '/api/env-status'
+    | '/api/mvp-status'
     | '/api/rtc'
     | '/api/runtime-status'
     | '/auth/callback'
@@ -221,6 +232,7 @@ export interface FileRouteTypes {
     | '/studio'
     | '/api/ai-status'
     | '/api/env-status'
+    | '/api/mvp-status'
     | '/api/rtc'
     | '/api/runtime-status'
     | '/auth/callback'
@@ -241,6 +253,7 @@ export interface RootRouteChildren {
   StudioRoute: typeof StudioRoute
   ApiAiStatusRoute: typeof ApiAiStatusRoute
   ApiEnvStatusRoute: typeof ApiEnvStatusRoute
+  ApiMvpStatusRoute: typeof ApiMvpStatusRoute
   ApiRtcRoute: typeof ApiRtcRoute
   ApiRuntimeStatusRoute: typeof ApiRuntimeStatusRoute
   AuthCallbackRoute: typeof AuthCallbackRoute
@@ -316,6 +329,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiEnvStatusRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/mvp-status': {
+      id: '/api/mvp-status'
+      path: '/api/mvp-status'
+      fullPath: '/api/mvp-status'
+      preLoaderRoute: typeof ApiMvpStatusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/rtc': {
       id: '/api/rtc'
       path: '/api/rtc'
@@ -385,6 +405,7 @@ const rootRouteChildren: RootRouteChildren = {
   StudioRoute: StudioRoute,
   ApiAiStatusRoute: ApiAiStatusRoute,
   ApiEnvStatusRoute: ApiEnvStatusRoute,
+  ApiMvpStatusRoute: ApiMvpStatusRoute,
   ApiRtcRoute: ApiRtcRoute,
   ApiRuntimeStatusRoute: ApiRuntimeStatusRoute,
   AuthCallbackRoute: AuthCallbackRoute,

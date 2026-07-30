@@ -459,6 +459,36 @@ var Circle = createLucideIcon("circle", [["circle", {
 * This source code is licensed under the ISC license.
 * See the LICENSE file in the root directory of this source tree.
 */
+var CloudOff = createLucideIcon("cloud-off", [
+	["path", {
+		d: "m2 2 20 20",
+		key: "1ooewy"
+	}],
+	["path", {
+		d: "M5.782 5.782A7 7 0 0 0 9 19h8.5a4.5 4.5 0 0 0 1.307-.193",
+		key: "yfwify"
+	}],
+	["path", {
+		d: "M21.532 16.5A4.5 4.5 0 0 0 17.5 10h-1.79A7.008 7.008 0 0 0 10 5.07",
+		key: "jlfiyv"
+	}]
+]);
+/**
+* @license lucide-react v0.510.0 - ISC
+*
+* This source code is licensed under the ISC license.
+* See the LICENSE file in the root directory of this source tree.
+*/
+var Cloud = createLucideIcon("cloud", [["path", {
+	d: "M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z",
+	key: "p7xjir"
+}]]);
+/**
+* @license lucide-react v0.510.0 - ISC
+*
+* This source code is licensed under the ISC license.
+* See the LICENSE file in the root directory of this source tree.
+*/
 var CodeXml = createLucideIcon("code-xml", [
 	["path", {
 		d: "m18 16 4-4-4-4",
@@ -1657,4 +1687,4 @@ var Zap = createLucideIcon("zap", [["path", {
 	key: "1xq2db"
 }]]);
 //#endregion
-export { CircleX as $, MessageSquare as A, FolderTree as B, Power as C, Package as D, Paintbrush as E, LayoutDashboard as F, ExternalLink as G, FileJson as H, Layers as I, Cpu as J, Download as K, Globe as L, Maximize2 as M, LoaderCircle as N, MousePointer2 as O, LayoutGrid as P, Circle as Q, GitFork as R, QrCode as S, Play as T, FileCode2 as U, FlaskConical as V, Eye as W, Command as X, Copy as Y, CodeXml as Z, Send as _, WandSparkles as a, Cable as at, Rocket as b, TriangleAlert as c, Braces as ct, Sun as d, BookOpen as dt, CircleMinus as et, Square as f, Bell as ft, ShieldCheck as g, Shield as h, WifiOff as i, Check as it, MessageSquareOff as j, Monitor as k, Timer as l, Boxes as lt, Smartphone as m, ArrowLeft as mt, X as n, CircleAlert as nt, Users as o, Bug as ot, Sparkles as p, ArrowRight as pt, CreditCard as q, Wifi as r, ChevronDown as rt, Upload as s, Brain as st, Zap as t, CircleCheck as tt, Tablet as u, Box as ut, RotateCw as v, Plug as w, RefreshCw as x, RotateCcw as y, GitBranch as z };
+export { CloudOff as $, MessageSquare as A, FolderTree as B, Power as C, Package as D, Paintbrush as E, LayoutDashboard as F, ExternalLink as G, FileJson as H, Layers as I, Cpu as J, Download as K, Globe as L, Maximize2 as M, LoaderCircle as N, MousePointer2 as O, LayoutGrid as P, Cloud as Q, GitFork as R, QrCode as S, Play as T, FileCode2 as U, FlaskConical as V, Eye as W, Command as X, Copy as Y, CodeXml as Z, Send as _, WandSparkles as a, ChevronDown as at, Rocket as b, TriangleAlert as c, Bug as ct, Sun as d, Boxes as dt, Circle as et, Square as f, Box as ft, ShieldCheck as g, ArrowLeft as gt, Shield as h, ArrowRight as ht, WifiOff as i, CircleAlert as it, MessageSquareOff as j, Monitor as k, Timer as l, Brain as lt, Smartphone as m, Bell as mt, X as n, CircleMinus as nt, Users as o, Check as ot, Sparkles as p, BookOpen as pt, CreditCard as q, Wifi as r, CircleCheck as rt, Upload as s, Cable as st, Zap as t, CircleX as tt, Tablet as u, Braces as ut, RotateCw as v, Plug as w, RefreshCw as x, RotateCcw as y, GitBranch as z };

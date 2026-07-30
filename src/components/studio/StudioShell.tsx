@@ -16,7 +16,6 @@ import { CommandPalette } from "./CommandPalette";
 import { ProductionLaunchHost } from "./ProductionLaunch";
 import { cn } from "@/lib/utils";
 import { useBillingSync } from "@/hooks/useBillingSync";
-import { useProjectSync } from "@/hooks/useProjectSync";
 
 function useIsDesktop() {
   const [isDesktop, setIsDesktop] = useState(false);
@@ -32,7 +31,7 @@ function useIsDesktop() {
 
 export function StudioShell() {
   useBillingSync();
-  useProjectSync();
+  // hydrate/sync: TopBar mounts useProjectSync (Cloud badge)
 
   const theme = useStudioStore((s) => s.theme);
   const mobilePanel = useStudioStore((s) => s.mobilePanel);
