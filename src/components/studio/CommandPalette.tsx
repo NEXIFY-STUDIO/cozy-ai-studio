@@ -30,8 +30,6 @@ export function CommandPalette() {
   const files = useStudioStore((s) => s.files);
   const setActiveFile = useStudioStore((s) => s.setActiveFile);
   const refreshPreview = useStudioStore((s) => s.refreshPreview);
-  const setPublishUrl = useStudioStore((s) => s.setPublishUrl);
-  const setPlanTier = useStudioStore((s) => s.setPlanTier);
   const setProductionLaunchOpen = useStudioStore((s) => s.setProductionLaunchOpen);
   const navigate = useNavigate();
 
@@ -91,9 +89,15 @@ export function CommandPalette() {
             />
             <Item
               icon={Rocket}
-              label="Go to Production"
+              label="Deploy / limits"
               onSelect={() => {
                 setCommandOpen(false);
+                const stripe = useStudioStore.getState().stripeConfigured;
+                if (!stripe) {
+                  void navigate({ to: "/pricing", search: {} });
+                  toast.message("Deploy needs Stripe — showing limits");
+                  return;
+                }
                 setProductionLaunchOpen(true);
               }}
             />
@@ -124,13 +128,13 @@ export function CommandPalette() {
             />
             <Item
               icon={Upload}
-              label="Publish to cozy-ai.studio"
+              label="Publish (preview only)"
               onSelect={() => {
-                const slug = `app-${Math.random().toString(36).slice(2, 7)}`;
-                const url = `${slug}.cozy-ai.studio`;
-                setPublishUrl(url);
                 setCommandOpen(false);
-                toast.success(`Published: ${url}`);
+                toast.message("Publish is not live yet", {
+                  description:
+                    "Share via showcase/export when available — no fake *.cozy-ai.studio deploy.",
+                });
               }}
             />
             <Item
@@ -143,7 +147,7 @@ export function CommandPalette() {
             />
             <Item
               icon={CreditCard}
-              label="Upgrade to Pro"
+              label="View limits / billing"
               onSelect={() => {
                 setCommandOpen(false);
                 void navigate({ to: "/pricing", search: {} });

@@ -5,56 +5,123 @@ import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { getMyBilling } from "@/lib/billing/functions";
 
 /**
- * Hydrate planTier + promptsUsed from server (subscriptions + usage_monthly).
- * Client zustand is a cache — server is source of truth when signed in.
+ * Hydrate plan + usage from server into the store (single mount in StudioShell).
  */
 export function useBillingSync() {
-  const { user, isPending } = useCurrentUserState();
+  const setQuota = useStudioStore((s) => s.setQuota);
   const setPlanTier = useStudioStore((s) => s.setPlanTier);
+  const { user, isPending } = useCurrentUserState();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [stripeConfigured, setStripeConfigured] = useState(false);
 
   useEffect(() => {
-    if (!authEnabled) return;
-    if (isPending) return;
-    if (!user) return;
-
     let cancelled = false;
-    setLoading(true);
-    void getMyBilling()
-      .then((snap) => {
-        if (cancelled) return;
-        setPlanTier(snap.planTier as PlanTier);
-        useStudioStore.setState({
-          promptsUsed: snap.promptsUsed,
-          promptLimit: snap.promptLimit,
-        });
-        setStripeConfigured(snap.stripeConfigured);
-        setError(null);
-      })
-      .catch((e) => {
-        if (cancelled) return;
-        setError(e instanceof Error ? e.message : String(e));
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
+
+    const loadAgentsQuota = async () => {
+      const res = await fetch("/api/agents/run", { method: "GET" });
+      if (!res.ok) return;
+      const j = (await res.json()) as {
+        quota?: {
+          planTier?: string;
+          promptsUsed?: number;
+          promptLimit?: number;
+          dailyUsed?: number;
+          dailyLimit?: number | null;
+        };
+      };
+      if (!j.quota || cancelled) return;
+      setQuota({
+        planTier: (j.quota.planTier as PlanTier) || "FREE",
+        promptsUsed: Number(j.quota.promptsUsed ?? 0),
+        promptLimit: Number(j.quota.promptLimit ?? 100),
+        dailyUsed: Number(j.quota.dailyUsed ?? 0),
+        dailyLimit:
+          j.quota.dailyLimit === undefined || j.quota.dailyLimit === null
+            ? null
+            : Number(j.quota.dailyLimit),
       });
+    };
+
+    setLoading(true);
+    void (async () => {
+      try {
+        if (authEnabled) {
+          if (isPending) return;
+          if (user) {
+            const snap = await getMyBilling();
+            if (cancelled) return;
+            setQuota({
+              planTier: snap.planTier as PlanTier,
+              promptsUsed: snap.promptsUsed,
+              promptLimit: snap.promptLimit,
+              stripeConfigured: snap.stripeConfigured,
+            });
+          }
+        } else {
+          if (!cancelled) {
+            setPlanTier("FREE");
+            setQuota({ stripeConfigured: false, planTier: "FREE" });
+          }
+        }
+        await loadAgentsQuota();
+        if (!cancelled) setError(null);
+      } catch (e) {
+        if (!cancelled) setError(e instanceof Error ? e.message : String(e));
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
 
     return () => {
       cancelled = true;
     };
-  }, [user, isPending, setPlanTier]);
+  }, [user, isPending, setPlanTier, setQuota]);
 
-  return { loading, error, stripeConfigured };
+  const stripeConfigured = useStudioStore((s) => s.stripeConfigured);
+  const dailyUsed = useStudioStore((s) => s.dailyUsed);
+  const dailyLimit = useStudioStore((s) => s.dailyLimit);
+
+  return { loading, error, stripeConfigured, dailyUsed, dailyLimit };
 }
 
 export async function refreshBillingFromServer() {
   const snap = await getMyBilling();
-  useStudioStore.setState({
+  useStudioStore.getState().setQuota({
     planTier: snap.planTier as PlanTier,
     promptsUsed: snap.promptsUsed,
     promptLimit: snap.promptLimit,
+    stripeConfigured: snap.stripeConfigured,
   });
   return snap;
+}
+
+export async function refreshAgentsQuota() {
+  try {
+    const res = await fetch("/api/agents/run", { method: "GET" });
+    if (!res.ok) return null;
+    const j = (await res.json()) as {
+      quota?: {
+        planTier?: string;
+        promptsUsed?: number;
+        promptLimit?: number;
+        dailyUsed?: number;
+        dailyLimit?: number | null;
+      };
+    };
+    if (j.quota) {
+      useStudioStore.getState().setQuota({
+        planTier: (j.quota.planTier as PlanTier) || "FREE",
+        promptsUsed: Number(j.quota.promptsUsed ?? 0),
+        promptLimit: Number(j.quota.promptLimit ?? 100),
+        dailyUsed: Number(j.quota.dailyUsed ?? 0),
+        dailyLimit:
+          j.quota.dailyLimit === undefined || j.quota.dailyLimit === null
+            ? null
+            : Number(j.quota.dailyLimit),
+      });
+    }
+    return j.quota ?? null;
+  } catch {
+    return null;
+  }
 }

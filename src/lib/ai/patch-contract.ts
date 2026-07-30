@@ -153,15 +153,26 @@ export function validateFilePatches(
       });
       continue;
     }
-    // crude binary detect
-    if (/[\x00-\x08\x0e-\x1f]/.test(content.slice(0, 2000))) {
-      issues.push({
-        path,
-        code: "BINARY_LIKE",
-        message: "Binary-like content blocked",
-        severity: "error",
-      });
-      continue;
+    // crude binary detect (char codes — avoid control-char regex lint)
+    {
+      const head = content.slice(0, 2000);
+      let binaryLike = false;
+      for (let i = 0; i < head.length; i++) {
+        const c = head.charCodeAt(i);
+        if (c <= 0x08 || (c >= 0x0e && c <= 0x1f)) {
+          binaryLike = true;
+          break;
+        }
+      }
+      if (binaryLike) {
+        issues.push({
+          path,
+          code: "BINARY_LIKE",
+          message: "Binary-like content blocked",
+          severity: "error",
+        });
+        continue;
+      }
     }
     totalBytes += bytes;
     if (totalBytes > MAX_TOTAL_BYTES) {

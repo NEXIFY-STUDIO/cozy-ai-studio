@@ -80,6 +80,33 @@ export const Route = createFileRoute("/api/agents/run")({
           throw e;
         }
 
+        let body: {
+          prompt?: string;
+          originalCode?: string;
+          activeFile?: string;
+          projectId?: string;
+          files?: Record<
+            string,
+            { path: string; language: string; content: string }
+          >;
+        };
+        try {
+          body = (await request.json()) as typeof body;
+        } catch {
+          return Response.json(
+            { error: "INVALID_JSON", message: "Request body must be JSON" },
+            { status: 400 },
+          );
+        }
+
+        const prompt = body.prompt?.trim() ?? "";
+        if (!prompt) {
+          return Response.json(
+            { error: "EMPTY_PROMPT", message: "prompt is required" },
+            { status: 400 },
+          );
+        }
+
         if (isDemoPipelineEnv()) {
           return Response.json(
             {
@@ -129,33 +156,6 @@ export const Route = createFileRoute("/api/agents/run")({
               dailyLimit: quota.dailyLimit,
             },
             { status: 429 },
-          );
-        }
-
-        let body: {
-          prompt?: string;
-          originalCode?: string;
-          activeFile?: string;
-          projectId?: string;
-          files?: Record<
-            string,
-            { path: string; language: string; content: string }
-          >;
-        };
-        try {
-          body = (await request.json()) as typeof body;
-        } catch {
-          return Response.json(
-            { error: "INVALID_JSON", message: "Request body must be JSON" },
-            { status: 400 },
-          );
-        }
-
-        const prompt = body.prompt?.trim() ?? "";
-        if (!prompt) {
-          return Response.json(
-            { error: "EMPTY_PROMPT", message: "prompt is required" },
-            { status: 400 },
           );
         }
 

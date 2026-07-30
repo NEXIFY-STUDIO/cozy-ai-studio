@@ -15,6 +15,7 @@ import {
   ensureMyProject,
 } from "@/lib/projects/functions";
 import { persistPendingApproval } from "@/hooks/useProjectSync";
+import { refreshAgentsQuota } from "@/hooks/useBillingSync";
 import {
   computeBackoffMs,
   getRetryPolicy,
@@ -327,7 +328,19 @@ export async function runStudioPipeline(
               : useDemo
                 ? "Demo pipeline complete — review the diff"
                 : "Pipeline complete — review the diff",
-          { description: timing },
+          {
+            description: `${timing} · Share from Live Preview`,
+            action: {
+              label: "Share",
+              onClick: () => {
+                const html = useStudioStore.getState().previewHtml;
+                void navigator.clipboard?.writeText(html).then(
+                  () => toast.message("Preview HTML copied"),
+                  () => toast.message("Open Live Preview → Share"),
+                );
+              },
+            },
+          },
         );
         try {
           const project = await ensureMyProject();
@@ -348,6 +361,7 @@ export async function runStudioPipeline(
         } catch {
           /* ignore */
         }
+        void refreshAgentsQuota();
 
         store.setPipelineRunning(false);
         store.setPipelinePhase("completed");

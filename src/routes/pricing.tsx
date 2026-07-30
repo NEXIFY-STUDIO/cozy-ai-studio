@@ -24,7 +24,7 @@ type PricingSearch = {
 export const Route = createFileRoute("/pricing")({
   component: PricingPage,
   head: () => ({
-    meta: [{ title: "Pricing — CAI · Cozy AI Studio" }],
+    meta: [{ title: "Limity — Cozy AI Studio" }],
   }),
   validateSearch: (s: Record<string, unknown>): PricingSearch => {
     const checkout =
@@ -43,45 +43,47 @@ const tiers: {
   blurb: string;
   features: string[];
   highlight?: boolean;
+  live: boolean;
 }[] = [
   {
     id: "FREE",
     name: "Free",
     price: "$0",
-    blurb: "Explore the studio",
+    blurb: "Open studio with real caps",
     features: [
-      "100 AI prompts / month",
-      "G0 → G1 → G2 pipeline",
-      "Community showcase",
-      "Mobile companion",
+      "20 AI prompts / day (server 429)",
+      "100 prompts / month",
+      "G0 → G1 → G2 pipeline + HitL",
+      "Live multi-device preview",
     ],
+    live: true,
   },
   {
     id: "PRO",
     name: "Pro",
     price: "$29",
-    blurb: "For serious builders",
+    blurb: "When Stripe keys are configured",
     features: [
       "10k prompts / month (fair use)",
       "Full multi-agent pipeline",
-      "Mistral / Codestral production path",
-      "Live multi-device preview",
-      "1-click publish",
+      "Higher daily allowance",
+      "Checkout only if STRIPE_* set",
     ],
     highlight: true,
+    live: false,
   },
   {
     id: "ENTERPRISE",
     name: "Enterprise",
     price: "$49",
-    blurb: "Per seat / month",
+    blurb: "Roadmap — not sold yet",
     features: [
       "Everything in Pro",
-      "Priority queue",
-      "Team seats & audit logs",
-      "Custom limits",
-      "Stripe invoice billing",
+      "Team seats (roadmap)",
+      "Custom limits (roadmap)",
+      "Not available until Stripe + seats ship",
     ],
+    live: false,
   },
 ];
 
@@ -168,6 +170,14 @@ function PricingPage() {
       return;
     }
 
+    if (!stripeConfigured) {
+      toast.message("Paid plans not live yet", {
+        description:
+          "STRIPE_SECRET_KEY / STRIPE_PRICE_* are not configured. Free caps still apply.",
+      });
+      return;
+    }
+
     setBusy(tier);
     try {
       const { url } = await createCheckout({ data: tier });
@@ -185,6 +195,10 @@ function PricingPage() {
 
   const openPortal = async () => {
     if (!requireAuth()) return;
+    if (!stripeConfigured) {
+      toast.message("Billing portal not live — Stripe not configured");
+      return;
+    }
     setBusy("portal");
     try {
       const { url } = await createPortal();
@@ -208,17 +222,15 @@ function PricingPage() {
           </Link>
           <Link to="/" className="inline-flex items-center gap-2">
             <CozyLogo size="sm" variant="seal" />
-            <span className="font-serif font-bold tracking-[0.15em] text-sm">
-              CAI
-            </span>
+            <span className="font-serif font-bold text-sm">Cozy AI Studio</span>
           </Link>
         </div>
 
         <p className="text-xs font-semibold tracking-wide text-choco uppercase mb-2">
-          Billing
+          Limits & billing
         </p>
         <h1 className="font-serif text-4xl font-bold mb-2">
-          Simple plans. Real Stripe checkout.
+          Free cap is real. Paid checkout only when Stripe is live.
         </h1>
         <p className="text-muted-foreground mb-2 max-w-xl">
           Current plan:{" "}
@@ -238,7 +250,7 @@ function PricingPage() {
         <p className="text-xs text-muted-foreground mb-8 max-w-xl">
           {stripeConfigured
             ? "Checkout and Customer Portal are live. Plan + usage come from the server (webhooks + usage_monthly)."
-            : "Stripe env not set yet — CTAs show a clear error (no demo mode)."}
+            : "Stripe env not set — Pro/Enterprise buttons stay disabled. Free daily (20) + monthly (100) caps are enforced on /api/agents/run."}
         </p>
 
         {user && (planTier === "PRO" || planTier === "ENTERPRISE") && (
@@ -246,7 +258,7 @@ function PricingPage() {
             <Button
               variant="outline"
               className="rounded-xl gap-2"
-              disabled={busy === "portal"}
+              disabled={busy === "portal" || !stripeConfigured}
               onClick={() => void openPortal()}
             >
               {busy === "portal" ? (
@@ -260,53 +272,66 @@ function PricingPage() {
         )}
 
         <div className="grid gap-5 md:grid-cols-3">
-          {tiers.map((tier) => (
-            <article
-              key={tier.id}
-              className={cn(
-                "flex flex-col rounded-2xl border bg-card p-6",
-                tier.highlight
-                  ? "border-choco border-2 shadow-[var(--shadow-brutalist)]"
-                  : "border-border shadow-sm",
-              )}
-            >
-              {tier.highlight && (
-                <span className="mb-3 inline-block w-fit rounded-full bg-choco/15 px-2.5 py-0.5 text-xs font-semibold text-choco">
-                  Recommended
-                </span>
-              )}
-              <h2 className="font-serif text-xl font-bold">{tier.name}</h2>
-              <p className="text-sm text-muted-foreground mt-1">{tier.blurb}</p>
-              <p className="mt-4 mb-6">
-                <span className="font-serif text-4xl font-bold">{tier.price}</span>
-                <span className="text-sm text-muted-foreground"> / mo</span>
-              </p>
-              <ul className="space-y-2.5 text-sm mb-8 flex-1">
-                {tier.features.map((f) => (
-                  <li key={f} className="flex gap-2">
-                    <Check className="h-4 w-4 text-success shrink-0 mt-0.5" />
-                    <span>{f}</span>
-                  </li>
-                ))}
-              </ul>
-              <Button
-                variant={tier.highlight ? "default" : "outline"}
-                className="w-full rounded-xl"
-                onClick={() => void onChoose(tier.id)}
-                disabled={planTier === tier.id || busy === tier.id}
-              >
-                {busy === tier.id ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : planTier === tier.id ? (
-                  "Current plan"
-                ) : tier.id === "FREE" ? (
-                  "Switch to Free"
-                ) : (
-                  `Checkout ${tier.name}`
+          {tiers.map((tier) => {
+            const paidDisabled =
+              tier.id !== "FREE" && !stripeConfigured && !tier.live;
+            const canCheckout =
+              tier.id === "FREE" || stripeConfigured;
+            return (
+              <article
+                key={tier.id}
+                className={cn(
+                  "flex flex-col rounded-2xl border bg-card p-6",
+                  tier.highlight
+                    ? "border-choco border-2 shadow-[var(--shadow-brutalist)]"
+                    : "border-border shadow-sm",
+                  paidDisabled && "opacity-90",
                 )}
-              </Button>
-            </article>
-          ))}
+              >
+                {tier.highlight && (
+                  <span className="mb-3 inline-block w-fit rounded-full bg-choco/15 px-2.5 py-0.5 text-xs font-semibold text-choco">
+                    {stripeConfigured ? "Recommended" : "Coming when Stripe is live"}
+                  </span>
+                )}
+                <h2 className="font-serif text-xl font-bold">{tier.name}</h2>
+                <p className="text-sm text-muted-foreground mt-1">{tier.blurb}</p>
+                <p className="mt-4 mb-6">
+                  <span className="font-serif text-4xl font-bold">{tier.price}</span>
+                  <span className="text-sm text-muted-foreground"> / mo</span>
+                </p>
+                <ul className="space-y-2.5 text-sm mb-8 flex-1">
+                  {tier.features.map((f) => (
+                    <li key={f} className="flex gap-2">
+                      <Check className="h-4 w-4 text-success shrink-0 mt-0.5" />
+                      <span>{f}</span>
+                    </li>
+                  ))}
+                </ul>
+                <Button
+                  variant={tier.highlight ? "default" : "outline"}
+                  className="w-full rounded-xl"
+                  onClick={() => void onChoose(tier.id)}
+                  disabled={
+                    planTier === tier.id ||
+                    busy === tier.id ||
+                    (tier.id !== "FREE" && !canCheckout)
+                  }
+                >
+                  {busy === tier.id ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : planTier === tier.id ? (
+                    "Current plan"
+                  ) : tier.id === "FREE" ? (
+                    "Use Free"
+                  ) : !stripeConfigured ? (
+                    "Not live yet"
+                  ) : (
+                    `Checkout ${tier.name}`
+                  )}
+                </Button>
+              </article>
+            );
+          })}
         </div>
 
         {!user && authEnabled && !isPending && (

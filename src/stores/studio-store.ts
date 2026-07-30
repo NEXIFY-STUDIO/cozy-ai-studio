@@ -109,6 +109,9 @@ interface StudioState {
   planTier: PlanTier;
   promptsUsed: number;
   promptLimit: number;
+  dailyUsed: number;
+  dailyLimit: number | null;
+  stripeConfigured: boolean;
   device: DeviceType;
   activeFile: string;
   files: Record<string, ProjectFile>;
@@ -155,6 +158,14 @@ interface StudioState {
   setCommandOpen: (open: boolean) => void;
   setMobilePanel: (panel: "studio" | "chat" | "preview") => void;
   setPlanTier: (tier: PlanTier) => void;
+  setQuota: (q: {
+    promptsUsed?: number;
+    promptLimit?: number;
+    dailyUsed?: number;
+    dailyLimit?: number | null;
+    planTier?: PlanTier;
+    stripeConfigured?: boolean;
+  }) => void;
   setAgents: (agents: AgentTask[]) => void;
   updateAgent: (id: string, patch: Partial<AgentTask>) => void;
   addChat: (msg: Omit<ChatMessage, "id" | "timestamp">) => void;
@@ -417,9 +428,12 @@ export const useStudioStore = create<StudioState>()(
   persist(
     (set, get) => ({
             theme: "dark",
-      planTier: "PRO",
+      planTier: "FREE",
       promptsUsed: 0,
       promptLimit: 100,
+      dailyUsed: 0,
+      dailyLimit: 20,
+      stripeConfigured: false,
       device: "iphone-se",
       activeFile: "src/App.tsx",
       files: initialFiles,
@@ -521,6 +535,17 @@ export const useStudioStore = create<StudioState>()(
       setMobilePanel: (panel) => set({ mobilePanel: panel }),
       setPlanTier: (tier) =>
         set({ planTier: tier, promptLimit: tier === "FREE" ? 100 : tier === "PRO" ? 10_000 : 1_000_000 }),
+      setQuota: (q) =>
+        set({
+          ...(q.promptsUsed !== undefined ? { promptsUsed: q.promptsUsed } : {}),
+          ...(q.promptLimit !== undefined ? { promptLimit: q.promptLimit } : {}),
+          ...(q.dailyUsed !== undefined ? { dailyUsed: q.dailyUsed } : {}),
+          ...(q.dailyLimit !== undefined ? { dailyLimit: q.dailyLimit } : {}),
+          ...(q.planTier !== undefined ? { planTier: q.planTier } : {}),
+          ...(q.stripeConfigured !== undefined
+            ? { stripeConfigured: q.stripeConfigured }
+            : {}),
+        }),
       setAgents: (agents) => set({ agents }),
       updateAgent: (id, patch) =>
         set({

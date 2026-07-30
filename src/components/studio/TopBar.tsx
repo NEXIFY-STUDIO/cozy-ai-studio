@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Command, Sun, Circle, FlaskConical, LayoutGrid, Cloud, CloudOff } from "lucide-react";
+import { Command, Sun, Circle, LayoutGrid, Cloud, CloudOff } from "lucide-react";
 import { useStudioStore } from "@/stores/studio-store";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -19,11 +19,25 @@ export function TopBar() {
   const setCommandOpen = useStudioStore((s) => s.setCommandOpen);
   const setMobilePanel = useStudioStore((s) => s.setMobilePanel);
   const planTier = useStudioStore((s) => s.planTier);
+  const promptsUsed = useStudioStore((s) => s.promptsUsed);
+  const promptLimit = useStudioStore((s) => s.promptLimit);
+  const dailyUsed = useStudioStore((s) => s.dailyUsed);
+  const dailyLimit = useStudioStore((s) => s.dailyLimit);
+  const stripeConfigured = useStudioStore((s) => s.stripeConfigured);
   const isPipelineRunning = useStudioStore((s) => s.isPipelineRunning);
   const productionLive = useStudioStore((s) => s.productionLive);
   const productionLaunchRunning = useStudioStore((s) => s.productionLaunchRunning);
   const navigate = useNavigate();
   const { hydrated, syncing, projectId } = useProjectSync();
+
+  const remaining =
+    planTier === "FREE"
+      ? Math.max(0, (promptLimit || 100) - promptsUsed)
+      : null;
+  const dailyLeft =
+    planTier === "FREE" && dailyLimit != null
+      ? Math.max(0, dailyLimit - dailyUsed)
+      : null;
 
   const openAgentsWindow = () => {
     setMobilePanel("chat");
@@ -44,10 +58,10 @@ export function TopBar() {
           <CozyLogo size="sm" variant="seal" className="group-hover:-translate-y-px transition-transform" />
           <div className="hidden sm:block min-w-0">
             <div className="font-serif text-base font-bold leading-none truncate">
-              CAI
+              Cozy
             </div>
             <div className="text-xs text-muted-foreground font-mono mt-0.5">
-              Cozy AI Studio
+              AI Studio
             </div>
           </div>
         </Link>
@@ -71,9 +85,9 @@ export function TopBar() {
             )}
           />
           {productionLaunchRunning
-            ? "Launching prod…"
+            ? "Deploy…"
             : productionLive
-              ? "Production"
+              ? "Deployed (local)"
               : isPipelineRunning
                 ? "Agents running"
                 : "Ready"}
@@ -128,21 +142,10 @@ export function TopBar() {
           className="h-9 gap-1.5 rounded-full px-3.5 text-xs font-semibold shadow-none"
           onClick={openAgentsWindow}
         >
-          Agents Window
+          Agents
           <IconOpenWindow className="opacity-90" />
         </Button>
 
-        <Link to="/playground" className="hidden md:block">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-9 w-9"
-            aria-label="Lab playground"
-            title="Lab"
-          >
-            <FlaskConical className="h-4 w-4 text-success" />
-          </Button>
-        </Link>
         <Link to="/showcase" className="hidden sm:block">
           <Button variant="ghost" size="icon" className="h-9 w-9" aria-label="Showcase">
             <LayoutGrid className="h-4 w-4" />
@@ -174,11 +177,32 @@ export function TopBar() {
           )}
         </Button>
 
-        <span className="hidden xl:inline text-xs text-muted-foreground font-mono">
-          {planTier}
-        </span>
+        <button
+          type="button"
+          onClick={() => void navigate({ to: "/pricing", search: {} })}
+          className={cn(
+            "hidden sm:inline-flex items-center gap-1.5 rounded-full border px-2.5 h-8 text-[11px] font-mono transition-colors",
+            planTier === "FREE"
+              ? "border-border bg-muted/60 text-muted-foreground hover:border-choco/40 hover:text-foreground"
+              : "border-choco/30 bg-choco/10 text-choco",
+          )}
+          title={
+            dailyLeft != null
+              ? `Daily left: ${dailyLeft} · Monthly left: ${remaining}`
+              : `Plan ${planTier}`
+          }
+        >
+          <span className="font-semibold">{planTier}</span>
+          {remaining != null && (
+            <span className="tabular-nums opacity-80">
+              {dailyLeft != null ? `${dailyLeft}d` : ""}
+              {dailyLeft != null ? " · " : ""}
+              {remaining} left
+            </span>
+          )}
+        </button>
 
-        <ProductionLaunchButton />
+        <ProductionLaunchButton stripeConfigured={stripeConfigured} />
 
         {authEnabled && (
           <div className="hidden sm:flex items-center shrink-0 ml-1">

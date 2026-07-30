@@ -368,7 +368,7 @@ export async function blueprintToZipBlob(bp: LabBlueprint): Promise<Blob> {
 
 export function safeFilename(name: string): string {
   return name
-    .replace(/[^\w.\-]+/g, "-")
+    .replace(/[^\w.-]+/g, "-")
     .replace(/-+/g, "-")
     .replace(/^-|-$/g, "")
     .slice(0, 64);

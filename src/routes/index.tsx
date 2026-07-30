@@ -7,14 +7,10 @@ import {
   Code2,
   Command,
   Eye,
-  FlaskConical,
-  Layers,
   Play,
   ShieldCheck,
   Smartphone,
   Sparkles,
-  Upload,
-  Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -25,12 +21,12 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       {
-        title: "Cozy AI Studio — Od nápadu k aplikácii s AI",
+        title: "Cozy AI Studio — Brief → preview → schválenie",
       },
       {
         name: "description",
         content:
-          "Vizualny AI studio. Planuj, generuj kod, schvaluj zmeny a nasadzuj — s agentmi G0, G1 a G2.",
+          "Rýchle AI studio: napíš brief, sleduj diff a live preview, schváľ zmeny. Free daily limit. Žiadny fake Enterprise checkout.",
       },
     ],
   }),
@@ -39,51 +35,39 @@ export const Route = createFileRoute("/")({
 const FEATURES = [
   {
     icon: Brain,
-    title: "Tri agenti, jeden tok",
-    body: "Plánovač navrhne štruktúru, kóder streamuje zmeny a auditor skontroluje bezpečnosť aj štýl.",
+    title: "Viditeľný agent pipeline",
+    body: "G0 plánuje, G1 streamuje kód, G2 audituje. Každý krok vidíš v paneli — nie čierna skrinka.",
     span: "sm:col-span-2",
   },
   {
     icon: Code2,
     title: "Diff, ktorý chápeš",
-    body: "Farebné pridania a odobratia. Schvál alebo zamietni bloky jedným klikom.",
+    body: "Farebné pridania a odobratia. Schváľ alebo zamietni bloky pred zápisom do projektu.",
     span: "",
   },
   {
     icon: Eye,
-    title: "Náhľad v reálnom čase",
-    body: "Mobil, tablet aj desktop. Vidíš výsledok skôr, než niečo uložíš.",
+    title: "Live preview",
+    body: "Mobil, tablet aj desktop frame. Vidíš výsledok skôr, než niečo uložíš.",
     span: "",
   },
   {
     icon: ShieldCheck,
     title: "Ty rozhoduješ",
-    body: "Žiadny slepý commit. Human-in-the-loop karty pred zápisom do projektu.",
+    body: "Human-in-the-loop karty pred acceptom. Server drží denný free cap pred modelom.",
     span: "",
-  },
-  {
-    icon: Layers,
-    title: "Builder Kernel + pluginy",
-    body: "Headless jadro, node graf a plugin SDK. Vyskúšaj v Lab playgroundi.",
-    span: "sm:col-span-2",
   },
   {
     icon: Smartphone,
-    title: "Mobilný companion",
-    body: "Schvaľuj zmeny na ceste swipe gestami.",
+    title: "Mobile pair",
+    body: "Spáruj telefón a schvaľuj diff na ceste (WS companion).",
     span: "",
   },
   {
-    icon: Upload,
-    title: "Publikuj na jeden klik",
-    body: "Nasadenie na *.cozy-ai.studio a galéria v Showcase.",
-    span: "",
-  },
-  {
-    icon: Zap,
-    title: "Go to Production",
-    body: "Kontroly, predplatné, build, SSL a live URL v jednom sprievodcovi.",
-    span: "",
+    icon: Sparkles,
+    title: "Brief → Studio",
+    body: "Jedna veta na landingu otvorí studio s predvyplneným promptom. Žiadna inštalácia.",
+    span: "sm:col-span-2",
   },
 ];
 
@@ -95,13 +79,13 @@ const STEPS = [
   },
   {
     n: "02",
-    title: "Sleduj agentov",
-    body: "G0 plánuje, G1 píše kód, G2 audituje. Všetko vidíš v paneli.",
+    title: "Sleduj pipeline",
+    body: "G0 → G1 → G2 v paneli. Diff + live preview vedľa seba.",
   },
   {
     n: "03",
-    title: "Schváľ a spusti",
-    body: "Inline accept/reject, live preview, potom produkčný deploy.",
+    title: "Schváľ zmeny",
+    body: "Accept/reject. Free: denný + mesačný limit (server 429).",
   },
 ];
 
@@ -130,7 +114,6 @@ function LandingPage() {
 
   return (
     <div className="min-h-dvh bg-background text-foreground overflow-x-hidden">
-      {/* Ambient wash — restrained, not purple AI soup */}
       <div
         aria-hidden
         className="pointer-events-none fixed inset-0 -z-10"
@@ -149,7 +132,7 @@ function LandingPage() {
                 Cozy AI Studio
               </span>
               <span className="hidden sm:block text-[11px] text-muted-foreground mt-0.5">
-                AI visual IDE
+                Brief → preview → approve
               </span>
             </div>
           </Link>
@@ -158,8 +141,7 @@ function LandingPage() {
             {[
               { href: "#funkcie", label: "Funkcie" },
               { href: "#ako", label: "Ako to funguje" },
-              { to: "/playground" as const, label: "Lab" },
-              { to: "/pricing" as const, label: "Cenník" },
+              { to: "/pricing" as const, label: "Limity" },
               { to: "/showcase" as const, label: "Galéria" },
             ].map((item) =>
               "href" in item ? (
@@ -183,12 +165,6 @@ function LandingPage() {
           </nav>
 
           <div className="flex items-center gap-2">
-            <Link to="/playground" className="hidden sm:block">
-              <Button variant="ghost" size="sm" className="h-9 gap-1.5">
-                <FlaskConical className="h-3.5 w-3.5" />
-                Lab
-              </Button>
-            </Link>
             <Link to="/studio">
               <Button size="sm" className="h-9 gap-1.5">
                 Otvoriť studio
@@ -200,29 +176,26 @@ function LandingPage() {
       </header>
 
       <main>
-        {/* ── Hero ───────────────────────────────────────── */}
         <section className="relative mx-auto max-w-6xl px-4 sm:px-6 pt-14 sm:pt-20 pb-10 sm:pb-14">
           <div className="mx-auto max-w-3xl text-center">
             <div className="mb-6 flex flex-col items-center gap-4">
               <CozyLogo size="xl" variant="stack" className="mb-1" />
               <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card/80 px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm backdrop-blur">
                 <span className="h-1.5 w-1.5 rounded-full bg-success agent-pulse" />
-                Multi-agent · Human-in-the-loop · SK-ready
+                Speed Studio · HitL · denný free cap
               </div>
             </div>
 
             <h1 className="font-serif text-[2.35rem] sm:text-6xl lg:text-[4rem] font-bold leading-[1.08] tracking-tight mb-5 text-balance">
-              Od vety k živej appke{" "}
+              Od vety k náhľadu{" "}
               <span className="text-choco">— s tebou v slučke</span>
             </h1>
 
             <p className="text-base sm:text-xl text-muted-foreground leading-relaxed max-w-2xl mx-auto mb-8 text-pretty">
-              Cozy AI Studio je vizuálne AI prostredie: agenti naplánujú, napíšu a
-              skontrolujú kód. Ty schvaľuješ zmeny, sleduješ diff a live preview —
-              ako v modernom AI studio, ale s teplým, prehľadným dizajnom.
+              Napíš brief, sleduj agentov a diff, schváľ zmeny a pozri live preview.
+              Bez inštalácie. Free má reálny denný limit (server 429 pred modelom).
             </p>
 
-            {/* Prompt dock — Lovable / AI Studio vibe */}
             <div
               className={cn(
                 "mx-auto max-w-2xl rounded-2xl border bg-card p-2 sm:p-2.5 shadow-[var(--shadow-elevated)] transition-shadow",
@@ -280,7 +253,7 @@ function LandingPage() {
                 <Check className="h-3.5 w-3.5 text-success" /> Bez inštalácie
               </span>
               <span className="inline-flex items-center gap-1.5">
-                <Check className="h-3.5 w-3.5 text-success" /> Free 100 promptov
+                <Check className="h-3.5 w-3.5 text-success" /> Free: 20 / deň · 100 / mesiac
               </span>
               <span className="inline-flex items-center gap-1.5">
                 <Command className="h-3.5 w-3.5" /> ⌘K v studiu
@@ -288,11 +261,9 @@ function LandingPage() {
             </div>
           </div>
 
-          {/* Product stage */}
           <div className="relative mx-auto mt-14 max-w-5xl">
             <div className="absolute -inset-3 sm:-inset-4 rounded-[1.75rem] bg-gradient-to-b from-choco/10 via-transparent to-transparent blur-sm" />
             <div className="relative rounded-[1.35rem] border border-border bg-card/90 p-2 sm:p-3 shadow-[var(--shadow-elevated)] backdrop-blur">
-              {/* Fake window chrome */}
               <div className="mb-2 flex items-center gap-2 px-2 py-1.5">
                 <div className="flex gap-1.5">
                   <span className="h-2.5 w-2.5 rounded-full bg-danger/70" />
@@ -301,14 +272,13 @@ function LandingPage() {
                 </div>
                 <div className="flex-1 text-center">
                   <span className="inline-flex rounded-md bg-muted px-3 py-1 text-xs font-mono text-muted-foreground">
-                    cozy-ai.studio / studio
+                    studio · 3-column
                   </span>
                 </div>
                 <div className="w-12" />
               </div>
 
               <div className="grid gap-2 lg:grid-cols-[0.9fr_1.15fr_0.95fr] min-h-[300px] sm:min-h-[340px]">
-                {/* Agents */}
                 <div className="rounded-2xl border border-border bg-muted/40 p-4 flex flex-col">
                   <div className="flex items-center gap-2 mb-4">
                     <Brain className="h-4 w-4 text-success" />
@@ -345,7 +315,6 @@ function LandingPage() {
                   </p>
                 </div>
 
-                {/* Diff */}
                 <div className="rounded-2xl border border-border bg-[#141414] p-4 font-mono text-[12.5px] leading-6 overflow-hidden text-[#e8eaed]">
                   <div className="flex items-center gap-2 mb-3 text-white/70">
                     <Code2 className="h-3.5 w-3.5 text-success" />
@@ -358,7 +327,7 @@ function LandingPage() {
                     {"−  <h1>Vitajte</h1>"}
                   </div>
                   <div className="text-emerald-300 bg-emerald-500/10 px-2 rounded-md mt-0.5">
-                    {"+  <h1>Od vety k živej appke</h1>"}
+                    {"+  <h1>Od vety k náhľadu</h1>"}
                   </div>
                   <div className="text-white/65 px-2 mt-2">
                     {"  <p className=\"text-lg\">…"}
@@ -376,7 +345,6 @@ function LandingPage() {
                   </div>
                 </div>
 
-                {/* Preview */}
                 <div className="rounded-2xl border border-border bg-muted/40 p-4 flex flex-col">
                   <div className="flex items-center gap-2 mb-3">
                     <Eye className="h-4 w-4 text-success" />
@@ -399,31 +367,27 @@ function LandingPage() {
           </div>
         </section>
 
-        {/* ── Trust strip ────────────────────────────────── */}
         <section className="border-y border-border bg-muted/30">
           <div className="mx-auto max-w-6xl px-4 sm:px-6 py-6 flex flex-wrap items-center justify-center gap-x-10 gap-y-3 text-sm text-muted-foreground">
             <span className="font-medium text-foreground/80">Stavané pre</span>
-            {["Product dizajn", "Frontend", "Startup MVP", "Agentické workflow"].map(
-              (t) => (
-                <span key={t} className="font-serif text-base font-semibold tracking-tight">
-                  {t}
-                </span>
-              ),
-            )}
+            {["Founders", "Marketeri", "Product", "Solo dev"].map((t) => (
+              <span key={t} className="font-serif text-base font-semibold tracking-tight">
+                {t}
+              </span>
+            ))}
           </div>
         </section>
 
-        {/* ── Features bento ─────────────────────────────── */}
         <section id="funkcie" className="py-20 sm:py-24">
           <div className="mx-auto max-w-6xl px-4 sm:px-6">
             <div className="max-w-2xl mb-12">
               <p className="label-caps text-choco mb-3">Funkcie</p>
               <h2 className="font-serif text-3xl sm:text-4xl font-bold tracking-tight mb-3 text-balance">
-                Všetko, čo čakáš od AI studia — a kontrola navyše
+                To, čo reálne beží v studiu
               </h2>
               <p className="text-base sm:text-lg text-muted-foreground leading-relaxed">
-                Inšpirované rýchlosťou Lovable a prehľadnosťou AI Studio. Bez
-                fialového chaosu, s chocolate accentom a jasným canvasom.
+                Žiadne Figma import, Kernel marketplace ani fake Pro checkout.
+                Len brief → pipeline → diff → preview → schválenie.
               </p>
             </div>
 
@@ -451,7 +415,6 @@ function LandingPage() {
           </div>
         </section>
 
-        {/* ── How it works ───────────────────────────────── */}
         <section id="ako" className="border-t border-border bg-muted/35 py-20 sm:py-24">
           <div className="mx-auto max-w-6xl px-4 sm:px-6">
             <div className="text-center max-w-2xl mx-auto mb-12">
@@ -484,47 +447,22 @@ function LandingPage() {
           </div>
         </section>
 
-        {/* ── Lab + pricing teaser ───────────────────────── */}
         <section className="py-20 sm:py-24">
-          <div className="mx-auto max-w-6xl px-4 sm:px-6 grid gap-4 lg:grid-cols-2">
-            <div className="rounded-[1.75rem] border border-border bg-canvas text-canvas-fg p-8 sm:p-10 relative overflow-hidden">
-              <div
-                aria-hidden
-                className="absolute inset-0 bg-dots-pattern opacity-80"
-              />
-              <div className="relative">
-                <FlaskConical className="h-8 w-8 text-choco mb-4" />
-                <h3 className="font-serif text-2xl sm:text-3xl font-bold mb-3">
-                  Cozy Lab
-                </h3>
-                <p className="text-[0.95rem] text-canvas-muted leading-relaxed max-w-md mb-6">
-                  Playground s Builder Kernel, Plugin SDK, Mistral gateway a
-                  canvasom. Vyskúšaj breakthrough API skôr, než pôjdu do
-                  produkcie.
-                </p>
-                <Link to="/playground">
-                  <Button className="gap-2">
-                    Otvoriť Lab
-                    <ArrowRight className="h-4 w-4" />
-                  </Button>
-                </Link>
-              </div>
-            </div>
-
-            <div className="rounded-[1.75rem] border border-border bg-card p-8 sm:p-10 flex flex-col">
-              <p className="label-caps text-choco mb-3">Cenník</p>
+          <div className="mx-auto max-w-6xl px-4 sm:px-6">
+            <div className="rounded-[1.75rem] border border-border bg-card p-8 sm:p-10 flex flex-col max-w-2xl">
+              <p className="label-caps text-choco mb-3">Limity</p>
               <h3 className="font-serif text-2xl sm:text-3xl font-bold mb-3">
-                Začni zadarmo. Škáluj s Pro.
+                Free s reálnym capom. Pro až keď Stripe beží.
               </h3>
               <p className="text-[0.95rem] text-muted-foreground leading-relaxed mb-6 flex-1">
-                Free tier: 100 promptov a základný preview. Pro odomkne plný
-                G0–G2 stack, produkčný launch a prioritné tokeny.
+                Free: 20 promptov / deň a 100 / mesiac — enforce na serveri pred
+                Mistralom. Checkout tlačidlá sú len ak sú nastavené STRIPE_* kľúče.
               </p>
               <ul className="space-y-2.5 mb-8 text-sm">
                 {[
-                  "100 free promptov na štart",
-                  "Live preview a code diff",
-                  "Pro: Go to Production wizard",
+                  "Denný free cap (server 429)",
+                  "Live preview + code diff + HitL",
+                  "Pro / Enterprise až po konfigurácii Stripe",
                 ].map((line) => (
                   <li key={line} className="flex items-start gap-2">
                     <Check className="h-4 w-4 text-success shrink-0 mt-0.5" />
@@ -535,7 +473,7 @@ function LandingPage() {
               <div className="flex flex-wrap gap-2">
                 <Link to="/pricing" search={{}}>
                   <Button variant="outline" className="gap-2">
-                    Zobraziť cenník
+                    Zobraziť limity
                   </Button>
                 </Link>
                 <Link to="/studio">
@@ -548,26 +486,20 @@ function LandingPage() {
           </div>
         </section>
 
-        {/* ── Final CTA ──────────────────────────────────── */}
         <section className="border-t border-border">
           <div className="mx-auto max-w-6xl px-4 sm:px-6 py-20 sm:py-24 text-center">
             <h2 className="font-serif text-3xl sm:text-5xl font-bold tracking-tight mb-4 text-balance">
               Pripravený postaviť niečo krásne?
             </h2>
             <p className="text-base sm:text-lg text-muted-foreground max-w-lg mx-auto mb-8 leading-relaxed">
-              Otvor studio, napíš prvý prompt a nechaj agentov pracovať — ty
-              držíš kľúč od každého commitu.
+              Otvor studio, napíš prvý prompt a schvaľuj zmeny — ty držíš kľúč od
+              každého acceptu.
             </p>
             <div className="flex flex-wrap justify-center gap-3">
               <Link to="/studio">
                 <Button size="lg" className="h-12 gap-2 px-8">
                   <Sparkles className="h-4 w-4" />
                   Spustiť Cozy AI Studio
-                </Button>
-              </Link>
-              <Link to="/playground">
-                <Button size="lg" variant="outline" className="h-12 px-8">
-                  Najprv Lab playground
                 </Button>
               </Link>
             </div>
@@ -580,20 +512,13 @@ function LandingPage() {
           <div className="flex items-center gap-2">
             <CozyLogo size="sm" variant="seal" />
             <span className="font-medium text-foreground">Cozy AI Studio</span>
-            <span className="text-xs">v1.0</span>
           </div>
           <div className="flex flex-wrap justify-center gap-4">
             <Link to="/studio" className="hover:text-foreground transition-colors">
               Studio
             </Link>
-            <Link
-              to="/playground"
-              className="hover:text-foreground transition-colors"
-            >
-              Lab
-            </Link>
             <Link to="/pricing" search={{}} className="hover:text-foreground transition-colors">
-              Cenník
+              Limity
             </Link>
             <Link
               to="/showcase"

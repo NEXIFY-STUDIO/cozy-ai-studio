@@ -1,5 +1,14 @@
 import { useState, useRef, useEffect } from "react";
-import { Send, Sparkles, FolderTree, FileCode2, ChevronDown } from "lucide-react";
+import {
+  Send,
+  Sparkles,
+  FolderTree,
+  FileCode2,
+  ChevronDown,
+  Coffee,
+  LayoutDashboard,
+  ShoppingBag,
+} from "lucide-react";
 import { useStudioStore } from "@/stores/studio-store";
 import { runStudioPipeline } from "@/lib/ai/run-studio-pipeline";
 import { AgentPipeline } from "./AgentPipeline";
@@ -12,10 +21,33 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { MobilePairPanel } from "./MobilePairPanel";
 
-const SUGGESTIONS = [
-  "Pridaj pricing sekciu Free / Pro / Enterprise",
-  "Postav dashboard s metrikami",
-  "Vytvor todo board vo warm brutalism štýle",
+const TEMPLATES: {
+  icon: typeof Coffee;
+  title: string;
+  prompt: string;
+  blurb: string;
+}[] = [
+  {
+    icon: Coffee,
+    title: "Kaviareň landing",
+    prompt:
+      "Landing page for a specialty coffee shop in Košice: hero, menu highlights, hours, contact form. Warm brutalism, chocolate accent, mobile-first.",
+    blurb: "Hero + menu + CTA",
+  },
+  {
+    icon: LayoutDashboard,
+    title: "SaaS dashboard",
+    prompt:
+      "Build a clean SaaS metrics dashboard with KPI cards, a simple chart placeholder, recent activity list, and dark-friendly warm palette.",
+    blurb: "KPIs + activity",
+  },
+  {
+    icon: ShoppingBag,
+    title: "Pricing page",
+    prompt:
+      "Create a pricing page with Free / Pro / Team cards, feature checklist, and a honest note that Free has a daily AI cap. No fake enterprise claims.",
+    blurb: "3 tiers + CTA",
+  },
 ];
 
 export function AgentPanel() {
@@ -29,9 +61,15 @@ export function AgentPanel() {
   const planTier = useStudioStore((s) => s.planTier);
   const promptsUsed = useStudioStore((s) => s.promptsUsed);
   const promptLimit = useStudioStore((s) => s.promptLimit);
+  const dailyUsed = useStudioStore((s) => s.dailyUsed);
+  const dailyLimit = useStudioStore((s) => s.dailyLimit);
   const lastError = useStudioStore((s) => s.lastPipelineError);
   const scrollRef = useRef<HTMLDivElement>(null);
   const consumedLanding = useRef(false);
+
+  const dailyLeft =
+    dailyLimit != null ? Math.max(0, dailyLimit - dailyUsed) : null;
+  const monthlyLeft = Math.max(0, promptLimit - promptsUsed);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({
@@ -60,9 +98,11 @@ export function AgentPanel() {
     await runStudioPipeline(prompt, { autoRetry: true });
   };
 
+  const userMessages = chat.filter((m) => m.role === "user");
+  const showEmpty = userMessages.length === 0 && !isPipelineRunning;
+
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-[var(--shadow-glass)]">
-      {/* Scrollable middle: pipeline + errors + chat */}
       <div
         ref={scrollRef}
         className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden cosy-scroll"
@@ -72,43 +112,53 @@ export function AgentPanel() {
           <RetryProgressBanner />
           <PipelineErrorPanel />
 
-          {/* Chat header */}
           <div className="flex items-center justify-between gap-2 min-w-0 pt-1">
             <div className="flex items-center gap-2 min-w-0">
               <Sparkles className="h-4 w-4 text-success shrink-0" />
               <span className="font-serif text-sm font-semibold truncate">Chat</span>
             </div>
-            <span className="text-xs text-muted-foreground tabular-nums shrink-0">
-              {planTier} · {promptsUsed}/
-              {planTier === "FREE" ? promptLimit : "∞"}
+            <span
+              className="text-[11px] text-muted-foreground tabular-nums shrink-0 font-mono"
+              title="Server-enforced free caps"
+            >
+              {planTier}
+              {dailyLeft != null ? ` · ${dailyLeft}d` : ""} · {monthlyLeft} left
             </span>
           </div>
 
-          {chat.length === 0 && (
+          {showEmpty && (
             <div className="space-y-3 min-w-0">
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Napíš, čo chceš postaviť. Agenti G0 → G1 → G2 to prejdú s tebou v
-                slučke.
+                Vyber šablónu (≤60 s k preview) alebo napíš vlastný brief. Po
+                dokončení: diff → Accept → Share v Live Preview.
               </p>
-              <div className="flex flex-col gap-1.5 min-w-0">
-                {SUGGESTIONS.map((s) => (
+              <div className="grid gap-1.5 min-w-0">
+                {TEMPLATES.map((t) => (
                   <button
-                    key={s}
+                    key={t.title}
                     type="button"
                     disabled={isPipelineRunning}
-                    onClick={() => void run(s)}
-                    className="w-full rounded-xl border border-border bg-background px-3 py-2 text-left text-xs leading-snug hover:border-choco/40 hover:text-foreground transition-colors disabled:opacity-50 break-words"
+                    onClick={() => void run(t.prompt)}
+                    className="flex w-full min-w-0 items-start gap-2.5 rounded-xl border border-border bg-background px-3 py-2.5 text-left hover:border-choco/40 transition-colors disabled:opacity-50"
                   >
-                    {s}
+                    <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-choco/10 text-choco">
+                      <t.icon className="h-4 w-4" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-xs font-semibold text-foreground">
+                        {t.title}
+                      </span>
+                      <span className="block text-[11px] text-muted-foreground mt-0.5">
+                        {t.blurb}
+                      </span>
+                    </span>
                   </button>
                 ))}
               </div>
-              {!isPipelineRunning && (
-                <ErrorHandlingExamples
-                  onRun={(p) => void run(p)}
-                  disabled={isPipelineRunning}
-                />
-              )}
+              <ErrorHandlingExamples
+                onRun={(p) => void run(p)}
+                disabled={isPipelineRunning}
+              />
             </div>
           )}
 
@@ -132,7 +182,6 @@ export function AgentPanel() {
         </div>
       </div>
 
-      {/* Files — collapsible, hidden bulk while agents run by default */}
       <div className="shrink-0 border-t border-border min-w-0">
         <button
           type="button"
@@ -178,7 +227,6 @@ export function AgentPanel() {
         <MobilePairPanel />
       </div>
 
-      {/* Sticky prompt — always visible, never crushed */}
       <div className="shrink-0 border-t border-border bg-card p-2.5 sm:p-3 min-w-0">
         <div className="flex items-end gap-2 min-w-0">
           <textarea
