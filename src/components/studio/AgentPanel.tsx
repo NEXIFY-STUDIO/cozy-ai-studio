@@ -190,8 +190,8 @@ export function AgentPanel() {
                 Hotovo — ďalší krok
               </p>
               <ol className="list-decimal list-inside text-muted-foreground space-y-0.5">
-                <li>Skontroluj Diff a Accept (HitL)</li>
-                <li>Otvor Náhľad a stlač Share</li>
+                <li>Diff → <strong className="text-foreground">Accept + Share link</strong></li>
+                <li>Public URL v clipboard (/a/…)</li>
               </ol>
               <div className="flex flex-wrap gap-2 pt-0.5">
                 <button
