@@ -17,12 +17,12 @@ export const Route = createRootRoute({
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
       {
-        title: "Cozy AI Studio — AI Visual IDE",
+        title: "Cozy AI Studio — Brief → preview → share",
       },
       {
         name: "description",
         content:
-          "Warm Brutalism AI IDE with multi-agent pipeline, live preview, and Human-in-the-Loop approvals.",
+          "Speed Studio: brief to live preview with multi-agent pipeline, HitL approvals, and free daily caps. No fake Kernel or Figma product claims.",
       },
       { name: "application-name", content: "Cozy AI Studio" },
       { name: "apple-mobile-web-app-title", content: "Cozy Studio" },

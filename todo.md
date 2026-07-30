@@ -16,18 +16,22 @@
 | P1.3 | Production button → **Limits** when Stripe off |
 | P2.1 | Empty-state 3 templates (café / dashboard / pricing) |
 | P2.2 | Share in Live Preview + toast after pipeline |
+| P2.3 | `npm run ship-gate` e2e truth + quota + freeze checks |
+| P3 | Freeze Lab/Kernel product claims (playground noindex + banner) |
 
 ## Next
 
 | # | Item |
 |---|---|
-| P3 | Freeze Lab/Kernel product claims in playground |
-| P4 | Stripe only after activation |
-| Manual | DATABASE_URL · STRIPE_* · auth redirect |
+| P4 | Stripe only after activation (keep UI "Not live yet") |
+| Manual | DATABASE_URL · STRIPE_* · auth redirect on Vercel |
 
 ## Check
 
 ```
-GET /api/agents/run → quota.dailyLimit / withinQuota
-Studio TopBar: FREE · Nd · N left · Limits (not Go to Production)
+npm run typecheck && npm run lint && npm run build
+npm run ship-gate   # server must be up on :8080
+GET /api/agents/run → dailyLimit 20, promptLimit 100
+Studio: FREE · Limits · templates · Share
+/playground: Experimental / not product banner
 ```
