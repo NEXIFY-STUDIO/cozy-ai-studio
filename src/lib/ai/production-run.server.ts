@@ -453,11 +453,11 @@ ${original.slice(0, 8000)}
         content: f.content as string,
       }));
 
-    let primaryPath =
+    const primaryPath =
       codeJson.primaryPath ||
       files[0]?.path ||
       activeFile;
-    let language = codeJson.language || files[0]?.language || "tsx";
+    const language = codeJson.language || files[0]?.language || "tsx";
     let code =
       files.find((f) => f.path === primaryPath)?.content ||
       codeJson.code ||

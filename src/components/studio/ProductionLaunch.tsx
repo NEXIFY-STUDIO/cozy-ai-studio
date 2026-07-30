@@ -20,31 +20,67 @@ import {
 } from "@/lib/production/launch-pipeline";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 
 type Phase = "idle" | "confirm" | "running" | "done" | "failed";
 
-export function ProductionLaunchButton({ className }: { className?: string }) {
+export function ProductionLaunchButton({
+  className,
+  stripeConfigured,
+}: {
+  className?: string;
+  stripeConfigured?: boolean;
+}) {
   const setOpen = useStudioStore((s) => s.setProductionLaunchOpen);
   const isLive = useStudioStore((s) => s.productionLive);
   const isRunning = useStudioStore((s) => s.productionLaunchRunning);
+  const storeStripe = useStudioStore((s) => s.stripeConfigured);
+  const liveBilling = stripeConfigured ?? storeStripe;
+  const navigate = useNavigate();
+
+  const onClick = () => {
+    if (!liveBilling && !isLive) {
+      void navigate({ to: "/pricing", search: {} });
+      toast.message("Deploy requires live billing", {
+        description:
+          "Free studio works now. Production deploy opens after Stripe keys are set.",
+      });
+      return;
+    }
+    setOpen(true);
+  };
 
   return (
     <Button
       size="sm"
+      variant={isLive ? "default" : "outline"}
       className={cn(
-        "h-9 text-xs gap-1.5 shadow-[var(--shadow-brutalist-sm)]",
-        isLive && "bg-success hover:bg-success/90 text-white",
+        "h-9 text-xs gap-1.5",
+        isLive && "bg-success hover:bg-success/90 text-white border-success",
+        !liveBilling && !isLive && "text-muted-foreground",
         className,
       )}
-      onClick={() => setOpen(true)}
+      onClick={onClick}
       disabled={isRunning}
+      title={
+        liveBilling
+          ? "Open production launch"
+          : "Stripe not configured — opens limits"
+      }
     >
       <Rocket className="h-3.5 w-3.5" />
       <span className="hidden sm:inline">
-        {isLive ? "Live" : isRunning ? "Launching…" : "Go to Production"}
+        {isLive
+          ? "Live"
+          : isRunning
+            ? "Deploying…"
+            : liveBilling
+              ? "Deploy"
+              : "Limits"}
       </span>
-      <span className="sm:hidden">{isLive ? "Live" : "Prod"}</span>
+      <span className="sm:hidden">
+        {isLive ? "Live" : liveBilling ? "Prod" : "Plan"}
+      </span>
     </Button>
   );
 }

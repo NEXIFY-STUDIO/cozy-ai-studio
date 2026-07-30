@@ -1,26 +1,33 @@
-# Cozy AI Studio — TODO
+# Cozy AI Studio — TODO (Option B · Speed Studio)
 
-**Prod (osobný):** https://cozy-ai-studio.vercel.app  
-**Docs:** `docs/MVP_PROMPTS.md` · `docs/POST_MVP_PROMPTS.md`
+**Prod:** https://cozy-ai-studio.vercel.app  
+**SoT:** [docs/SOURCE_OF_TRUTH.md](docs/SOURCE_OF_TRUTH.md)
 
-## MVP 5 promptov (teraz)
-| # | Status | Poznámka |
-|---|---|---|
-| MVP-1 Persist | kód hotový | treba `DATABASE_URL` na ostrej |
-| MVP-2 Auth | kód hotový | Supabase redirect URL |
-| MVP-3 Mistral | **live** na prod | ai-status ok |
-| MVP-4 Live Runtime | kód hotový | top-level tab |
-| MVP-5 Pricing | kód hotový | treba Stripe keys |
+## Done
 
-**Check:** `GET /api/mvp-status` → `mvpReady` / `sellReady`
+| # | Item |
+|---|---|
+| P0.1 | Truth cut landing |
+| P0.2 | Primary path `/` → `/studio` |
+| P0.3 | Pricing honesty (no fake Pro checkout) |
+| P0.4 | SOURCE_OF_TRUTH.md |
+| P1.1 | Hard daily+monthly quota before Mistral (429) |
+| P1.2 | TopBar: FREE + remaining, not fake PRO; brand Cozy |
+| P1.3 | Production button → **Limits** when Stripe off |
+| P2.1 | Empty-state 3 templates (café / dashboard / pricing) |
+| P2.2 | Share in Live Preview + toast after pipeline |
 
-## Post-MVP 7 (neskôr)
-P1 Launch · P2 Metering · P3 Mobile WS · P4 Telemetry · P5 Domain · P6 RLS · P7 Smoke  
-→ `docs/POST_MVP_PROMPTS.md`
+## Next
 
-## Ty manuálne
-1. DATABASE_URL  
-2. SUPABASE_SERVICE_ROLE_KEY  
-3. Auth redirect `…/auth/callback`  
-4. STRIPE_*  
-5. Rotuj kľúče z chatu  
+| # | Item |
+|---|---|
+| P3 | Freeze Lab/Kernel product claims in playground |
+| P4 | Stripe only after activation |
+| Manual | DATABASE_URL · STRIPE_* · auth redirect |
+
+## Check
+
+```
+GET /api/agents/run → quota.dailyLimit / withinQuota
+Studio TopBar: FREE · Nd · N left · Limits (not Go to Production)
+```
