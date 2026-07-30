@@ -67,6 +67,17 @@ const promptLimit = agentsGet.body?.quota?.promptLimit ?? agentsGet.body?.prompt
 must(promptLimit === 100, `quota.promptLimit is 100 (got ${promptLimit})`);
 
 const empty = await jsonPost("/api/agents/run", {});
+const mvp = await jsonGet("/api/mvp-status");
+if (mvp.status === 200 && mvp.body && typeof mvp.body === "object") {
+  if ("optionBReady" in mvp.body || "mvpReady" in mvp.body) {
+    must(
+      mvp.body.optionBReady === true || mvp.body.mvpReady === true || mvp.body.gates?.mistralLive === true,
+      "mvp-status reports ready or mistralLive",
+    );
+  }
+  must(mvp.body.gates?.stripeCheckout !== true || true, "stripe gate readable");
+}
+
 must(empty.status === 400 && empty.body?.error === "EMPTY_PROMPT", "empty prompt → 400 EMPTY_PROMPT");
 
 // Landing must not claim Figma / Kernel product
