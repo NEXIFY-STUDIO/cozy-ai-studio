@@ -18,6 +18,7 @@
 | P2.2 | Share in Live Preview + toast after pipeline |
 | P2.3 | `npm run ship-gate` e2e truth + quota + freeze checks |
 | P3 | Freeze Lab/Kernel product claims (playground noindex + banner) |
+| Polish | Studio TTFP: auto-run landing brief, Stop, next-step Diff→Share, share helper |
 
 ## Next
 

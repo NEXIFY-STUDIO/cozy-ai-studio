@@ -1,4 +1,5 @@
 import { toast } from "sonner";
+import { sharePreviewHtml } from "@/lib/share-preview";
 import { useStudioStore } from "@/stores/studio-store";
 import {
   runMultiAgentPipeline,
@@ -320,24 +321,24 @@ export async function runStudioPipeline(
         const timing = result.phases
           .map((p) => `${p.agent.replace("_", " ")} ${p.durationMs}ms`)
           .join(" · ");
+        // Mobile: jump to preview so Share is one tap away
+        useStudioStore.getState().setMobilePanel("preview");
+
         toast.success(
           attempt > 0
             ? `Pipeline recovered after ${attempt} retry(ies)`
             : result.audit.healed
               ? "Pipeline complete after auto-heal"
               : useDemo
-                ? "Demo pipeline complete — review the diff"
-                : "Pipeline complete — review the diff",
+                ? "Demo pipeline complete — Accept diff, then Share"
+                : "Pipeline complete — Accept diff, then Share",
           {
-            description: `${timing} · Share from Live Preview`,
+            description: `${timing} · Diff → Accept → Share`,
             action: {
               label: "Share",
               onClick: () => {
                 const html = useStudioStore.getState().previewHtml;
-                void navigator.clipboard?.writeText(html).then(
-                  () => toast.message("Preview HTML copied"),
-                  () => toast.message("Open Live Preview → Share"),
-                );
+                void sharePreviewHtml(html);
               },
             },
           },

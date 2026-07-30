@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { useStudioStore } from "@/stores/studio-store";
 import { cn } from "@/lib/utils";
-import { toast } from "sonner";
+import { sharePreviewHtml } from "@/lib/share-preview";
 import {
   DEVICE_PRESETS,
   FAMILY_LABEL,
@@ -63,37 +63,15 @@ export function LivePreview() {
   }, []);
 
 
+  const pipelinePhase = useStudioStore((s) => s.pipelinePhase);
+  const pendingApproval = useStudioStore((s) => s.pendingApproval);
+
   const sharePreview = useCallback(async () => {
-    const html = previewHtml || "<!doctype html><html><body><p>Empty preview</p></body></html>";
-    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-    const file = new File([blob], "cozy-preview.html", { type: "text/html" });
-    try {
-      if (navigator.share && navigator.canShare?.({ files: [file] })) {
-        await navigator.share({
-          title: "Cozy AI Studio preview",
-          files: [file],
-        });
-        toast.success("Shared preview HTML");
-        return;
-      }
-    } catch {
-      /* fall through */
-    }
-    try {
-      await navigator.clipboard.writeText(html);
-      toast.success("Preview HTML copied", {
-        description: "Paste into a file or CodePen. Public host deploy is not live yet.",
-      });
-    } catch {
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "cozy-preview.html";
-      a.click();
-      URL.revokeObjectURL(url);
-      toast.success("Downloaded cozy-preview.html");
-    }
+    await sharePreviewHtml(previewHtml);
   }, [previewHtml]);
+
+  const shareHighlight =
+    pipelinePhase === "completed" || Boolean(pendingApproval);
 
   const handleRefresh = useCallback(() => {
     setIsRefreshing(true);
@@ -311,11 +289,16 @@ export function LivePreview() {
           <button
             type="button"
             onClick={() => void sharePreview()}
-            className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-border bg-background/70 px-2.5 text-xs font-medium hover:border-choco/40 transition-colors shrink-0"
+            className={cn(
+              "inline-flex h-9 items-center gap-1.5 rounded-xl border px-2.5 text-xs font-medium transition-colors shrink-0",
+              shareHighlight
+                ? "border-success/50 bg-success/15 text-foreground shadow-[0_0_0_1px_rgba(74,140,90,0.25)]"
+                : "border-border bg-background/70 hover:border-choco/40",
+            )}
             title="Share or copy preview HTML"
           >
             <Share2 className="h-3.5 w-3.5 text-success" />
-            <span className="hidden sm:inline">Share</span>
+            <span>Share</span>
           </button>
 
           <div className="flex items-center gap-0.5 rounded-xl bg-background/70 p-1 border border-border shrink-0">

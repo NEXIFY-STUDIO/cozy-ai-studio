@@ -8,6 +8,9 @@ import {
   Coffee,
   LayoutDashboard,
   ShoppingBag,
+  Square,
+  CheckCircle2,
+  Share2,
 } from "lucide-react";
 import { useStudioStore } from "@/stores/studio-store";
 import { runStudioPipeline } from "@/lib/ai/run-studio-pipeline";
@@ -53,11 +56,15 @@ const TEMPLATES: {
 export function AgentPanel() {
   const [input, setInput] = useState("");
   const [filesOpen, setFilesOpen] = useState(false);
+  const [showErrorDemos, setShowErrorDemos] = useState(false);
   const chat = useStudioStore((s) => s.chat);
   const files = useStudioStore((s) => s.files);
   const activeFile = useStudioStore((s) => s.activeFile);
   const setActiveFile = useStudioStore((s) => s.setActiveFile);
   const isPipelineRunning = useStudioStore((s) => s.isPipelineRunning);
+  const cancelPipeline = useStudioStore((s) => s.cancelPipeline);
+  const pendingApproval = useStudioStore((s) => s.pendingApproval);
+  const setMobilePanel = useStudioStore((s) => s.setMobilePanel);
   const planTier = useStudioStore((s) => s.planTier);
   const promptsUsed = useStudioStore((s) => s.promptsUsed);
   const promptLimit = useStudioStore((s) => s.promptLimit);
@@ -76,7 +83,7 @@ export function AgentPanel() {
       top: scrollRef.current.scrollHeight,
       behavior: "smooth",
     });
-  }, [chat, lastError, isPipelineRunning]);
+  }, [chat, lastError, isPipelineRunning, pendingApproval]);
 
   useEffect(() => {
     if (consumedLanding.current) return;
@@ -85,7 +92,8 @@ export function AgentPanel() {
       if (q) {
         consumedLanding.current = true;
         sessionStorage.removeItem("cozy-landing-prompt");
-        setInput(q);
+        // Auto-run landing brief for ≤60s TTFP path
+        void runStudioPipeline(q.trim(), { autoRetry: true });
       }
     } catch {
       /* ignore */
@@ -99,7 +107,7 @@ export function AgentPanel() {
   };
 
   const userMessages = chat.filter((m) => m.role === "user");
-  const showEmpty = userMessages.length === 0 && !isPipelineRunning;
+  const showEmpty = userMessages.length === 0 && !isPipelineRunning && !pendingApproval;
 
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-[var(--shadow-glass)]">
@@ -155,10 +163,53 @@ export function AgentPanel() {
                   </button>
                 ))}
               </div>
-              <ErrorHandlingExamples
-                onRun={(p) => void run(p)}
-                disabled={isPipelineRunning}
-              />
+              <div className="pt-1">
+                <button
+                  type="button"
+                  onClick={() => setShowErrorDemos((v) => !v)}
+                  className="text-[11px] text-muted-foreground hover:text-foreground underline-offset-2 hover:underline"
+                >
+                  {showErrorDemos ? "Skryť error demos" : "Dev: error demos"}
+                </button>
+                {showErrorDemos && (
+                  <div className="mt-2">
+                    <ErrorHandlingExamples
+                      onRun={(p) => void run(p)}
+                      disabled={isPipelineRunning}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {pendingApproval && (
+            <div className="rounded-xl border border-success/30 bg-success/10 px-3 py-2.5 text-xs leading-relaxed space-y-2">
+              <p className="font-semibold text-foreground flex items-center gap-1.5">
+                <CheckCircle2 className="h-3.5 w-3.5 text-success shrink-0" />
+                Hotovo — ďalší krok
+              </p>
+              <ol className="list-decimal list-inside text-muted-foreground space-y-0.5">
+                <li>Skontroluj Diff a Accept (HitL)</li>
+                <li>Otvor Náhľad a stlač Share</li>
+              </ol>
+              <div className="flex flex-wrap gap-2 pt-0.5">
+                <button
+                  type="button"
+                  onClick={() => setMobilePanel("studio")}
+                  className="inline-flex items-center gap-1 rounded-lg border border-border bg-background px-2.5 py-1.5 text-[11px] font-medium hover:border-choco/40"
+                >
+                  Diff
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMobilePanel("preview")}
+                  className="inline-flex items-center gap-1 rounded-lg border border-success/40 bg-success/15 px-2.5 py-1.5 text-[11px] font-medium"
+                >
+                  <Share2 className="h-3 w-3" />
+                  Náhľad + Share
+                </button>
+              </div>
             </div>
           )}
 
@@ -228,6 +279,11 @@ export function AgentPanel() {
       </div>
 
       <div className="shrink-0 border-t border-border bg-card p-2.5 sm:p-3 min-w-0">
+        {dailyLeft != null && dailyLeft <= 3 && dailyLeft > 0 && (
+          <p className="mb-2 text-[11px] text-amber-700 dark:text-amber-400 font-medium">
+            Zostáva {dailyLeft} free prompt{dailyLeft === 1 ? "" : "ov"} dnes
+          </p>
+        )}
         <div className="flex items-end gap-2 min-w-0">
           <textarea
             value={input}
@@ -242,21 +298,34 @@ export function AgentPanel() {
             rows={2}
             placeholder={
               isPipelineRunning
-                ? "Agenti pracujú… počkaj alebo Stop"
-                : "Opíš zámer… napr. pricing sekcia"
+                ? "Agenti pracujú… Stop vpravo"
+                : "Brief… napr. landing pre kaviareň"
             }
             className="min-h-[2.75rem] max-h-28 min-w-0 flex-1 resize-none rounded-xl border border-border bg-background px-3 py-2.5 text-sm leading-snug outline-none focus:border-choco focus:ring-1 focus:ring-choco/30 disabled:opacity-60 break-words"
             aria-label="Prompt"
           />
-          <Button
-            size="icon"
-            className="h-11 w-11 shrink-0"
-            disabled={isPipelineRunning || !input.trim()}
-            onClick={() => void run(input.trim())}
-            aria-label="Odoslať prompt"
-          >
-            <Send className="h-4 w-4" />
-          </Button>
+          {isPipelineRunning ? (
+            <Button
+              size="icon"
+              variant="secondary"
+              className="h-11 w-11 shrink-0"
+              onClick={() => cancelPipeline()}
+              aria-label="Zastaviť pipeline"
+              title="Stop"
+            >
+              <Square className="h-4 w-4 fill-current" />
+            </Button>
+          ) : (
+            <Button
+              size="icon"
+              className="h-11 w-11 shrink-0"
+              disabled={!input.trim()}
+              onClick={() => void run(input.trim())}
+              aria-label="Odoslať prompt"
+            >
+              <Send className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       </div>
     </div>
