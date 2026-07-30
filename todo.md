@@ -19,14 +19,14 @@
 | P2.3 | `npm run ship-gate` e2e truth + quota + freeze checks |
 | P3 | Freeze Lab/Kernel product claims (playground noindex + banner) |
 | Polish | Studio TTFP: auto-run landing brief, Stop, next-step Diff→Share, share helper |
+| Env | DATABASE_URL + Mistral + Supabase on Vercel prod (pooler eu-west-1) |
 
 ## Next
 
 | # | Item |
 |---|---|
 | P4 | Stripe only after activation (keep UI "Not live yet") |
-| Env | DATABASE_URL + Mistral + Supabase keys on Vercel prod (qyts… eu-west-1) |
-| Manual | STRIPE_* when activating (P4); optional auth redirect if enabling login |
+| Manual | STRIPE_* when activating; optional auth if enabling login |
 
 ## Check
 
