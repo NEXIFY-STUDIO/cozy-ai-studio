@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { CozyLogo } from "@/components/brand/CozyLogo";
 
 export const Route = createFileRoute("/")({
   component: LandingPage,
@@ -142,9 +143,7 @@ function LandingPage() {
       <header className="sticky top-0 z-40 border-b border-border/70 bg-background/75 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
           <Link to="/" className="flex items-center gap-2.5 group">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-choco text-white font-serif font-bold text-sm shadow-[var(--shadow-brutalist-sm)] group-hover:-translate-y-px transition-transform">
-              C
-            </div>
+            <CozyLogo size="md" variant="seal" className="group-hover:-translate-y-px transition-transform" />
             <div className="leading-none">
               <span className="font-serif text-lg font-bold tracking-tight">
                 Cozy AI Studio
@@ -204,9 +203,12 @@ function LandingPage() {
         {/* ── Hero ───────────────────────────────────────── */}
         <section className="relative mx-auto max-w-6xl px-4 sm:px-6 pt-14 sm:pt-20 pb-10 sm:pb-14">
           <div className="mx-auto max-w-3xl text-center">
-            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-card/80 px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm backdrop-blur">
-              <span className="h-1.5 w-1.5 rounded-full bg-success agent-pulse" />
-              Multi-agent · Human-in-the-loop · SK-ready
+            <div className="mb-6 flex flex-col items-center gap-4">
+              <CozyLogo size="xl" variant="stack" className="mb-1" />
+              <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card/80 px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm backdrop-blur">
+                <span className="h-1.5 w-1.5 rounded-full bg-success agent-pulse" />
+                Multi-agent · Human-in-the-loop · SK-ready
+              </div>
             </div>
 
             <h1 className="font-serif text-[2.35rem] sm:text-6xl lg:text-[4rem] font-bold leading-[1.08] tracking-tight mb-5 text-balance">
@@ -232,7 +234,7 @@ function LandingPage() {
               </label>
               <div className="flex flex-col sm:flex-row gap-2">
                 <div className="relative flex-1">
-                  <Sparkles className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-choco pointer-events-none" />
+                  <Sparkles className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-success pointer-events-none" />
                   <input
                     id="hero-prompt"
                     value={prompt}
@@ -309,7 +311,7 @@ function LandingPage() {
                 {/* Agents */}
                 <div className="rounded-2xl border border-border bg-muted/40 p-4 flex flex-col">
                   <div className="flex items-center gap-2 mb-4">
-                    <Brain className="h-4 w-4 text-choco" />
+                    <Brain className="h-4 w-4 text-success" />
                     <span className="text-sm font-semibold">Agenti</span>
                     <span className="ml-auto text-xs font-mono text-muted-foreground">
                       G0 → G1 → G2
@@ -345,8 +347,8 @@ function LandingPage() {
 
                 {/* Diff */}
                 <div className="rounded-2xl border border-border bg-[#141414] p-4 font-mono text-[12.5px] leading-6 overflow-hidden text-[#e8eaed]">
-                  <div className="flex items-center gap-2 mb-3 text-white/50">
-                    <Code2 className="h-3.5 w-3.5 text-choco" />
+                  <div className="flex items-center gap-2 mb-3 text-white/70">
+                    <Code2 className="h-3.5 w-3.5 text-success" />
                     <span>diff · Hero.tsx</span>
                     <span className="ml-auto text-[11px] rounded bg-white/10 px-1.5 py-0.5">
                       +12 −3
@@ -358,7 +360,7 @@ function LandingPage() {
                   <div className="text-emerald-300 bg-emerald-500/10 px-2 rounded-md mt-0.5">
                     {"+  <h1>Od vety k živej appke</h1>"}
                   </div>
-                  <div className="text-white/45 px-2 mt-2">
+                  <div className="text-white/65 px-2 mt-2">
                     {"  <p className=\"text-lg\">…"}
                   </div>
                   <div className="text-emerald-300 bg-emerald-500/10 px-2 rounded-md mt-0.5">
@@ -368,7 +370,7 @@ function LandingPage() {
                     <span className="rounded-lg bg-emerald-500/15 text-emerald-300 px-2.5 py-1 text-xs">
                       Schváliť blok
                     </span>
-                    <span className="rounded-lg bg-white/8 text-white/55 px-2.5 py-1 text-xs">
+                    <span className="rounded-lg bg-white/8 text-white/75 px-2.5 py-1 text-xs">
                       Zamietnuť
                     </span>
                   </div>
@@ -377,7 +379,7 @@ function LandingPage() {
                 {/* Preview */}
                 <div className="rounded-2xl border border-border bg-muted/40 p-4 flex flex-col">
                   <div className="flex items-center gap-2 mb-3">
-                    <Eye className="h-4 w-4 text-choco" />
+                    <Eye className="h-4 w-4 text-success" />
                     <span className="text-sm font-semibold">Live preview</span>
                   </div>
                   <div className="flex-1 rounded-[1.35rem] border-[5px] border-charcoal/15 dark:border-white/15 bg-white dark:bg-canvas-elevated p-4 flex flex-col items-center justify-center text-center shadow-inner min-h-[200px]">
@@ -474,7 +476,7 @@ function LandingPage() {
                     {s.body}
                   </p>
                   {i < STEPS.length - 1 && (
-                    <ArrowRight className="hidden md:block absolute -right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-choco/40 z-10" />
+                    <ArrowRight className="hidden md:block absolute -right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-success/40 z-10" />
                   )}
                 </li>
               ))}
@@ -485,7 +487,7 @@ function LandingPage() {
         {/* ── Lab + pricing teaser ───────────────────────── */}
         <section className="py-20 sm:py-24">
           <div className="mx-auto max-w-6xl px-4 sm:px-6 grid gap-4 lg:grid-cols-2">
-            <div className="rounded-[1.75rem] border border-border bg-canvas text-[#f2f3f5] p-8 sm:p-10 relative overflow-hidden">
+            <div className="rounded-[1.75rem] border border-border bg-canvas text-canvas-fg p-8 sm:p-10 relative overflow-hidden">
               <div
                 aria-hidden
                 className="absolute inset-0 bg-dots-pattern opacity-80"
@@ -495,7 +497,7 @@ function LandingPage() {
                 <h3 className="font-serif text-2xl sm:text-3xl font-bold mb-3">
                   Cozy Lab
                 </h3>
-                <p className="text-[0.95rem] text-white/70 leading-relaxed max-w-md mb-6">
+                <p className="text-[0.95rem] text-canvas-muted leading-relaxed max-w-md mb-6">
                   Playground s Builder Kernel, Plugin SDK, Mistral gateway a
                   canvasom. Vyskúšaj breakthrough API skôr, než pôjdu do
                   produkcie.
@@ -531,7 +533,7 @@ function LandingPage() {
                 ))}
               </ul>
               <div className="flex flex-wrap gap-2">
-                <Link to="/pricing">
+                <Link to="/pricing" search={{}}>
                   <Button variant="outline" className="gap-2">
                     Zobraziť cenník
                   </Button>
@@ -576,9 +578,7 @@ function LandingPage() {
       <footer className="border-t border-border bg-muted/20">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 py-10 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
           <div className="flex items-center gap-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-choco text-white font-serif font-bold text-xs">
-              C
-            </div>
+            <CozyLogo size="sm" variant="seal" />
             <span className="font-medium text-foreground">Cozy AI Studio</span>
             <span className="text-xs">v1.0</span>
           </div>
@@ -592,7 +592,7 @@ function LandingPage() {
             >
               Lab
             </Link>
-            <Link to="/pricing" className="hover:text-foreground transition-colors">
+            <Link to="/pricing" search={{}} className="hover:text-foreground transition-colors">
               Cenník
             </Link>
             <Link

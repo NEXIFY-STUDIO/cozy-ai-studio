@@ -145,9 +145,8 @@ export function CommandPalette() {
               icon={CreditCard}
               label="Upgrade to Pro"
               onSelect={() => {
-                setPlanTier("PRO");
                 setCommandOpen(false);
-                navigate({ to: "/pricing" });
+                void navigate({ to: "/pricing", search: {} });
               }}
             />
             <Item

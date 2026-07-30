@@ -1,4 +1,4 @@
-import { r as __toESM } from "../_runtime.mjs";
+import { o as __toESM } from "../_runtime.mjs";
 import { n as require_react } from "./monaco-editor__react+react.mjs";
 import { n as require_jsx_runtime } from "./radix-ui__react-context+react.mjs";
 //#region node_modules/react-resizable-panels/dist/react-resizable-panels.js

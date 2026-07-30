@@ -15,6 +15,8 @@ import { RejectionPoll } from "./RejectionPoll";
 import { CommandPalette } from "./CommandPalette";
 import { ProductionLaunchHost } from "./ProductionLaunch";
 import { cn } from "@/lib/utils";
+import { useBillingSync } from "@/hooks/useBillingSync";
+import { useProjectSync } from "@/hooks/useProjectSync";
 
 function useIsDesktop() {
   const [isDesktop, setIsDesktop] = useState(false);
@@ -29,6 +31,9 @@ function useIsDesktop() {
 }
 
 export function StudioShell() {
+  useBillingSync();
+  useProjectSync();
+
   const theme = useStudioStore((s) => s.theme);
   const mobilePanel = useStudioStore((s) => s.mobilePanel);
   const setMobilePanel = useStudioStore((s) => s.setMobilePanel);

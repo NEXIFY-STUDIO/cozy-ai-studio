@@ -24,6 +24,13 @@ export interface PipelineResult {
   taskGraph: TaskNode[];
   audit: AuditReport;
   phases: { agent: AgentId; durationMs: number }[];
+  /** Multi-file G1 patches from SSE / generators */
+  filePatches?: {
+    path: string;
+    content: string;
+    language?: string;
+    op?: "write" | "create" | "delete";
+  }[];
 }
 
 export type PipelineCallbacks = {
@@ -572,6 +579,14 @@ export class MultiAgentOrchestrator {
       taskGraph: graph,
       audit,
       phases,
+      filePatches: [
+        {
+          path: artifact.filePath,
+          content: code,
+          language: artifact.language,
+          op: "write" as const,
+        },
+      ],
     };
   }
 }

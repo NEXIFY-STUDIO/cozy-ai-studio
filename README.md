@@ -82,6 +82,47 @@ src/
 | `npm run lint` | ESLint |
 | `npm run preview` | Serve built app on `:8080` |
 
+
+## Production environment
+
+Copy [`env.example`](./env.example) into Vercel → **Settings → Environment Variables** (Production).
+
+```bash
+MISTRAL_API_KEY=
+DATABASE_URL=
+BETTER_AUTH_SECRET=
+BETTER_AUTH_URL=
+STRIPE_SECRET_KEY=
+STRIPE_WEBHOOK_SECRET=
+STRIPE_PRICE_PRO=
+STRIPE_PRICE_ENTERPRISE=
+VERCEL_TOKEN=
+VERCEL_TEAM_ID=
+DEMO_PIPELINE=false
+```
+
+| Variable | Required | Purpose |
+| --- | --- | --- |
+| `MISTRAL_API_KEY` | yes* | Real multi-agent pipeline (`POST /api/agents/run`) |
+| `DATABASE_URL` | yes | Neon/Postgres (projects, auth, billing, RTC) |
+| `BETTER_AUTH_SECRET` | yes | Session signing (`openssl rand -base64 32`) |
+| `BETTER_AUTH_URL` | yes | Public origin, e.g. `https://your-app.vercel.app` |
+| `STRIPE_SECRET_KEY` | yes | Checkout + portal |
+| `STRIPE_WEBHOOK_SECRET` | yes | Subscription webhooks |
+| `STRIPE_PRICE_PRO` / `STRIPE_PRICE_ENTERPRISE` | yes | Price IDs from Stripe Dashboard |
+| `VERCEL_TOKEN` + `VERCEL_TEAM_ID` | launch | Production Launch → deploy API |
+| `DEMO_PIPELINE` | no | `false` on prod; `true` forces mock agents |
+
+\* If `DEMO_PIPELINE=true`, Mistral is optional (offline mock).
+
+After deploy, verify (booleans only — never returns secret values):
+
+```bash
+curl -s https://YOUR_DOMAIN/api/env-status | jq
+```
+
+Optional helpers: `VERCEL_DEPLOY_HOOK_URL`, `VERCEL_PROJECT_ID`, `VITE_AUTH_ENABLED`.
+
 ## Deploy notes
 
 - Vite config gates Nitro `vercel` preset on `command === "build"`.  

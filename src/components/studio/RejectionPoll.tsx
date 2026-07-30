@@ -1,6 +1,11 @@
 import { X, Paintbrush, Bug, MessageSquareOff } from "lucide-react";
 import { useStudioStore, type RejectionReason } from "@/stores/studio-store";
 import { Button } from "@/components/ui/button";
+import {
+  getActiveProjectId,
+  persistTelemetry,
+  resolveServerApproval,
+} from "@/hooks/useProjectSync";
 
 const options: {
   reason: NonNullable<RejectionReason>;
@@ -9,15 +14,34 @@ const options: {
 }[] = [
   { reason: "SYNTAX_ERROR", label: "Broken / non-functional code", icon: Bug },
   { reason: "BAD_STYLING", label: "Bad UI styling", icon: Paintbrush },
-  { reason: "WRONG_LOGIC", label: "Didn't follow the prompt", icon: MessageSquareOff },
+  {
+    reason: "WRONG_LOGIC",
+    label: "Didn't follow the prompt",
+    icon: MessageSquareOff,
+  },
 ];
 
 export function RejectionPoll() {
   const show = useStudioStore((s) => s.showRejectionPoll);
   const submitRejection = useStudioStore((s) => s.submitRejection);
   const dismissRejectionPoll = useStudioStore((s) => s.dismissRejectionPoll);
+  const lastPrompt = useStudioStore((s) => s.lastPrompt);
+  const pipelineLatencyMs = useStudioStore((s) => s.pipelineLatencyMs);
 
   if (!show) return null;
+
+  const submit = (reason: RejectionReason) => {
+    submitRejection(reason);
+    void resolveServerApproval("rejected", reason);
+    void persistTelemetry({
+      prompt: lastPrompt,
+      status: "REJECTED",
+      rejectionReason: reason,
+      agentType: "G0-G1-G2",
+      latencyMs: pipelineLatencyMs,
+      projectId: getActiveProjectId(),
+    });
+  };
 
   return (
     <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-charcoal/25 backdrop-blur-sm p-4">
@@ -31,7 +55,18 @@ export function RejectionPoll() {
           </div>
           <button
             type="button"
-            onClick={dismissRejectionPoll}
+            onClick={() => {
+              dismissRejectionPoll();
+              void resolveServerApproval("rejected", null);
+              void persistTelemetry({
+                prompt: lastPrompt,
+                status: "REJECTED",
+                rejectionReason: null,
+                agentType: "G0-G1-G2",
+                latencyMs: pipelineLatencyMs,
+                projectId: getActiveProjectId(),
+              });
+            }}
             className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted"
             aria-label="Dismiss"
           >
@@ -44,7 +79,7 @@ export function RejectionPoll() {
             <button
               key={reason}
               type="button"
-              onClick={() => submitRejection(reason)}
+              onClick={() => submit(reason)}
               className="flex w-full items-center gap-3 rounded-xl border border-border bg-muted/40 px-3 py-3 text-left text-sm hover:border-terracotta/40 hover:bg-terracotta/5 transition-colors min-h-11"
             >
               <Icon className="h-4 w-4 text-terracotta shrink-0" />
@@ -57,7 +92,7 @@ export function RejectionPoll() {
           variant="ghost"
           size="sm"
           className="mt-3 w-full"
-          onClick={() => submitRejection("OTHER")}
+          onClick={() => submit("OTHER")}
         >
           Skip / other
         </Button>

@@ -10,6 +10,7 @@ import {
 } from "./PipelineErrorPanel";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { MobilePairPanel } from "./MobilePairPanel";
 
 const SUGGESTIONS = [
   "Pridaj pricing sekciu Free / Pro / Enterprise",
@@ -64,7 +65,7 @@ export function AgentPanel() {
       {/* Scrollable middle: pipeline + errors + chat */}
       <div
         ref={scrollRef}
-        className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden @@Cozy_SCROLL@@"
+        className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden cosy-scroll"
       >
         <div className="space-y-2.5 p-2.5 sm:p-3 min-w-0">
           <AgentPipeline compact={isPipelineRunning} />
@@ -74,7 +75,7 @@ export function AgentPanel() {
           {/* Chat header */}
           <div className="flex items-center justify-between gap-2 min-w-0 pt-1">
             <div className="flex items-center gap-2 min-w-0">
-              <Sparkles className="h-4 w-4 text-choco shrink-0" />
+              <Sparkles className="h-4 w-4 text-success shrink-0" />
               <span className="font-serif text-sm font-semibold truncate">Chat</span>
             </div>
             <span className="text-xs text-muted-foreground tabular-nums shrink-0">
@@ -151,7 +152,7 @@ export function AgentPanel() {
           />
         </button>
         {filesOpen && (
-          <ul className="max-h-28 overflow-auto @@Cozy_SCROLL@@ px-2 pb-2 space-y-0.5 min-w-0">
+          <ul className="max-h-28 overflow-auto cosy-scroll px-2 pb-2 space-y-0.5 min-w-0">
             {Object.values(files).map((f) => (
               <li key={f.path} className="min-w-0">
                 <button
@@ -164,13 +165,17 @@ export function AgentPanel() {
                       : "text-muted-foreground hover:bg-muted",
                   )}
                 >
-                  <FileCode2 className="h-3.5 w-3.5 shrink-0 text-choco" />
+                  <FileCode2 className="h-3.5 w-3.5 shrink-0 text-success" />
                   <span className="truncate font-mono">{f.path}</span>
                 </button>
               </li>
             ))}
           </ul>
         )}
+      </div>
+
+      <div className="shrink-0 px-2.5 sm:px-3 pb-2">
+        <MobilePairPanel />
       </div>
 
       {/* Sticky prompt — always visible, never crushed */}

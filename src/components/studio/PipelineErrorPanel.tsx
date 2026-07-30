@@ -162,7 +162,7 @@ export function ErrorHandlingExamples({
   return (
     <div className="rounded-2xl border border-border bg-muted/30 p-3 shadow-sm min-w-0 overflow-hidden">
       <div className="mb-2 flex items-center gap-2 min-w-0">
-        <BookOpen className="h-3.5 w-3.5 text-choco shrink-0" />
+        <BookOpen className="h-3.5 w-3.5 text-success shrink-0" />
         <span className="text-xs font-semibold text-muted-foreground truncate">
           Príklady chýb
         </span>

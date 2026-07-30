@@ -4,12 +4,28 @@ import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import viteReact from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { nitro } from "nitro/vite";
+import { realtimeWsPlugin } from "./src/lib/realtime/ws-plugin";
 
 /**
  * Finish PGLite bootstrap during dev-server setup (before traffic). Vite awaits
  * async `configureServer` hooks. Production: `src/lib/db` kicks `ensureDbReady`
  * on import.
  */
+
+/** COOP/COEP so WebContainer can use SharedArrayBuffer */
+function webcontainerHeadersPlugin(): Plugin {
+  return {
+    name: "app-builder:webcontainer-headers",
+    configureServer(server) {
+      server.middlewares.use((_req, res, next) => {
+        res.setHeader("Cross-Origin-Embedder-Policy", "require-corp");
+        res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
+        next();
+      });
+    },
+  };
+}
+
 function pgliteBootstrapPlugin(): Plugin {
   return {
     name: "app-builder:pglite-bootstrap",
@@ -129,9 +145,25 @@ export default defineConfig(({ command }) => ({
     host: "0.0.0.0",
     port: 8080,
     strictPort: true,
+    // Required for WebContainer SharedArrayBuffer
+    headers: {
+      "Cross-Origin-Embedder-Policy": "require-corp",
+      "Cross-Origin-Opener-Policy": "same-origin",
+    },
+  },
+  preview: {
+    host: "0.0.0.0",
+    port: 8080,
+    strictPort: true,
+    headers: {
+      "Cross-Origin-Embedder-Policy": "require-corp",
+      "Cross-Origin-Opener-Policy": "same-origin",
+    },
   },
   resolve: { tsconfigPaths: true },
   plugins: [
+    webcontainerHeadersPlugin(),
+    realtimeWsPlugin(),
     pgliteBootstrapPlugin(),
     // Before tanstackStart so /auth/popup never falls through to the SPA.
     authPopupPlugin(),

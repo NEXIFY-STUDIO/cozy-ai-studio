@@ -6,7 +6,8 @@ import type { PipelineErrorCode, PipelineErrorAgent } from "@/lib/ai/errors";
 export type AgentId = "G0_PLANNER" | "G1_CODER" | "G2_AUDITOR";
 export type AgentStatus = "idle" | "pending" | "in_progress" | "completed" | "failed";
 export type PlanTier = "FREE" | "PRO" | "ENTERPRISE";
-export type DeviceType = "mobile" | "tablet" | "desktop";
+export type DeviceType = string;
+
 export type ThemeMode = "light" | "dark";
 export type RejectionReason =
   | "BAD_STYLING"
@@ -55,6 +56,22 @@ export interface PendingApproval {
   modifiedCode: string;
   language: string;
   previewHtml: string;
+  /** Validated multi-file patches ready for Accept → WC write */
+  filePatches?: { path: string; content: string; language?: string }[];
+}
+
+export interface PreflightReportState {
+  ok: boolean;
+  canAccept: boolean;
+  checks: {
+    id: string;
+    label: string;
+    status: "pass" | "fail" | "warn" | "skip";
+    detail?: string;
+  }[];
+  issues: { path: string; code: string; message: string; severity: string }[];
+  patchCount: number;
+  ranAt: number;
 }
 
 export interface TelemetryLog {
@@ -107,6 +124,7 @@ interface StudioState {
   taskGraph: TaskNode[];
   chat: ChatMessage[];
   pendingApproval: PendingApproval | null;
+  preflightReport: PreflightReportState | null;
   showRejectionPoll: boolean;
   lastPrompt: string;
   previewHtml: string;
@@ -147,6 +165,7 @@ interface StudioState {
   acceptAllDiffs: () => void;
   rejectAllDiffs: () => void;
   setPendingApproval: (approval: PendingApproval | null) => void;
+  setPreflightReport: (report: PreflightReportState | null) => void;
   approvePending: () => void;
   rejectPending: () => void;
   submitRejection: (reason: RejectionReason) => void;
@@ -163,6 +182,7 @@ interface StudioState {
   setPublishUrl: (url: string | null) => void;
   addTelemetry: (log: Omit<TelemetryLog, "id" | "createdAt">) => void;
   updateFileContent: (path: string, content: string) => void;
+  setFiles: (files: Record<string, ProjectFile>) => void;
   setPipelineLatency: (ms: number) => void;
   resetAgents: () => void;
   setPipelineError: (err: PipelineErrorState | null) => void;
@@ -396,11 +416,11 @@ function computeChunks(original: string, modified: string): DiffChunk[] {
 export const useStudioStore = create<StudioState>()(
   persist(
     (set, get) => ({
-      theme: "light",
+            theme: "dark",
       planTier: "PRO",
       promptsUsed: 12,
       promptLimit: 9999,
-      device: "mobile",
+      device: "iphone-se",
       activeFile: "src/App.tsx",
       files: initialFiles,
       originalCode: STARTER_APP,
@@ -423,6 +443,7 @@ export const useStudioStore = create<StudioState>()(
         },
       ],
       pendingApproval: null,
+      preflightReport: null,
       showRejectionPoll: false,
       lastPrompt: "",
       previewHtml: STARTER_PREVIEW,
@@ -555,14 +576,45 @@ export const useStudioStore = create<StudioState>()(
         set({ modifiedCode: get().originalCode, diffChunks: [] });
       },
       setPendingApproval: (approval) => set({ pendingApproval: approval }),
+      setPreflightReport: (report) => set({ preflightReport: report }),
       approvePending: () => {
         const pending = get().pendingApproval;
         if (!pending) return;
-        get().acceptAllDiffs();
+        // Multi-file: write all validated patches into project tree
+        const patches = pending.filePatches ?? [];
+        if (patches.length > 0) {
+          const files = { ...get().files };
+          for (const p of patches) {
+            const lang =
+              p.language ??
+              (p.path.endsWith(".css")
+                ? "css"
+                : p.path.endsWith(".json")
+                  ? "json"
+                  : "typescript");
+            files[p.path] = { path: p.path, language: lang, content: p.content };
+          }
+          const primary =
+            patches.find((p) => p.path === get().activeFile) ?? patches[0];
+          set({
+            files,
+            activeFile: primary.path,
+            originalCode: primary.content,
+            modifiedCode: primary.content,
+            language: primary.language ?? get().language,
+            diffChunks: [],
+          });
+        } else {
+          get().acceptAllDiffs();
+        }
         get().setPreviewHtml(pending.previewHtml);
         get().addChat({
           role: "assistant",
-          content: `Approved: ${pending.title}. Changes written to project.`,
+          content: `Approved: ${pending.title}. ${
+            patches.length > 1
+              ? `${patches.length} files written → Live Runtime.`
+              : "Changes written to project."
+          }`,
           agent: "G2_AUDITOR",
         });
         get().addTelemetry({
@@ -571,7 +623,9 @@ export const useStudioStore = create<StudioState>()(
           agentType: "G0-G1-G2",
           latencyMs: get().pipelineLatencyMs,
         });
-        set({ pendingApproval: null });
+        set({ pendingApproval: null, preflightReport: null });
+        // bump preview for WC remount even if html same
+        set({ previewKey: get().previewKey + 1 });
       },
       rejectPending: () => {
         get().rejectAllDiffs();
@@ -644,6 +698,7 @@ export const useStudioStore = create<StudioState>()(
             ...get().telemetry,
           ].slice(0, 50),
         }),
+      setFiles: (files) => set({ files: { ...files } }),
       updateFileContent: (path, content) => {
         const files = { ...get().files };
         const existing = files[path];
@@ -678,21 +733,22 @@ export const useStudioStore = create<StudioState>()(
     }),
     {
       name: "cozy-ai-studio-v1",
+      // Server is source of truth for files/plan/usage/telemetry.
+      // Keep only UI prefs in localStorage (cozy-ai-studio-v1).
       partialize: (s) => ({
         theme: s.theme,
-        planTier: s.planTier,
+        device: s.device,
         productionLive: s.productionLive,
         productionRegion: s.productionRegion,
         productionPrepaidCredits: s.productionPrepaidCredits,
         productionInvoiceId: s.productionInvoiceId,
         publishUrl: s.publishUrl,
-        promptsUsed: s.promptsUsed,
-        device: s.device,
-        files: s.files,
-        previewHtml: s.previewHtml,
-        telemetry: s.telemetry,
-        showcase: s.showcase,
       }),
+      onRehydrateStorage: () => (state) => {
+        if (typeof document === "undefined") return;
+        const theme = state?.theme ?? "dark";
+        document.documentElement.classList.toggle("dark", theme === "dark");
+      },
     },
   ),
 );

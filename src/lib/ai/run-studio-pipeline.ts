@@ -1,22 +1,43 @@
 import { toast } from "sonner";
 import { useStudioStore } from "@/stores/studio-store";
-import { runMultiAgentPipeline } from "./orchestrator";
+import {
+  runMultiAgentPipeline,
+  type PipelineCallbacks,
+  type PipelineResult,
+} from "./orchestrator";
+import {
+  isClientDemoPipeline,
+  runRemoteMultiAgentPipeline,
+} from "./run-remote-pipeline";
 import { PipelineError } from "./errors";
+import {
+  recordMyPromptUsage,
+  ensureMyProject,
+} from "@/lib/projects/functions";
+import { persistPendingApproval } from "@/hooks/useProjectSync";
 import {
   computeBackoffMs,
   getRetryPolicy,
   isAutoRetryable,
   waitWithAbort,
+  DEFAULT_RETRY_POLICY,
   type RetryPolicy,
 } from "./retry-policy";
+import { runPreflight } from "./preflight";
+import type { FilePatch } from "./patch-contract";
 
 export type RunPipelineOptions = {
-  /** Enable automatic retries for transient errors (default true) */
   autoRetry?: boolean;
+  forceDemo?: boolean;
 };
 
+function shouldUseDemo(forceDemo?: boolean): boolean {
+  if (forceDemo) return true;
+  return isClientDemoPipeline();
+}
+
 /**
- * Run G0→G1→G2 with exponential-backoff auto-retry for transient failures.
+ * G0→G1→G2 with auto-retry + preflight contract before HitL.
  */
 export async function runStudioPipeline(
   prompt: string,
@@ -64,6 +85,7 @@ export async function runStudioPipeline(
   store.clearPipelineError();
   store.resetRetryState();
   store.resetAgents();
+  store.setPreflightReport(null);
   const signal = store.beginPipeline();
   store.incrementPrompts();
   store.addChat({ role: "user", content: trimmed });
@@ -73,6 +95,67 @@ export async function runStudioPipeline(
   let attempt = 0;
   let lastError: PipelineError | null = null;
   let policy: RetryPolicy | null = null;
+  let useDemo = shouldUseDemo(options.forceDemo);
+  let fellBackToDemo = false;
+
+  const buildCallbacks = (): PipelineCallbacks => ({
+    signal,
+    attempt,
+    onAgentUpdate: (patch) => store.updateAgent(patch.id, patch),
+    onStreamCode: (code) => store.streamModifiedCode(code),
+    onChat: (content, agent) =>
+      store.addChat({ role: "assistant", content, agent }),
+    onPhase: (phase) => store.setPipelinePhase(phase),
+    onTaskGraph: (nodes) => store.setTaskGraph(nodes),
+    onProgress: (pct, label) =>
+      store.setPipelineProgress(
+        pct,
+        attempt > 0 ? `Retry ${attempt + 1}: ${label}` : label,
+      ),
+  });
+
+  const runOnce = async (): Promise<PipelineResult> => {
+    const callbacks = buildCallbacks();
+    if (useDemo) {
+      return runMultiAgentPipeline(trimmed, original, callbacks);
+    }
+    try {
+      return await runRemoteMultiAgentPipeline(
+        {
+          prompt: trimmed,
+          originalCode: original,
+          activeFile: store.activeFile,
+          files: store.files,
+        },
+        callbacks,
+      );
+    } catch (e) {
+      const err = PipelineError.fromUnknown(e);
+      if (
+        !fellBackToDemo &&
+        (err.message === "MISSING_API_KEY" ||
+          err.message === "DEMO_PIPELINE" ||
+          err.detail?.includes("MISTRAL_API_KEY") ||
+          err.userMessage.includes("no Mistral key"))
+      ) {
+        fellBackToDemo = true;
+        useDemo = true;
+        store.addChat({
+          role: "system",
+          content:
+            "Production AI unavailable (no MISTRAL_API_KEY). Falling back to offline demo pipeline.",
+        });
+        toast.message("Demo pipeline", {
+          description: "Mistral key missing — using offline mock agents.",
+        });
+        return runMultiAgentPipeline(trimmed, original, {
+          ...callbacks,
+          attempt,
+        });
+      }
+      throw e;
+    }
+  };
 
   try {
     while (true) {
@@ -92,7 +175,9 @@ export async function runStudioPipeline(
             content: `Auto-retry ${attempt}/${policy?.maxRetries ?? "?"} after ${lastError?.code ?? "error"}…`,
           });
           toast.message(`Retrying pipeline (attempt ${attempt + 1})`, {
-            description: lastError ? `Recovering from ${lastError.code}` : undefined,
+            description: lastError
+              ? `Recovering from ${lastError.code}`
+              : undefined,
           });
         }
 
@@ -101,44 +186,132 @@ export async function runStudioPipeline(
           isAutoRetrying: attempt > 0,
         });
 
-        const result = await runMultiAgentPipeline(trimmed, original, {
-          signal,
-          attempt,
-          onAgentUpdate: (patch) => store.updateAgent(patch.id, patch),
-          onStreamCode: (code) => store.streamModifiedCode(code),
-          onChat: (content, agent) =>
-            store.addChat({ role: "assistant", content, agent }),
-          onPhase: (phase) => store.setPipelinePhase(phase),
-          onTaskGraph: (nodes) => store.setTaskGraph(nodes),
-          onProgress: (pct, label) =>
-            store.setPipelineProgress(
-              pct,
-              attempt > 0 ? `Retry ${attempt + 1}: ${label}` : label,
-            ),
+        const result = await runOnce();
+
+        // ── P1: build + validate G1 patches ───────────────────────────
+        const rawPatches: Partial<FilePatch>[] = result.filePatches?.length
+          ? result.filePatches.map((p) => ({
+              path: p.path,
+              content: p.content,
+              language: p.language,
+              op: p.op ?? "write",
+            }))
+          : [
+              {
+                path: result.filePath,
+                content: result.code,
+                language: result.language,
+                op: "write",
+              },
+            ];
+
+        store.setPipelineProgress(92, "Preflight contract…");
+        const preflight = runPreflight(rawPatches);
+        store.setPreflightReport({
+          ok: preflight.ok,
+          canAccept: preflight.canAccept,
+          checks: preflight.checks,
+          issues: preflight.issues.map((i) => ({
+            path: i.path,
+            code: i.code,
+            message: i.message,
+            severity: i.severity,
+          })),
+          patchCount: preflight.patches.length,
+          ranAt: preflight.ranAt,
         });
+
+        if (!preflight.canAccept) {
+          store.addChat({
+            role: "system",
+            content: `Preflight blocked HitL: ${preflight.issues
+              .filter((i) => i.severity === "error")
+              .map((i) => i.message)
+              .join("; ")}`,
+          });
+          toast.error("Preflight failed — patches rejected", {
+            description: "Fix agent output or retry with a clearer prompt.",
+          });
+          store.setPipelineError({
+            code: "UNKNOWN",
+            agent: "G1_CODER",
+            userMessage: "G1 patch contract failed preflight.",
+            detail: preflight.issues.map((i) => i.message).join(" · "),
+            exampleFix: "Retry prompt; avoid binary paths and path traversal.",
+            retryable: true,
+            recoverable: true,
+          });
+          store.setPipelineRunning(false);
+          store.setPipelinePhase("failed");
+          return false;
+        }
 
         if (store.files[result.filePath]) {
           store.setActiveFile(result.filePath);
         }
+
+        // Stage multi-file content into tree as proposed (not accepted yet)
+        // Only primary goes to diff view; siblings sit ready in pending.filePatches
+        for (const p of preflight.patches) {
+          if (p.path === result.filePath) continue;
+          if (p.content) {
+            // keep in pending only until Accept — optional soft stage
+          }
+        }
+
         const base =
           useStudioStore.getState().files[result.filePath]?.content ?? original;
-        store.setDiff(base, result.code, result.language);
+        const primaryContent =
+          preflight.patches.find((p) => p.path === result.filePath)?.content ??
+          result.code;
+        store.setDiff(base, primaryContent, result.language);
         store.setPipelineLatency(Date.now() - started);
+        const approvalDesc = [
+          result.audit.healed ? "Auto-healed by G2 loop." : null,
+          attempt > 0 ? `Succeeded after ${attempt} retry(ies).` : null,
+          fellBackToDemo ? "Ran via offline demo fallback." : null,
+          !useDemo && !fellBackToDemo ? "Mistral production pipeline." : null,
+          preflight.ok
+            ? `Preflight OK · ${preflight.patches.length} file(s).`
+            : `Preflight warnings · ${preflight.patches.length} file(s).`,
+          result.description,
+        ]
+          .filter(Boolean)
+          .join(" ");
+
         store.setPendingApproval({
           title: result.title,
-          description: [
-            result.audit.healed ? "Auto-healed by G2 loop." : null,
-            attempt > 0 ? `Succeeded after ${attempt} retry(ies).` : null,
-            result.description,
-          ]
-            .filter(Boolean)
-            .join(" "),
-          affectedFiles: result.affectedFiles,
+          description: approvalDesc,
+          affectedFiles:
+            preflight.patches.map((p) => p.path).length > 0
+              ? preflight.patches.map((p) => p.path)
+              : result.affectedFiles,
           originalCode: base,
-          modifiedCode: result.code,
+          modifiedCode: primaryContent,
           language: result.language,
           previewHtml: result.previewHtml,
+          filePatches: preflight.patches.map((p) => ({
+            path: p.path,
+            content: p.content,
+            language: p.language,
+          })),
         });
+
+        try {
+          const project = await ensureMyProject();
+          await persistPendingApproval({
+            projectId: project.id,
+            title: result.title,
+            description: approvalDesc,
+            affectedFiles: preflight.patches.map((p) => p.path),
+            originalCode: base,
+            modifiedCode: primaryContent,
+            language: result.language,
+            previewHtml: result.previewHtml,
+          });
+        } catch {
+          /* unauthenticated / offline */
+        }
 
         const timing = result.phases
           .map((p) => `${p.agent.replace("_", " ")} ${p.durationMs}ms`)
@@ -148,159 +321,100 @@ export async function runStudioPipeline(
             ? `Pipeline recovered after ${attempt} retry(ies)`
             : result.audit.healed
               ? "Pipeline complete after auto-heal"
-              : "Pipeline complete — review the diff",
+              : useDemo
+                ? "Demo pipeline complete — review the diff"
+                : "Pipeline complete — review the diff",
           { description: timing },
         );
+        try {
+          const project = await ensureMyProject();
+          const usage = await recordMyPromptUsage({
+            data: {
+              projectId: project.id,
+              promptPreview: trimmed,
+              provider: useDemo || fellBackToDemo ? "demo" : "mistral",
+              agent: "G0_G1_G2",
+              tokensIn: Math.ceil(trimmed.length / 4),
+            },
+          });
+          if (usage && typeof usage === "object" && "promptsUsed" in usage) {
+            useStudioStore.setState({
+              promptsUsed: (usage as { promptsUsed: number }).promptsUsed,
+            });
+          }
+        } catch {
+          /* ignore */
+        }
+
+        store.setPipelineRunning(false);
+        store.setPipelinePhase("completed");
+        store.setPipelineProgress(100, "Awaiting approval");
         store.resetRetryState();
-        store.clearPipelineError();
         return true;
       } catch (e) {
-        const err = PipelineError.fromUnknown(e);
-        lastError = err;
-
-        if (err.code === "ABORTED") {
+        if (e instanceof DOMException && e.name === "AbortError") {
+          store.setPipelineRunning(false);
           store.setPipelinePhase("cancelled");
-          store.resetRetryState();
-          store.setPipelineError({
-            code: err.code,
-            agent: err.agent,
-            userMessage: err.userMessage,
-            detail: err.detail,
-            exampleFix: err.exampleFix,
-            retryable: true,
-            recoverable: true,
-          });
-          toast.message("Pipeline cancelled");
           return false;
         }
-
-        markFailedAgent(err);
-
-        if (!policy) {
-          policy = getRetryPolicy(err.code);
-        }
-
-        const canAuto =
-          autoRetry &&
-          isAutoRetryable(err) &&
-          policy !== null &&
-          attempt < policy.maxRetries;
-
-        store.addChat({
-          role: "system",
-          content: [
-            `Error [${err.code}] via ${err.agent} (attempt ${attempt + 1})`,
-            err.userMessage,
-            err.detail ? `Detail: ${err.detail}` : null,
-            canAuto && policy
-              ? `Auto-retry in backoff (${attempt + 1}/${policy.maxRetries} retries used after this wait).`
-              : err.exampleFix
-                ? `Recovery: ${err.exampleFix}`
-                : null,
-          ]
-            .filter(Boolean)
-            .join("\n"),
-        });
-
-        if (canAuto && policy) {
-          const delay = computeBackoffMs(policy, attempt);
-          const maxAttempts = 1 + policy.maxRetries;
-          store.setRetryState({
-            retryAttempt: attempt + 1,
-            retryMaxAttempts: maxAttempts,
-            retryCountdownMs: delay,
-            isAutoRetrying: true,
-          });
-          store.setPipelinePhase("planning");
-          store.setPipelineProgress(
-            0,
-            `Retry ${attempt + 2}/${maxAttempts} in ${(delay / 1000).toFixed(1)}s…`,
-          );
-          toast.message(`Retrying in ${(delay / 1000).toFixed(1)}s`, {
-            description: `${err.code} · attempt ${attempt + 2}/${maxAttempts}`,
-          });
-
-          try {
-            await waitWithAbort(delay, signal, (remaining) => {
-              store.setRetryState({ retryCountdownMs: remaining });
-              store.setPipelineProgress(
-                0,
-                `Retry ${attempt + 2}/${maxAttempts} in ${(remaining / 1000).toFixed(1)}s…`,
-              );
-            });
-          } catch {
-            store.setPipelinePhase("cancelled");
-            store.resetRetryState();
-            store.setPipelineError({
-              code: "ABORTED",
-              agent: "ORCHESTRATOR",
-              userMessage: "Pipeline was cancelled during retry backoff.",
-              retryable: true,
-              recoverable: true,
-            });
-            toast.message("Pipeline cancelled");
-            return false;
-          }
-
-          attempt += 1;
-          continue;
-        }
-
-        // Give up — surface error for manual retry
-        store.setPipelinePhase("failed");
-        store.setPipelineLatency(Date.now() - started);
+        lastError = PipelineError.fromUnknown(e);
         store.setPipelineError({
-          code: err.code,
-          agent: err.agent,
-          userMessage: err.userMessage,
-          detail: [
-            err.detail,
-            attempt > 0 ? `Failed after ${attempt + 1} attempt(s).` : null,
-          ]
-            .filter(Boolean)
-            .join("\n") || undefined,
-          exampleFix: err.exampleFix,
-          retryable: err.retryable,
-          recoverable: err.recoverable,
+          code: lastError.code,
+          agent: lastError.agent,
+          userMessage: lastError.userMessage,
+          detail: lastError.detail,
+          exampleFix: lastError.exampleFix,
+          retryable: lastError.retryable,
+          recoverable: lastError.recoverable,
         });
+        store.setPipelinePhase("failed");
+        store.setPipelineRunning(false);
+
+        if (!autoRetry || !isAutoRetryable(lastError)) {
+          toast.error(lastError.userMessage, {
+            description: lastError.exampleFix,
+          });
+          return false;
+        }
+        const activePolicy: RetryPolicy =
+          policy ?? getRetryPolicy(lastError.code) ?? DEFAULT_RETRY_POLICY;
+        policy = activePolicy;
+        if (attempt >= activePolicy.maxRetries) {
+          toast.error("Retries exhausted", {
+            description: lastError.userMessage,
+          });
+          return false;
+        }
+        const delay = computeBackoffMs(activePolicy, attempt);
         store.setRetryState({
           retryAttempt: attempt,
-          retryMaxAttempts: policy ? 1 + policy.maxRetries : attempt + 1,
-          retryCountdownMs: 0,
-          isAutoRetrying: false,
+          retryMaxAttempts: activePolicy.maxRetries,
+          retryCountdownMs: delay,
+          isAutoRetrying: true,
         });
-        toast.error(err.userMessage, {
-          description:
-            err.code +
-            (err.retryable ? " · manual retry available" : "") +
-            (attempt > 0 ? ` · ${attempt + 1} attempts` : ""),
-        });
-        return false;
+        try {
+          await waitWithAbort(delay, signal, (left) => {
+            store.setRetryState({ retryCountdownMs: left });
+          });
+        } catch {
+          return false;
+        }
+        attempt += 1;
       }
     }
-  } finally {
-    store.setPipelineRunning(false);
-    useStudioStore.setState({ _abort: null });
-    store.setRetryState({ isAutoRetrying: false, retryCountdownMs: 0 });
-  }
-}
-
-function markFailedAgent(err: PipelineError) {
-  const store = useStudioStore.getState();
-  const agentId =
-    err.agent === "G0_PLANNER"
-      ? "g0"
-      : err.agent === "G1_CODER"
-        ? "g1"
-        : err.agent === "G2_AUDITOR"
-          ? "g2"
-          : null;
-  if (!agentId) return;
-  const current = store.agents.find((a) => a.id === agentId);
-  if (current?.status !== "failed") {
-    store.updateAgent(agentId, {
-      status: "failed",
-      payload: err.userMessage,
+  } catch (e) {
+    const err = PipelineError.fromUnknown(e);
+    store.setPipelineError({
+      code: err.code,
+      agent: err.agent,
+      userMessage: err.userMessage,
+      detail: err.detail,
+      exampleFix: err.exampleFix,
+      retryable: err.retryable,
+      recoverable: err.recoverable,
     });
+    store.setPipelineRunning(false);
+    store.setPipelinePhase("failed");
+    return false;
   }
 }

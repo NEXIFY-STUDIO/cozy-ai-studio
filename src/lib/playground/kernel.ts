@@ -249,13 +249,131 @@ export class PluginRegistry {
 
 // ── Mistral gateway stream demo ──────────────────────────────────
 
+export type StreamPlanMeta = {
+  mode: "production" | "demo";
+  provider: string;
+  detail?: string;
+};
+
+/**
+ * Stream a plan via POST /api/agents/run (same pipeline as Studio).
+ * Falls back to offline demo stream when API unavailable — callers should show "Demo only".
+ */
 export async function streamMistralPlan(
   prompt: string,
   onToken: (partial: string) => void,
   signal?: AbortSignal,
+  onMeta?: (meta: StreamPlanMeta) => void,
 ): Promise<string> {
+  // Try production agents API (SSE)
+  try {
+    const { getBearerToken } = await import("@/lib/auth/client");
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      Accept: "text/event-stream",
+    };
+    const bearer = getBearerToken();
+    if (bearer) headers.Authorization = `Bearer ${bearer}`;
+
+    const res = await fetch("/api/agents/run", {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        prompt: `PLAN ONLY (no full code): ${prompt}`,
+        originalCode: "// lab playground plan",
+        activeFile: "src/App.tsx",
+      }),
+      signal,
+    });
+
+    if (res.ok && res.body) {
+      onMeta?.({ mode: "production", provider: "mistral" });
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let acc = "";
+      while (true) {
+        if (signal?.aborted) throw new DOMException("aborted", "AbortError");
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        let idx: number;
+        while ((idx = buffer.indexOf("\n\n")) !== -1) {
+          const block = buffer.slice(0, idx);
+          buffer = buffer.slice(idx + 2);
+          if (!block.trim() || block.startsWith(":")) continue;
+          let type: string | null = null;
+          const dataLines: string[] = [];
+          for (const line of block.split("\n")) {
+            if (line.startsWith("event:")) type = line.slice(6).trim();
+            else if (line.startsWith("data:")) dataLines.push(line.slice(5).trim());
+          }
+          if (!type || !dataLines.length) continue;
+          let data: unknown;
+          try {
+            data = JSON.parse(dataLines.join("\n"));
+          } catch {
+            continue;
+          }
+          if (type === "chat") {
+            const c = data as { content?: string };
+            if (c.content) {
+              acc = acc ? `${acc}\n${c.content}` : c.content;
+              onToken(acc);
+            }
+          } else if (type === "token") {
+            const tok = data as { accumulated?: string; token?: string };
+            if (tok.accumulated) {
+              acc = `## Plan (stream)\n\n${tok.accumulated}`;
+              onToken(acc);
+            }
+          } else if (type === "task") {
+            const g = data as { graph?: Array<{ id?: string; label?: string }> };
+            if (g.graph?.length) {
+              const lines = g.graph.map(
+                (n, i) => `${i + 1}. ${n.label || n.id || "task"}`,
+              );
+              acc = [`## Plan (G0 task graph)`, ``, `Prompt: ${prompt}`, ``, ...lines].join("\n");
+              onToken(acc);
+            }
+          } else if (type === "done") {
+            const d = data as { plan?: string; title?: string; description?: string };
+            if (d.plan) {
+              acc = typeof d.plan === "string" ? d.plan : JSON.stringify(d.plan, null, 2);
+            } else if (!acc) {
+              acc = [`## Plan`, ``, d.title || prompt, d.description || ""].join("\n");
+            }
+            onToken(acc);
+          } else if (type === "error") {
+            const e = data as { userMessage?: string };
+            throw new Error(e.userMessage || "Agent pipeline error");
+          }
+        }
+      }
+      if (acc) return acc;
+    } else {
+      // 401/503/409 → demo
+      let detail = `HTTP ${res.status}`;
+      try {
+        const j = (await res.json()) as { message?: string; error?: string };
+        detail = j.message || j.error || detail;
+      } catch {
+        /* ignore */
+      }
+      onMeta?.({ mode: "demo", provider: "demo", detail });
+    }
+  } catch (e) {
+    if (e instanceof DOMException && e.name === "AbortError") throw e;
+    onMeta?.({
+      mode: "demo",
+      provider: "demo",
+      detail: e instanceof Error ? e.message : String(e),
+    });
+  }
+
+  // Offline demo stream
   const plan = [
-    `## Plan (Mistral)`,
+    `## Plan (Demo only)`,
     ``,
     `Prompt: ${prompt}`,
     ``,
@@ -265,7 +383,7 @@ export async function streamMistralPlan(
     `4. Run Plugin: Design Token Sync`,
     `5. Export JSON + smoke preview`,
     ``,
-    `Provider: mistral · marker: mistral-agent-g2-1`,
+    `Provider: demo · connect Mistral + sign in for /api/agents/run`,
   ].join("\n");
 
   let acc = "";
@@ -273,7 +391,7 @@ export async function streamMistralPlan(
     if (signal?.aborted) throw new DOMException("aborted", "AbortError");
     acc = plan.slice(0, i + 6);
     onToken(acc);
-    await new Promise((r) => setTimeout(r, 18));
+    await new Promise((r) => setTimeout(r, 12));
   }
   onToken(plan);
   return plan;

@@ -1,51 +1,36 @@
 /**
  * Live-preview sign-in popup — server-only (NEVER import from the client).
- *
- * The sandbox preview runs the app in a partitioned iframe, so OAuth must happen
- * in a top-level popup (first-party cookies). This handler is the ENTIRE popup
- * document — no React shell:
- *
- *   Phase 1 (`?providerId=…`): start OAuth server-side and 302 straight to the
- *     broker / upstream login page. The popup never paints the app.
- *   Phase 2 (`?done=1`): after the broker round-trip, emit a tiny HTML page that
- *     posts the session token to the opener and closes. No SPA hydrate, no
- *     server-fn round-trip.
- *
- * Wired automatically by the Vite `authPopupPlugin` in `vite.config.ts` during
- * `npm run dev` (live preview). Do NOT create `src/routes/auth/popup.tsx` — a
- * React route here paints the full app shell in the popup. The opener lives in
- * `client.ts` (`signIn` → `openSignInPopup`).
  */
 import { auth, SESSION_TOKEN_COOKIE } from "./server";
 
-/** Message shape the popup posts to the opener (must match `client.ts`). */
 type PopupMessage = {
   source: "grok-auth-popup";
   token: string | null;
   error?: string;
 };
 
-/**
- * Handle `GET /auth/popup`. Invoked by the Vite `authPopupPlugin` (dev / live
- * preview). Do not re-export this from a React route file.
- */
 export async function handleAuthPopupRequest(request: Request): Promise<Response> {
   const url = new URL(request.url);
   const done = url.searchParams.get("done") === "1";
 
   if (done) {
     const errored = url.searchParams.has("error");
-    const token = errored ? null : readCookie(request, SESSION_TOKEN_COOKIE);
+    const token = errored
+      ? null
+      : readSessionToken(request);
     const message: PopupMessage = {
       source: "grok-auth-popup",
       token,
-      ...(errored ? { error: url.searchParams.get("error") ?? "sign_in_failed" } : {}),
+      ...(errored
+        ? { error: url.searchParams.get("error") ?? "sign_in_failed" }
+        : !token
+          ? { error: "session_cookie_missing" }
+          : {}),
     };
     return new Response(completionHtml(message), {
       status: 200,
       headers: {
         "content-type": "text/html; charset=utf-8",
-        // Never cache a page that embeds a session token.
         "cache-control": "no-store",
       },
     });
@@ -59,7 +44,6 @@ export async function handleAuthPopupRequest(request: Request): Promise<Response
     });
   }
 
-  // Stay first-party for the callback so the session cookie lands in THIS popup.
   const back = `${url.origin}/auth/popup?done=1`;
   try {
     const apiRes = await auth.api.signInWithOAuth2({
@@ -68,8 +52,6 @@ export async function handleAuthPopupRequest(request: Request): Promise<Response
         callbackURL: back,
         errorCallbackURL: `${back}&error=1`,
       },
-      // Forward the preview host so Better Auth derives the correct baseURL /
-      // redirect_uri for the dynamic `*.grok-sandbox.com` origin.
       headers: request.headers,
       asResponse: true,
     });
@@ -95,8 +77,6 @@ export async function handleAuthPopupRequest(request: Request): Promise<Response
       });
     }
 
-    // 302 to the broker (which headlessly forwards to Google/X). Forward any
-    // Set-Cookie (OAuth state / PKCE) so the callback can complete in this popup.
     const headers = new Headers({ location, "cache-control": "no-store" });
     for (const cookie of apiRes.headers.getSetCookie()) {
       headers.append("set-cookie", cookie);
@@ -122,42 +102,94 @@ function completionResponse(message: PopupMessage): Response {
   });
 }
 
-/** Minimal HTML: postMessage the token to the opener and close. No React. */
 function completionHtml(message: PopupMessage): string {
-  // JSON is safe inside a <script type="application/json"> block; the inline
-  // script only reads it. Avoids escaping pitfalls of embedding in JS source.
   const payload = JSON.stringify(message).replace(/</g, "\\u003c");
+  const ok = Boolean(message.token) && !message.error;
   return `<!doctype html>
-<html lang="en">
+<html lang="sk">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Signing in…</title>
+<title>${ok ? "Prihlásený" : "Prihlásenie…"}</title>
 <style>
-  html,body{margin:0;min-height:100%;background:#0b0b0c;color:#a1a1aa;
-    font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  html,body{margin:0;min-height:100%;background:#141414;color:#e8e4de;
+    font:15px/1.5 system-ui,-apple-system,sans-serif}
   main{min-height:100vh;display:grid;place-items:center;padding:1.5rem;text-align:center}
+  p{max-width:22rem;margin:0 auto .75rem}
+  .muted{color:#a39e96;font-size:13px}
+  button{margin-top:1rem;padding:.7rem 1.2rem;border-radius:12px;border:0;
+    background:#6b3f24;color:#fff;font-weight:600;cursor:pointer}
+  button:hover{filter:brightness(1.08)}
 </style>
 </head>
 <body>
-<main><p>Signing you in…</p></main>
+<main>
+  <p id="status">${ok ? "Hotovo — vraciame ťa do aplikácie…" : "Dokončujem prihlásenie…"}</p>
+  <p class="muted" id="hint">Toto okno sa zatvorí samo.</p>
+  <button type="button" id="continue" hidden>Pokračovať</button>
+</main>
 <script type="application/json" id="grok-auth-popup-msg">${payload}</script>
 <script>
 (function () {
   var el = document.getElementById("grok-auth-popup-msg");
   var msg = { source: "grok-auth-popup", token: null };
   try { if (el && el.textContent) msg = JSON.parse(el.textContent); } catch (e) {}
-  try {
-    if (window.opener) window.opener.postMessage(msg, window.location.origin);
-  } catch (e) {}
-  try { window.close(); } catch (e) {}
+  function post() {
+    try {
+      if (window.opener) window.opener.postMessage(msg, window.location.origin);
+    } catch (e) {}
+  }
+  post();
+  setTimeout(post, 50);
+  setTimeout(post, 200);
+  setTimeout(post, 500);
+  var btn = document.getElementById("continue");
+  var status = document.getElementById("status");
+  var hint = document.getElementById("hint");
+  if (!msg.token) {
+    status.textContent = "Prihlásenie sa nedokončilo.";
+    hint.textContent = msg.error ? ("Kód: " + msg.error) : "Zatvor okno a skús znova.";
+    btn.hidden = false;
+    btn.textContent = "Zatvoriť";
+    btn.onclick = function () { try { window.close(); } catch (e) {} };
+  } else {
+    setTimeout(function () {
+      try { window.close(); } catch (e) {}
+      // If browser blocks close, show manual continue
+      setTimeout(function () {
+        if (!window.closed) {
+          hint.textContent = "Ak sa okno nezavrelo, klikni nižšie.";
+          btn.hidden = false;
+          btn.textContent = "Hotovo — zavrieť";
+          btn.onclick = function () {
+            post();
+            try { window.close(); } catch (e) {}
+          };
+        }
+      }, 400);
+    }, 120);
+  }
 })();
 </script>
 </body>
 </html>`;
 }
 
-/** Read a single cookie value from the request (handles `=` inside values). */
+/** Prefer configured cookie; fall back to common Better Auth names. */
+function readSessionToken(request: Request): string | null {
+  const names = [
+    SESSION_TOKEN_COOKIE,
+    "grok-auth.session_token",
+    "better-auth.session_token",
+    "__Secure-better-auth.session_token",
+  ];
+  for (const name of names) {
+    const v = readCookie(request, name);
+    if (v) return v;
+  }
+  return null;
+}
+
 function readCookie(request: Request, name: string): string | null {
   const header = request.headers.get("cookie");
   if (!header) return null;

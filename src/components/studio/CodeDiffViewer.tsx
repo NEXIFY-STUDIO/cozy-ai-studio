@@ -5,6 +5,8 @@ import { Check, X, Code2, Loader2 } from "lucide-react";
 import { useStudioStore } from "@/stores/studio-store";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { PreflightBar } from "./PreflightBar";
+import { pushAcceptedFilesToWebContainer } from "@/hooks/useWebContainerPreview";
 
 // Configure Monaco CDN loader once
 loader.config({
@@ -39,7 +41,7 @@ function FallbackDiff({
   }, [original, modified]);
 
   return (
-    <div className="h-full overflow-auto @@Cozy_SCROLL@@ font-mono text-[12.5px] leading-5 p-3 bg-canvas text-[#e8eaed] dark:text-[#e8eaed]">
+    <div className="h-full overflow-auto cosy-scroll font-mono text-[12.5px] leading-5 p-3 bg-canvas text-canvas-fg">
       {lines.map((row, i) => (
         <div
           key={`${row.n}-${i}-${row.type}`}
@@ -49,7 +51,7 @@ function FallbackDiff({
             row.type === "del" && "diff-del",
           )}
         >
-          <span className="w-8 shrink-0 text-right opacity-40 select-none tabular-nums">
+          <span className="w-8 shrink-0 text-right opacity-55 select-none text-canvas-muted tabular-nums">
             {row.n}
           </span>
           <span className="w-5 shrink-0 opacity-60 select-none">
@@ -123,12 +125,23 @@ export function CodeDiffViewer() {
               <Button size="sm" variant="danger" onClick={rejectAllDiffs} className="h-7 text-xs">
                 Reject all
               </Button>
-              <Button size="sm" onClick={acceptAllDiffs} className="h-7 text-xs">
+              <Button
+                size="sm"
+                onClick={() => {
+                  acceptAllDiffs();
+                  void pushAcceptedFilesToWebContainer();
+                }}
+                className="h-7 text-xs"
+              >
                 Accept all
               </Button>
             </>
           )}
         </div>
+      </div>
+
+      <div className="px-3 pt-2">
+        <PreflightBar />
       </div>
 
       {/* Inline chunk actions */}

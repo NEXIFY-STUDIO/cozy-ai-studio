@@ -8,10 +8,8 @@ import {
   CreditCard,
   Shield,
   Globe,
-  Zap,
   ExternalLink,
   AlertCircle,
-  Lock,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useStudioStore, type PlanTier } from "@/stores/studio-store";
@@ -22,8 +20,9 @@ import {
 } from "@/lib/production/launch-pipeline";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { Link } from "@tanstack/react-router";
 
-type Phase = "idle" | "confirm" | "payment" | "running" | "done" | "failed";
+type Phase = "idle" | "confirm" | "running" | "done" | "failed";
 
 export function ProductionLaunchButton({ className }: { className?: string }) {
   const setOpen = useStudioStore((s) => s.setProductionLaunchOpen);
@@ -82,32 +81,19 @@ function ProductionLaunchModal({ onClose }: { onClose: () => void }) {
   const [selectedPlan, setSelectedPlan] = useState<"PRO" | "ENTERPRISE">(
     planTier === "ENTERPRISE" ? "ENTERPRISE" : "PRO",
   );
+  const [projectName, setProjectName] = useState("my-cai-app");
+  const [resultUrl, setResultUrl] = useState(publishUrl ?? "");
+  const [invoiceId, setInvoiceId] = useState(productionInvoiceId ?? "");
   const [prepaid, setPrepaid] = useState(
     productionPrepaidCredits > 0 ? productionPrepaidCredits : 50_000,
   );
-  const [cardName, setCardName] = useState("Erik Demo");
-  const [cardNumber, setCardNumber] = useState("4242 4242 4242 4242");
-  const [cardExp, setCardExp] = useState("12/28");
-  const [cardCvc, setCardCvc] = useState("424");
-  const [projectName, setProjectName] = useState("my-cosy-app");
-  const [resultUrl, setResultUrl] = useState(publishUrl ?? "");
-  const [invoiceId, setInvoiceId] = useState(productionInvoiceId ?? "");
   const [error, setError] = useState<string | null>(null);
   const [abortCtrl, setAbortCtrl] = useState<AbortController | null>(null);
-  const [payResolve, setPayResolve] = useState<
-    | ((
-        v: {
-          plan: "PRO" | "ENTERPRISE";
-          cardLast4: string;
-          prepaidCredits: number;
-        } | null,
-      ) => void)
-    | null
-  >(null);
+  const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && phase !== "running" && phase !== "payment") onClose();
+      if (e.key === "Escape" && phase !== "running") onClose();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -123,6 +109,7 @@ function ProductionLaunchModal({ onClose }: { onClose: () => void }) {
 
   const startLaunch = useCallback(async () => {
     setError(null);
+    setCheckoutUrl(null);
     setPhase("running");
     setSteps(createInitialLaunchSteps());
     setProgress(0);
@@ -147,11 +134,18 @@ function ProductionLaunchModal({ onClose }: { onClose: () => void }) {
             setProgress(pct);
             setProgressLabel(label);
           },
-          onRequirePayment: () =>
-            new Promise((resolve) => {
-              setPhase("payment");
-              setPayResolve(() => resolve);
-            }),
+          onCheckoutRequired: (url) => {
+            setCheckoutUrl(url);
+            toast.message("Stripe Checkout required", {
+              description: "Complete payment, then re-run launch.",
+              action: {
+                label: "Open Checkout",
+                onClick: () => {
+                  window.location.href = url;
+                },
+              },
+            });
+          },
         },
       );
 
@@ -194,10 +188,11 @@ function ProductionLaunchModal({ onClose }: { onClose: () => void }) {
       setProductionState({ productionLaunchRunning: false });
       setPhase("failed");
       setError(aborted ? "Cancelled." : e instanceof Error ? e.message : "Failed");
-      toast[aborted ? "message" : "error"](aborted ? "Launch cancelled" : "Launch failed");
+      toast[aborted ? "message" : "error"](
+        aborted ? "Launch cancelled" : "Launch failed",
+      );
     } finally {
       setAbortCtrl(null);
-      setPayResolve(null);
     }
   }, [
     projectName,
@@ -209,32 +204,8 @@ function ProductionLaunchModal({ onClose }: { onClose: () => void }) {
     addChat,
   ]);
 
-  const confirmPayment = () => {
-    const digits = cardNumber.replace(/\s/g, "");
-    if (digits.length < 12 || !cardExp || cardCvc.length < 3) {
-      toast.error("Enter valid card details");
-      return;
-    }
-    payResolve?.({
-      plan: selectedPlan,
-      cardLast4: digits.slice(-4),
-      prepaidCredits: prepaid,
-    });
-    setPayResolve(null);
-    setPhase("running");
-  };
-
-  const cancelPayment = () => {
-    payResolve?.(null);
-    setPayResolve(null);
-  };
-
   const cancelLaunch = () => {
     abortCtrl?.abort();
-    if (payResolve) {
-      payResolve(null);
-      setPayResolve(null);
-    }
   };
 
   return (
@@ -247,18 +218,17 @@ function ProductionLaunchModal({ onClose }: { onClose: () => void }) {
       >
         <div className="flex items-start justify-between gap-3 border-b border-border px-5 py-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-terracotta mb-1">
+            <p className="text-xs font-semibold uppercase tracking-wide text-choco mb-1">
               Production
             </p>
-            <h2 id="prod-launch-title" className="font-serif text-xl font-bold leading-tight">
-              {phase === "done"
-                ? "You're live"
-                : phase === "payment"
-                  ? "Payment"
-                  : "Go to Production"}
+            <h2
+              id="prod-launch-title"
+              className="font-serif text-xl font-bold leading-tight"
+            >
+              {phase === "done" ? "You're live" : "Go to Production"}
             </h2>
             <p className="text-xs text-muted-foreground mt-1 max-w-md">
-              Pay once, then we check, build, deploy, and publish your app.
+              Real pipeline: typecheck → Stripe → build → Vercel deploy → healthcheck.
             </p>
           </div>
           <Button
@@ -276,31 +246,14 @@ function ProductionLaunchModal({ onClose }: { onClose: () => void }) {
           </Button>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-auto @@Cozy_SCROLL@@ px-5 py-4 space-y-4">
+        <div className="min-h-0 flex-1 overflow-auto cosy-scroll px-5 py-4 space-y-4">
           {phase === "confirm" && (
             <ConfirmStep
               projectName={projectName}
               setProjectName={setProjectName}
               selectedPlan={selectedPlan}
               setSelectedPlan={setSelectedPlan}
-              prepaid={prepaid}
-              setPrepaid={setPrepaid}
               planTier={planTier}
-            />
-          )}
-
-          {phase === "payment" && (
-            <PaymentStep
-              selectedPlan={selectedPlan}
-              prepaid={prepaid}
-              cardName={cardName}
-              setCardName={setCardName}
-              cardNumber={cardNumber}
-              setCardNumber={setCardNumber}
-              cardExp={cardExp}
-              setCardExp={setCardExp}
-              cardCvc={cardCvc}
-              setCardCvc={setCardCvc}
             />
           )}
 
@@ -315,6 +268,7 @@ function ProductionLaunchModal({ onClose }: { onClose: () => void }) {
               invoiceId={invoiceId}
               selectedPlan={selectedPlan}
               prepaid={prepaid}
+              checkoutUrl={checkoutUrl}
             />
           )}
         </div>
@@ -322,32 +276,20 @@ function ProductionLaunchModal({ onClose }: { onClose: () => void }) {
         <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border px-5 py-3 bg-muted/30">
           {phase === "confirm" && (
             <>
-              <p className="text-xs text-muted-foreground">Demo — no real charges.</p>
+              <p className="text-xs text-muted-foreground">
+                Requires active Stripe plan + Vercel deploy credentials.
+              </p>
               <div className="flex gap-2 ml-auto">
                 <Button variant="secondary" size="sm" className="h-10" onClick={onClose}>
                   Later
                 </Button>
-                <Button size="sm" className="h-10 gap-1.5" onClick={() => void startLaunch()}>
+                <Button
+                  size="sm"
+                  className="h-10 gap-1.5"
+                  onClick={() => void startLaunch()}
+                >
                   <Rocket className="h-4 w-4" />
-                  Start
-                </Button>
-              </div>
-            </>
-          )}
-
-          {phase === "payment" && (
-            <>
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Lock className="h-3 w-3" />
-                Secure checkout (demo)
-              </div>
-              <div className="flex gap-2 ml-auto">
-                <Button variant="secondary" size="sm" className="h-10" onClick={cancelPayment}>
-                  Cancel
-                </Button>
-                <Button size="sm" className="h-10 gap-1.5" onClick={confirmPayment}>
-                  <CreditCard className="h-4 w-4" />
-                  Pay
+                  Start launch
                 </Button>
               </div>
             </>
@@ -356,7 +298,12 @@ function ProductionLaunchModal({ onClose }: { onClose: () => void }) {
           {phase === "running" && (
             <>
               <p className="text-xs font-mono text-muted-foreground">{progressLabel}</p>
-              <Button variant="danger" size="sm" className="h-10 ml-auto" onClick={cancelLaunch}>
+              <Button
+                variant="danger"
+                size="sm"
+                className="h-10 ml-auto"
+                onClick={cancelLaunch}
+              >
                 Cancel
               </Button>
             </>
@@ -366,23 +313,41 @@ function ProductionLaunchModal({ onClose }: { onClose: () => void }) {
             <>
               {phase === "done" && resultUrl && (
                 <a
-                  href={`https://${resultUrl}`}
+                  href={
+                    resultUrl.startsWith("http")
+                      ? resultUrl
+                      : `https://${resultUrl}`
+                  }
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-1.5 text-xs text-terracotta font-medium hover:underline"
+                  className="inline-flex items-center gap-1.5 text-xs text-choco font-medium hover:underline"
                 >
                   <ExternalLink className="h-3.5 w-3.5" />
                   {resultUrl}
                 </a>
               )}
               <div className="flex gap-2 ml-auto">
+                {phase === "failed" && checkoutUrl && (
+                  <Button
+                    size="sm"
+                    className="h-10 gap-1.5"
+                    onClick={() => {
+                      window.location.href = checkoutUrl;
+                    }}
+                  >
+                    <CreditCard className="h-4 w-4" />
+                    Stripe Checkout
+                  </Button>
+                )}
                 {phase === "failed" && (
                   <Button
                     size="sm"
+                    variant={checkoutUrl ? "secondary" : "default"}
                     className="h-10"
                     onClick={() => {
                       setPhase("confirm");
                       setError(null);
+                      setCheckoutUrl(null);
                     }}
                   >
                     Retry
@@ -420,28 +385,27 @@ function ConfirmStep({
   setProjectName,
   selectedPlan,
   setSelectedPlan,
-  prepaid,
-  setPrepaid,
   planTier,
 }: {
   projectName: string;
   setProjectName: (v: string) => void;
   selectedPlan: "PRO" | "ENTERPRISE";
   setSelectedPlan: (v: "PRO" | "ENTERPRISE") => void;
-  prepaid: number;
-  setPrepaid: (v: number) => void;
   planTier: PlanTier;
 }) {
   return (
     <div className="space-y-4">
       <div className="grid gap-3 sm:grid-cols-3">
         {[
-          { icon: Shield, title: "Check", text: "Code & security" },
-          { icon: CreditCard, title: "Pay", text: "Plan + credits" },
-          { icon: Globe, title: "Ship", text: "Build & go live" },
+          { icon: Shield, title: "Checks", text: "typecheck + build" },
+          { icon: CreditCard, title: "Stripe", text: "Active subscription" },
+          { icon: Globe, title: "Vercel", text: "Deploy + healthcheck" },
         ].map(({ icon: Icon, title, text }) => (
-          <div key={title} className="rounded-2xl border border-border bg-background/60 p-3">
-            <Icon className="h-4 w-4 text-terracotta mb-2" />
+          <div
+            key={title}
+            className="rounded-2xl border border-border bg-background/60 p-3"
+          >
+            <Icon className="h-4 w-4 text-choco mb-2" />
             <p className="text-xs font-semibold">{title}</p>
             <p className="text-xs text-muted-foreground mt-0.5">{text}</p>
           </div>
@@ -455,20 +419,24 @@ function ConfirmStep({
         <input
           value={projectName}
           onChange={(e) => setProjectName(e.target.value)}
-          className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm outline-none focus:border-terracotta focus:ring-1 focus:ring-terracotta/30 font-mono"
+          className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm outline-none focus:border-choco focus:ring-1 focus:ring-choco/30 font-mono"
           placeholder="my-app"
         />
       </label>
 
       <div className="space-y-2">
         <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Plan
+          Target plan
         </span>
         <div className="grid gap-2 sm:grid-cols-2">
           {(
             [
               { id: "PRO" as const, price: "$29/mo", blurb: "For builders" },
-              { id: "ENTERPRISE" as const, price: "$49/seat", blurb: "Teams & SSO" },
+              {
+                id: "ENTERPRISE" as const,
+                price: "$49/seat",
+                blurb: "Teams",
+              },
             ] as const
           ).map((p) => (
             <button
@@ -478,13 +446,15 @@ function ConfirmStep({
               className={cn(
                 "rounded-2xl border p-3 text-left transition-colors min-h-16",
                 selectedPlan === p.id
-                  ? "border-terracotta bg-terracotta/10"
-                  : "border-border hover:border-terracotta/40",
+                  ? "border-choco bg-choco/10"
+                  : "border-border hover:border-choco/40",
               )}
             >
               <div className="flex items-center justify-between gap-2">
                 <span className="font-serif font-semibold text-sm">{p.id}</span>
-                <span className="font-mono text-xs text-muted-foreground">{p.price}</span>
+                <span className="font-mono text-xs text-muted-foreground">
+                  {p.price}
+                </span>
               </div>
               <p className="text-xs text-muted-foreground mt-1">{p.blurb}</p>
             </button>
@@ -492,135 +462,23 @@ function ConfirmStep({
         </div>
         {planTier === "FREE" && (
           <p className="text-xs text-amber-800 dark:text-amber-200 bg-amber-500/10 rounded-lg px-2 py-1.5">
-            Free can’t go live — payment upgrades you here.
+            Current plan is FREE. Launch will open Stripe Checkout if you are
+            not subscribed.{" "}
+            <Link
+              to="/pricing"
+              search={{}}
+              className="underline underline-offset-2 font-medium"
+            >
+              View pricing
+            </Link>
           </p>
         )}
-      </div>
-
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Prepaid credits
-          </span>
-          <span className="font-mono text-xs">{prepaid.toLocaleString()} tokens</span>
-        </div>
-        <input
-          type="range"
-          min={10000}
-          max={200000}
-          step={10000}
-          value={prepaid}
-          onChange={(e) => setPrepaid(Number(e.target.value))}
-          className="w-full accent-[var(--color-terracotta,#D96B43)]"
-        />
-        <p className="text-xs text-muted-foreground flex items-center gap-1">
-          <Zap className="h-3 w-3 text-terracotta" />
-          Pay upfront so AI doesn’t stop mid-request.
-        </p>
-      </div>
-    </div>
-  );
-}
-
-function PaymentStep({
-  selectedPlan,
-  prepaid,
-  cardName,
-  setCardName,
-  cardNumber,
-  setCardNumber,
-  cardExp,
-  setCardExp,
-  cardCvc,
-  setCardCvc,
-}: {
-  selectedPlan: "PRO" | "ENTERPRISE";
-  prepaid: number;
-  cardName: string;
-  setCardName: (v: string) => void;
-  cardNumber: string;
-  setCardNumber: (v: string) => void;
-  cardExp: string;
-  setCardExp: (v: string) => void;
-  cardCvc: string;
-  setCardCvc: (v: string) => void;
-}) {
-  const planPrice = selectedPlan === "PRO" ? 29 : 49;
-  const creditPrice = Math.round((prepaid / 50_000) * 12);
-
-  return (
-    <div className="space-y-4">
-      <div className="rounded-2xl border border-border bg-background/70 p-4">
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-          Summary
-        </p>
-        <div className="space-y-1.5 text-sm">
-          <div className="flex justify-between">
-            <span>{selectedPlan}</span>
-            <span className="font-mono">${planPrice}</span>
-          </div>
-          <div className="flex justify-between text-muted-foreground">
-            <span>Credits</span>
-            <span className="font-mono">${creditPrice}</span>
-          </div>
-          <div className="border-t border-border pt-2 flex justify-between font-semibold">
-            <span>Total</span>
-            <span className="font-mono text-terracotta">${planPrice + creditPrice}</span>
-          </div>
-        </div>
-      </div>
-
-      <div className="space-y-3">
-        <label className="block space-y-1">
-          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Name
-          </span>
-          <input
-            value={cardName}
-            onChange={(e) => setCardName(e.target.value)}
-            className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm outline-none focus:border-terracotta"
-            autoComplete="cc-name"
-          />
-        </label>
-        <label className="block space-y-1">
-          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Card
-          </span>
-          <input
-            value={cardNumber}
-            onChange={(e) => setCardNumber(e.target.value)}
-            className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm font-mono outline-none focus:border-terracotta"
-            inputMode="numeric"
-            autoComplete="cc-number"
-            placeholder="4242 4242 4242 4242"
-          />
-        </label>
-        <div className="grid grid-cols-2 gap-3">
-          <label className="block space-y-1">
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Expiry
-            </span>
-            <input
-              value={cardExp}
-              onChange={(e) => setCardExp(e.target.value)}
-              className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm font-mono outline-none focus:border-terracotta"
-              placeholder="MM/YY"
-              autoComplete="cc-exp"
-            />
-          </label>
-          <label className="block space-y-1">
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              CVC
-            </span>
-            <input
-              value={cardCvc}
-              onChange={(e) => setCardCvc(e.target.value)}
-              className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm font-mono outline-none focus:border-terracotta"
-              placeholder="424"
-              autoComplete="cc-csc"
-            />
-          </label>
-        </div>
+        {(planTier === "PRO" || planTier === "ENTERPRISE") && (
+          <p className="text-xs text-success bg-success/10 rounded-lg px-2 py-1.5">
+            Server plan: {planTier} — billing step will verify via Stripe webhook
+            state.
+          </p>
+        )}
       </div>
     </div>
   );
@@ -636,6 +494,7 @@ function RunningSteps({
   invoiceId,
   selectedPlan,
   prepaid,
+  checkoutUrl,
 }: {
   steps: LaunchStep[];
   progress: number;
@@ -646,6 +505,7 @@ function RunningSteps({
   invoiceId: string;
   selectedPlan: "PRO" | "ENTERPRISE";
   prepaid: number;
+  checkoutUrl: string | null;
 }) {
   return (
     <div className="space-y-4">
@@ -658,7 +518,7 @@ function RunningSteps({
           <div
             className={cn(
               "h-full rounded-full transition-all duration-300",
-              phase === "failed" ? "bg-danger" : "bg-terracotta",
+              phase === "failed" ? "bg-danger" : "bg-choco",
             )}
             style={{ width: `${Math.min(100, progress)}%` }}
           />
@@ -671,7 +531,7 @@ function RunningSteps({
             key={step.id}
             className={cn(
               "flex items-start gap-3 rounded-xl border px-3 py-2.5 transition-colors",
-              step.status === "running" && "border-terracotta/40 bg-terracotta/5",
+              step.status === "running" && "border-choco/40 bg-choco/5",
               step.status === "done" && "border-border bg-background/50",
               step.status === "failed" && "border-danger/40 bg-danger-bg/40",
               step.status === "pending" && "border-transparent opacity-60",
@@ -684,9 +544,11 @@ function RunningSteps({
                 </div>
               )}
               {step.status === "running" && (
-                <Loader2 className="h-5 w-5 animate-spin text-terracotta" />
+                <Loader2 className="h-5 w-5 animate-spin text-choco" />
               )}
-              {step.status === "failed" && <AlertCircle className="h-5 w-5 text-danger" />}
+              {step.status === "failed" && (
+                <AlertCircle className="h-5 w-5 text-danger" />
+              )}
               {step.status === "pending" && (
                 <div className="flex h-5 w-5 items-center justify-center rounded-full border border-border text-xs font-mono text-muted-foreground">
                   {i + 1}
@@ -697,7 +559,9 @@ function RunningSteps({
               <p className="text-xs font-semibold">{step.title}</p>
               <p className="text-xs text-muted-foreground">{step.description}</p>
               {step.detail && (
-                <p className="mt-1 font-mono text-xs text-foreground/80">{step.detail}</p>
+                <p className="mt-1 font-mono text-xs text-foreground/80 break-all">
+                  {step.detail}
+                </p>
               )}
             </div>
           </li>
@@ -707,7 +571,9 @@ function RunningSteps({
       {phase === "done" && resultUrl && (
         <div className="rounded-2xl border border-success/30 bg-success/10 p-4">
           <p className="font-serif text-base font-bold">Live</p>
-          <p className="mt-1 font-mono text-sm text-terracotta">https://{resultUrl}</p>
+          <p className="mt-1 font-mono text-sm text-choco">
+            https://{resultUrl.replace(/^https?:\/\//, "")}
+          </p>
           <p className="mt-2 text-xs text-muted-foreground">
             {selectedPlan} · {prepaid.toLocaleString()} tokens
             {invoiceId ? ` · ${invoiceId}` : ""}
@@ -716,8 +582,17 @@ function RunningSteps({
       )}
 
       {error && (
-        <div className="rounded-xl border border-danger/30 bg-danger-bg/50 px-3 py-2 text-xs text-danger">
-          {error}
+        <div className="rounded-xl border border-danger/30 bg-danger-bg/50 px-3 py-2 text-xs text-danger space-y-2">
+          <p>{error}</p>
+          {checkoutUrl && (
+            <a
+              href={checkoutUrl}
+              className="inline-flex items-center gap-1 font-medium underline underline-offset-2"
+            >
+              <CreditCard className="h-3.5 w-3.5" />
+              Open Stripe Checkout
+            </a>
+          )}
         </div>
       )}
     </div>

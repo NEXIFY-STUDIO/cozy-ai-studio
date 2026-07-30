@@ -10,15 +10,31 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as MobileRouteImport } from './routes/mobile'
 import { Route as PlaygroundRouteImport } from './routes/playground'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as ShowcaseRouteImport } from './routes/showcase'
 import { Route as StudioRouteImport } from './routes/studio'
+import { Route as ApiAiStatusRouteImport } from './routes/api/ai-status'
+import { Route as ApiEnvStatusRouteImport } from './routes/api/env-status'
+import { Route as ApiRtcRouteImport } from './routes/api/rtc'
+import { Route as ApiRuntimeStatusRouteImport } from './routes/api/runtime-status'
+import { Route as AuthCallbackRouteImport } from './routes/auth/callback'
+import { Route as ApiAgentsRunRouteImport } from './routes/api/agents/run'
+import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as ApiLaunchRunRouteImport } from './routes/api/launch/run'
+import { Route as ApiStripeWebhookRouteImport } from './routes/api/stripe/webhook'
+import { Route as ApiWsHttpRouteImport } from './routes/api/ws/http'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MobileRoute = MobileRouteImport.update({
@@ -46,55 +62,193 @@ const StudioRoute = StudioRouteImport.update({
   path: '/studio',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAiStatusRoute = ApiAiStatusRouteImport.update({
+  id: '/api/ai-status',
+  path: '/api/ai-status',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiEnvStatusRoute = ApiEnvStatusRouteImport.update({
+  id: '/api/env-status',
+  path: '/api/env-status',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiRtcRoute = ApiRtcRouteImport.update({
+  id: '/api/rtc',
+  path: '/api/rtc',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiRuntimeStatusRoute = ApiRuntimeStatusRouteImport.update({
+  id: '/api/runtime-status',
+  path: '/api/runtime-status',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthCallbackRoute = AuthCallbackRouteImport.update({
+  id: '/auth/callback',
+  path: '/auth/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAgentsRunRoute = ApiAgentsRunRouteImport.update({
+  id: '/api/agents/run',
+  path: '/api/agents/run',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
+  id: '/api/auth/$',
+  path: '/api/auth/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiLaunchRunRoute = ApiLaunchRunRouteImport.update({
+  id: '/api/launch/run',
+  path: '/api/launch/run',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiStripeWebhookRoute = ApiStripeWebhookRouteImport.update({
+  id: '/api/stripe/webhook',
+  path: '/api/stripe/webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiWsHttpRoute = ApiWsHttpRouteImport.update({
+  id: '/api/ws/http',
+  path: '/api/ws/http',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
   '/mobile': typeof MobileRoute
   '/playground': typeof PlaygroundRoute
   '/pricing': typeof PricingRoute
   '/showcase': typeof ShowcaseRoute
   '/studio': typeof StudioRoute
+  '/api/ai-status': typeof ApiAiStatusRoute
+  '/api/env-status': typeof ApiEnvStatusRoute
+  '/api/rtc': typeof ApiRtcRoute
+  '/api/runtime-status': typeof ApiRuntimeStatusRoute
+  '/auth/callback': typeof AuthCallbackRoute
+  '/api/agents/run': typeof ApiAgentsRunRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/launch/run': typeof ApiLaunchRunRoute
+  '/api/stripe/webhook': typeof ApiStripeWebhookRoute
+  '/api/ws/http': typeof ApiWsHttpRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
   '/mobile': typeof MobileRoute
   '/playground': typeof PlaygroundRoute
   '/pricing': typeof PricingRoute
   '/showcase': typeof ShowcaseRoute
   '/studio': typeof StudioRoute
+  '/api/ai-status': typeof ApiAiStatusRoute
+  '/api/env-status': typeof ApiEnvStatusRoute
+  '/api/rtc': typeof ApiRtcRoute
+  '/api/runtime-status': typeof ApiRuntimeStatusRoute
+  '/auth/callback': typeof AuthCallbackRoute
+  '/api/agents/run': typeof ApiAgentsRunRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/launch/run': typeof ApiLaunchRunRoute
+  '/api/stripe/webhook': typeof ApiStripeWebhookRoute
+  '/api/ws/http': typeof ApiWsHttpRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
   '/mobile': typeof MobileRoute
   '/playground': typeof PlaygroundRoute
   '/pricing': typeof PricingRoute
   '/showcase': typeof ShowcaseRoute
   '/studio': typeof StudioRoute
+  '/api/ai-status': typeof ApiAiStatusRoute
+  '/api/env-status': typeof ApiEnvStatusRoute
+  '/api/rtc': typeof ApiRtcRoute
+  '/api/runtime-status': typeof ApiRuntimeStatusRoute
+  '/auth/callback': typeof AuthCallbackRoute
+  '/api/agents/run': typeof ApiAgentsRunRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/launch/run': typeof ApiLaunchRunRoute
+  '/api/stripe/webhook': typeof ApiStripeWebhookRoute
+  '/api/ws/http': typeof ApiWsHttpRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/mobile' | '/playground' | '/pricing' | '/showcase' | '/studio'
-  fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/mobile' | '/playground' | '/pricing' | '/showcase' | '/studio'
-  id:
-    | '__root__'
     | '/'
+    | '/login'
     | '/mobile'
     | '/playground'
     | '/pricing'
     | '/showcase'
     | '/studio'
+    | '/api/ai-status'
+    | '/api/env-status'
+    | '/api/rtc'
+    | '/api/runtime-status'
+    | '/auth/callback'
+    | '/api/agents/run'
+    | '/api/auth/$'
+    | '/api/launch/run'
+    | '/api/stripe/webhook'
+    | '/api/ws/http'
+  fileRoutesByTo: FileRoutesByTo
+  to:
+    | '/'
+    | '/login'
+    | '/mobile'
+    | '/playground'
+    | '/pricing'
+    | '/showcase'
+    | '/studio'
+    | '/api/ai-status'
+    | '/api/env-status'
+    | '/api/rtc'
+    | '/api/runtime-status'
+    | '/auth/callback'
+    | '/api/agents/run'
+    | '/api/auth/$'
+    | '/api/launch/run'
+    | '/api/stripe/webhook'
+    | '/api/ws/http'
+  id:
+    | '__root__'
+    | '/'
+    | '/login'
+    | '/mobile'
+    | '/playground'
+    | '/pricing'
+    | '/showcase'
+    | '/studio'
+    | '/api/ai-status'
+    | '/api/env-status'
+    | '/api/rtc'
+    | '/api/runtime-status'
+    | '/auth/callback'
+    | '/api/agents/run'
+    | '/api/auth/$'
+    | '/api/launch/run'
+    | '/api/stripe/webhook'
+    | '/api/ws/http'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  LoginRoute: typeof LoginRoute
   MobileRoute: typeof MobileRoute
   PlaygroundRoute: typeof PlaygroundRoute
   PricingRoute: typeof PricingRoute
   ShowcaseRoute: typeof ShowcaseRoute
   StudioRoute: typeof StudioRoute
+  ApiAiStatusRoute: typeof ApiAiStatusRoute
+  ApiEnvStatusRoute: typeof ApiEnvStatusRoute
+  ApiRtcRoute: typeof ApiRtcRoute
+  ApiRuntimeStatusRoute: typeof ApiRuntimeStatusRoute
+  AuthCallbackRoute: typeof AuthCallbackRoute
+  ApiAgentsRunRoute: typeof ApiAgentsRunRoute
+  ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiLaunchRunRoute: typeof ApiLaunchRunRoute
+  ApiStripeWebhookRoute: typeof ApiStripeWebhookRoute
+  ApiWsHttpRoute: typeof ApiWsHttpRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -104,6 +258,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/mobile': {
@@ -141,16 +302,97 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StudioRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/ai-status': {
+      id: '/api/ai-status'
+      path: '/api/ai-status'
+      fullPath: '/api/ai-status'
+      preLoaderRoute: typeof ApiAiStatusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/env-status': {
+      id: '/api/env-status'
+      path: '/api/env-status'
+      fullPath: '/api/env-status'
+      preLoaderRoute: typeof ApiEnvStatusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/rtc': {
+      id: '/api/rtc'
+      path: '/api/rtc'
+      fullPath: '/api/rtc'
+      preLoaderRoute: typeof ApiRtcRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/runtime-status': {
+      id: '/api/runtime-status'
+      path: '/api/runtime-status'
+      fullPath: '/api/runtime-status'
+      preLoaderRoute: typeof ApiRuntimeStatusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/callback': {
+      id: '/auth/callback'
+      path: '/auth/callback'
+      fullPath: '/auth/callback'
+      preLoaderRoute: typeof AuthCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/agents/run': {
+      id: '/api/agents/run'
+      path: '/api/agents/run'
+      fullPath: '/api/agents/run'
+      preLoaderRoute: typeof ApiAgentsRunRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/$': {
+      id: '/api/auth/$'
+      path: '/api/auth/$'
+      fullPath: '/api/auth/$'
+      preLoaderRoute: typeof ApiAuthSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/launch/run': {
+      id: '/api/launch/run'
+      path: '/api/launch/run'
+      fullPath: '/api/launch/run'
+      preLoaderRoute: typeof ApiLaunchRunRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/stripe/webhook': {
+      id: '/api/stripe/webhook'
+      path: '/api/stripe/webhook'
+      fullPath: '/api/stripe/webhook'
+      preLoaderRoute: typeof ApiStripeWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/ws/http': {
+      id: '/api/ws/http'
+      path: '/api/ws/http'
+      fullPath: '/api/ws/http'
+      preLoaderRoute: typeof ApiWsHttpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  LoginRoute: LoginRoute,
   MobileRoute: MobileRoute,
   PlaygroundRoute: PlaygroundRoute,
   PricingRoute: PricingRoute,
   ShowcaseRoute: ShowcaseRoute,
   StudioRoute: StudioRoute,
+  ApiAiStatusRoute: ApiAiStatusRoute,
+  ApiEnvStatusRoute: ApiEnvStatusRoute,
+  ApiRtcRoute: ApiRtcRoute,
+  ApiRuntimeStatusRoute: ApiRuntimeStatusRoute,
+  AuthCallbackRoute: AuthCallbackRoute,
+  ApiAgentsRunRoute: ApiAgentsRunRoute,
+  ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiLaunchRunRoute: ApiLaunchRunRoute,
+  ApiStripeWebhookRoute: ApiStripeWebhookRoute,
+  ApiWsHttpRoute: ApiWsHttpRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
