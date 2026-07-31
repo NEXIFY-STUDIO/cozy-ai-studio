@@ -77,6 +77,7 @@ export const Route = createFileRoute("/api/share")({
           sourceCode?: string | Record<string, string>;
           sourceLanguage?: string;
           sourcePath?: string;
+          meta?: Record<string, unknown>;
         };
         try {
           body = (await request.json()) as typeof body;
@@ -103,7 +104,11 @@ export const Route = createFileRoute("/api/share")({
           await recordActivationEvent({
             userId,
             event: "share_created",
-            meta: { id: created.id, title: body.title ?? null },
+            meta: {
+              id: created.id,
+              title: body.title ?? null,
+              ...(body.meta && typeof body.meta === "object" ? body.meta : {}),
+            },
           });
           return Response.json({
             ok: true,
