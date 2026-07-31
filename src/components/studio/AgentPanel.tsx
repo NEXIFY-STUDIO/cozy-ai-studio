@@ -199,23 +199,19 @@ export function AgentPanel() {
           <RetryProgressBanner />
           <PipelineErrorPanel />
 
-          <div className="flex items-start justify-between gap-2 min-w-0 pt-1">
-            <div className="min-w-0">
-              <div className="flex items-center gap-2 min-w-0">
-                <Sparkles className="h-4 w-4 text-choco shrink-0" />
-                <span className="font-serif text-sm font-semibold truncate">Brief</span>
-              </div>
-              <p className="mt-0.5 text-[11px] text-muted-foreground pl-6">
-                Multi-agent pipeline
-              </p>
+          <div className="flex items-center justify-between gap-2 min-w-0 pt-0.5">
+            <div className="flex items-center gap-2 min-w-0">
+              <Sparkles className="h-4 w-4 text-choco shrink-0" />
+              <span className="font-serif text-sm font-semibold truncate">Brief</span>
             </div>
-            <div className="flex flex-col items-end gap-1.5 shrink-0">
+            <div className="flex items-center gap-1.5 shrink-0">
               <span
-                className="text-[11px] text-muted-foreground tabular-nums font-mono pt-0.5"
-                title="Server-enforced free caps"
+                className="text-[11px] text-muted-foreground tabular-nums font-mono"
+                title="Quota"
               >
-                {planTier}
-                {dailyLeft != null ? ` · ${dailyLeft}d` : ""} · {monthlyLeft} left
+                {planTier === "ENTERPRISE" && monthlyLeft > 100_000
+                  ? "SUPER ∞"
+                  : `${planTier}${dailyLeft != null ? ` · ${dailyLeft}d` : ""} · ${monthlyLeft}`}
               </span>
               <button
                 type="button"
@@ -225,72 +221,55 @@ export function AgentPanel() {
                   "inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-[11px] font-medium transition-colors",
                   cleanArmed
                     ? "border-destructive/50 bg-destructive/15 text-destructive"
-                    : "border-border bg-background text-muted-foreground hover:text-foreground hover:border-choco/40",
+                    : "border-border/80 bg-transparent text-muted-foreground hover:text-foreground hover:border-choco/40",
                 )}
-                title="Vymazať celú históriu editora natrvalo"
+                title="Vymazať históriu editora"
                 aria-label={cleanArmed ? "Potvrdiť vymazanie" : "Vyčistiť editor"}
               >
                 <Eraser className="h-3 w-3" />
-                {cleanArmed ? "Naozaj vymazať" : "Vyčistiť"}
+                {cleanArmed ? "Naozaj?" : "Clean"}
               </button>
             </div>
           </div>
 
           {showEmpty && (
-            <div className="space-y-3 min-w-0">
-              <div className="rounded-xl border border-border/80 bg-[#F4F1EA]/60 dark:bg-muted/40 px-3 py-2.5 text-sm text-muted-foreground leading-relaxed">
-                <span className="font-semibold text-choco text-[10px] uppercase tracking-wider">
-                  Studio
-                </span>
-                <p className="mt-1 text-foreground/80">
-                  Speed Studio ready. Describe a UI change — agents G0→G1→G2 will
-                  propose a Diff for Accept.
-                </p>
-              </div>
-              <div className="grid gap-1.5 min-w-0">
+            <div className="space-y-2.5 min-w-0">
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Popíš UI zmenu — G0→G1→G2 pripraví Diff na Accept.
+              </p>
+              <div className="flex flex-wrap gap-1.5 min-w-0">
                 {TEMPLATES.map((t) => (
                   <button
                     key={t.title}
                     type="button"
                     disabled={isPipelineRunning}
                     onClick={() => void run(t.prompt)}
-                    className="flex w-full min-w-0 items-start gap-2.5 rounded-xl border border-border bg-background px-3 py-2.5 text-left hover:border-choco/40 transition-colors disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-2.5 py-1.5 text-[11px] font-medium text-foreground hover:border-choco/40 transition-colors disabled:opacity-50"
                   >
-                    <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-choco/10 text-choco">
-                      <t.icon className="h-4 w-4" />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-xs font-semibold text-foreground">
-                        {t.title}
-                      </span>
-                      <span className="block text-[11px] text-muted-foreground mt-0.5">
-                        {t.blurb}
-                      </span>
-                    </span>
+                    <t.icon className="h-3.5 w-3.5 text-choco shrink-0" />
+                    {t.title}
                   </button>
                 ))}
               </div>
-              <div className="pt-1">
-                {import.meta.env.DEV && (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => setShowErrorDemos((v) => !v)}
-                      className="text-[11px] text-muted-foreground hover:text-foreground underline-offset-2 hover:underline"
-                    >
-                      {showErrorDemos ? "Skryť error demos" : "Dev: error demos"}
-                    </button>
-                    {showErrorDemos && (
-                      <div className="mt-2">
-                        <ErrorHandlingExamples
-                          onRun={(p) => void run(p)}
-                          disabled={isPipelineRunning}
-                        />
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
+              {import.meta.env.DEV && (
+                <div className="pt-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setShowErrorDemos((v) => !v)}
+                    className="text-[11px] text-muted-foreground hover:text-foreground underline-offset-2 hover:underline"
+                  >
+                    {showErrorDemos ? "Skryť error demos" : "Dev: error demos"}
+                  </button>
+                  {showErrorDemos && (
+                    <div className="mt-2">
+                      <ErrorHandlingExamples
+                        onRun={(p) => void run(p)}
+                        disabled={isPipelineRunning}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 

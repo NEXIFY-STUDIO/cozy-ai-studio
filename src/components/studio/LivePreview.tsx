@@ -243,17 +243,12 @@ export function LivePreview() {
       data-safe-top={safeArea.top}
       data-safe-bottom={safeArea.bottom}
     >
-      <div className="flex items-center justify-between gap-2 border-b border-border bg-muted/80 px-3 py-2.5 sm:px-4 min-w-0">
+      <div className="flex items-center justify-between gap-2 border-b border-border bg-muted/60 px-3 py-2 sm:px-3 min-w-0">
         <div className="flex items-center gap-2 min-w-0">
-          <div className="min-w-0">
-            <span className="font-serif text-sm font-semibold shrink-0 block">Live Preview</span>
-            <span className="text-[11px] text-muted-foreground hidden sm:block">
-              Hot after Accept · safe under camera
-            </span>
-          </div>
+          <span className="font-serif text-sm font-semibold shrink-0">Preview</span>
           <span
             className={cn(
-              "hidden sm:inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-mono",
+              "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-mono",
               useWcFrame
                 ? "border-success/40 bg-success/10 text-success"
                 : wc.status === "error" || wc.status === "fallback"
@@ -265,26 +260,15 @@ export function LivePreview() {
             <Box className="h-3 w-3" />
             {statusLabel}
           </span>
-          {(wc.status === "fallback" || wc.status === "error") && (
-            <button
-              type="button"
-              className="hidden sm:inline-flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-[10px] hover:bg-muted"
-              title="Skúsiť znova Live Runtime"
-              onClick={() => void retryLiveRuntime()}
-            >
-              <RefreshCw className="h-3 w-3" />
-              Skúsiť znova
-            </button>
-          )}
         </div>
 
-        <div className="flex items-center gap-1.5 min-w-0">
+        <div className="flex items-center gap-1 min-w-0">
           <div className="relative min-w-0">
             <button
               type="button"
               onClick={() => setPickerOpen((o) => !o)}
               className={cn(
-                "flex max-w-[11rem] sm:max-w-[14rem] items-center gap-1.5 rounded-xl border px-2.5 h-9 text-xs font-medium transition-colors",
+                "flex max-w-[9.5rem] sm:max-w-[12rem] items-center gap-1.5 rounded-xl border px-2 h-8 text-xs font-medium transition-colors",
                 pickerOpen
                   ? "border-choco/40 bg-choco/10 text-foreground"
                   : "border-border bg-background/70 text-foreground hover:border-choco/30",
@@ -362,48 +346,27 @@ export function LivePreview() {
             type="button"
             onClick={() => void sharePreview()}
             className={cn(
-              "inline-flex h-9 items-center gap-1.5 rounded-xl border px-2.5 text-xs font-medium transition-colors shrink-0",
+              "inline-flex h-8 items-center gap-1 rounded-xl border px-2.5 text-xs font-medium transition-colors shrink-0",
               shareHighlight
-                ? "border-success/50 bg-success/15 text-foreground shadow-[0_0_0_1px_rgba(74,140,90,0.25)]"
+                ? "border-success/50 bg-success/15 text-foreground"
                 : "border-border bg-background/70 hover:border-choco/40",
             )}
-            title="Share or copy preview HTML"
+            title="Share preview"
           >
             <Share2 className="h-3.5 w-3.5 text-success" />
-            <span>Share</span>
+            <span className="hidden sm:inline">Share</span>
           </button>
 
-          <div className="flex items-center gap-0.5 rounded-xl bg-background/70 p-1 border border-border shrink-0">
-            <button
-              type="button"
-              title={
-                useWcFrame
-                  ? "Inspect needs srcDoc mode (cross-origin WC)"
-                  : "Visual element selector"
-              }
-              onClick={toggleInspect}
-              disabled={useWcFrame}
-              className={cn(
-                "rounded-lg p-1.5 transition-all",
-                inspectMode
-                  ? "bg-choco text-white"
-                  : "text-muted-foreground hover:text-foreground",
-                useWcFrame && "opacity-40 cursor-not-allowed",
-              )}
-            >
-              <MousePointer2 className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              title="Refresh"
-              onClick={handleRefresh}
-              className="rounded-lg p-1.5 text-muted-foreground hover:text-foreground transition-all"
-            >
-              <RotateCw
-                className={cn("h-4 w-4", isRefreshing && "animate-spin")}
-              />
-            </button>
-          </div>
+          <button
+            type="button"
+            title="Refresh"
+            onClick={handleRefresh}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-border bg-background/70 text-muted-foreground hover:text-foreground shrink-0"
+          >
+            <RotateCw
+              className={cn("h-3.5 w-3.5", isRefreshing && "animate-spin")}
+            />
+          </button>
         </div>
       </div>
 

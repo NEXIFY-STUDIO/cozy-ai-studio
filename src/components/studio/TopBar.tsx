@@ -1,18 +1,27 @@
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Command, Sun, Circle, LayoutGrid, Cloud, CloudOff } from "lucide-react";
+import {
+  Command,
+  Sun,
+  Circle,
+  LayoutGrid,
+  Cloud,
+  CloudOff,
+  MoreHorizontal,
+} from "lucide-react";
 import { useStudioStore } from "@/stores/studio-store";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { ProductionLaunchButton } from "./ProductionLaunch";
-import {
-  IconOpenWindow,
-  StudioChromeIcons,
-} from "@/components/icons/studio-icons";
 import { CozyLogo } from "@/components/brand/CozyLogo";
 import { UserButton, SignedIn, SignedOut } from "@/lib/auth/gates";
 import { authEnabled } from "@/lib/auth/client";
 import { useProjectSync } from "@/hooks/useProjectSync";
 
+/**
+ * Top chrome — only primary status + SUPER badge visible.
+ * Secondary actions live in a single ⋯ menu (search, theme, showcase, pricing).
+ */
 export function TopBar() {
   const theme = useStudioStore((s) => s.theme);
   const toggleTheme = useStudioStore((s) => s.toggleTheme);
@@ -29,7 +38,11 @@ export function TopBar() {
   const productionLaunchRunning = useStudioStore((s) => s.productionLaunchRunning);
   const navigate = useNavigate();
   const { hydrated, syncing, projectId } = useProjectSync();
+  const [moreOpen, setMoreOpen] = useState(false);
+  const moreRef = useRef<HTMLDivElement>(null);
 
+  const isSuper =
+    planTier === "ENTERPRISE" && (promptLimit ?? 0) >= 1_000_000;
   const remaining =
     planTier === "FREE"
       ? Math.max(0, (promptLimit || 100) - promptsUsed)
@@ -39,41 +52,51 @@ export function TopBar() {
       ? Math.max(0, dailyLimit - dailyUsed)
       : null;
 
-  const openAgentsWindow = () => {
+  useEffect(() => {
+    if (!moreOpen) return;
+    const onDoc = (e: MouseEvent) => {
+      if (!moreRef.current?.contains(e.target as Node)) setMoreOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMoreOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [moreOpen]);
+
+  const focusBrief = () => {
     setMobilePanel("chat");
     void navigate({ to: "/studio" });
     requestAnimationFrame(() => {
-      const el = document.querySelector<HTMLTextAreaElement>(
-        'textarea[aria-label="Prompt"]',
-      );
-      el?.focus();
-      el?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      document
+        .querySelector<HTMLTextAreaElement>('textarea[aria-label="Prompt"]')
+        ?.focus();
     });
   };
 
   return (
-    <header className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-border bg-card/80 px-3 sm:px-4 backdrop-blur-md cosy-safe-x">
-      <div className="flex items-center gap-3 min-w-0">
+    <header className="flex h-12 shrink-0 items-center justify-between gap-2 border-b border-border bg-card/80 px-3 sm:px-4 backdrop-blur-md cosy-safe-x">
+      <div className="flex items-center gap-2.5 min-w-0">
         <Link to="/" className="flex items-center gap-2 shrink-0 group">
-          <CozyLogo size="sm" variant="seal" className="group-hover:-translate-y-px transition-transform" />
-          <div className="hidden sm:flex items-center gap-2 min-w-0">
-            <div className="min-w-0">
-              <div className="font-serif text-base font-bold leading-none truncate tracking-tight">
-                COSY Speed Studio
-              </div>
+          <CozyLogo
+            size="sm"
+            variant="seal"
+            className="group-hover:-translate-y-px transition-transform"
+          />
+          <div className="hidden sm:block min-w-0">
+            <div className="font-serif text-sm font-bold leading-none truncate tracking-tight">
+              COSY Studio
             </div>
-            <span
-              className="shrink-0 rounded-full border border-[#1C1D21]/15 bg-[#F4F1EA] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#1C1D21] dark:border-white/20 dark:bg-white/10 dark:text-white/90"
-              title="Option B — Brief → preview → share"
-            >
-              OPTION B
-            </span>
           </div>
         </Link>
 
         <div
           className={cn(
-            "hidden md:flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium border",
+            "flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium border",
             productionLaunchRunning || isPipelineRunning
               ? "border-agents-blue/40 bg-agents-blue/10 text-agents-blue"
               : productionLive
@@ -91,137 +114,135 @@ export function TopBar() {
           />
           {productionLaunchRunning
             ? "Deploy…"
-            : productionLive
-              ? "Deployed (local)"
-              : isPipelineRunning
-                ? "Agents running"
-                : "Ready"}
+            : isPipelineRunning
+              ? "Agents"
+              : "Ready"}
         </div>
 
         <div
           className={cn(
-            "hidden lg:flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-mono border",
-            syncing
-              ? "border-agents-blue/40 bg-agents-blue/10 text-agents-blue"
-              : projectId && hydrated
-                ? "border-success/30 bg-success/10 text-success"
-                : "border-border bg-muted text-muted-foreground",
+            "hidden md:flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-mono border",
+            projectId && hydrated
+              ? "border-success/30 bg-success/10 text-success"
+              : "border-border bg-muted text-muted-foreground",
           )}
-          title={
-            projectId
-              ? `Cloud project ${projectId}`
-              : "Waiting for cloud hydrate…"
-          }
+          title={projectId ? `Cloud ${projectId}` : "Local"}
         >
           {projectId ? (
             <Cloud className="h-3 w-3" />
           ) : (
             <CloudOff className="h-3 w-3" />
           )}
-          {syncing ? "Sync…" : projectId ? "Cloud" : "Local"}
+          {syncing ? "Sync" : projectId ? "Cloud" : "Local"}
         </div>
       </div>
 
-      <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+      <div className="flex items-center gap-1.5 min-w-0">
         <button
           type="button"
-          onClick={() => setCommandOpen(true)}
-          className="hidden lg:flex items-center gap-2 rounded-xl border border-border bg-muted/50 px-3 h-9 text-xs text-muted-foreground hover:text-foreground hover:border-agents-blue/40 transition-colors min-w-[120px]"
+          onClick={focusBrief}
+          className="hidden sm:inline-flex h-8 items-center rounded-full bg-choco px-3 text-xs font-semibold text-white hover:bg-choco/90 transition-colors"
         >
-          <Command className="h-3.5 w-3.5" />
-          <span>Search…</span>
-          <kbd className="ml-auto font-mono text-xs opacity-60">⌘K</kbd>
+          Brief
         </button>
-
-        <StudioChromeIcons
-          className="hidden sm:inline-flex"
-          onBilling={() => void navigate({ to: "/pricing", search: {} })}
-          onChat={openAgentsWindow}
-          onSettings={toggleTheme}
-        />
-
-        <Button
-          size="sm"
-          className="h-9 gap-1.5 rounded-full px-3.5 text-xs font-semibold shadow-none"
-          onClick={openAgentsWindow}
-        >
-          Agents
-          <IconOpenWindow className="opacity-90" />
-        </Button>
-
-        <Link to="/showcase" className="hidden sm:block">
-          <Button variant="ghost" size="icon" className="h-9 w-9" aria-label="Showcase">
-            <LayoutGrid className="h-4 w-4" />
-          </Button>
-        </Link>
-
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-9 w-9 sm:hidden"
-          onClick={() => setCommandOpen(true)}
-          aria-label="Command palette"
-        >
-          <Command className="h-4 w-4" />
-        </Button>
-
-        <Button
-          variant="ghost"
-          size="icon"
-          className="hidden sm:inline-flex h-9 w-9"
-          onClick={toggleTheme}
-          aria-label={theme === "dark" ? "Switch to cream theme" : "Switch to silver theme"}
-          title={theme === "dark" ? "Svetlý motív" : "Tmavý motív"}
-        >
-          {theme === "dark" ? (
-            <Sun className="h-4 w-4" />
-          ) : (
-            <Circle className="h-4 w-4 fill-muted-foreground/30" />
-          )}
-        </Button>
 
         <button
           type="button"
           onClick={() => void navigate({ to: "/pricing", search: {} })}
           className={cn(
-            "hidden sm:inline-flex items-center gap-1.5 rounded-full border px-2.5 h-8 text-[11px] font-mono transition-colors",
-            planTier === "FREE"
-              ? "border-border bg-muted/60 text-muted-foreground hover:border-choco/40 hover:text-foreground"
-              : "border-choco/30 bg-choco/10 text-choco",
+            "inline-flex items-center gap-1 rounded-full border px-2 h-8 text-[11px] font-mono",
+            isSuper
+              ? "border-choco/40 bg-choco/15 text-choco"
+              : "border-border bg-muted/60 text-muted-foreground",
           )}
           title={
-            planTier === "ENTERPRISE" && (promptLimit ?? 0) >= 1_000_000
+            isSuper
               ? "Super Admin · unlimited"
               : dailyLeft != null
-                ? `Daily left: ${dailyLeft} · Monthly left: ${remaining}`
+                ? `Daily ${dailyLeft} · Monthly ${remaining}`
                 : `Plan ${planTier}`
           }
         >
-          <span className="font-semibold">
-            {planTier === "ENTERPRISE" && (promptLimit ?? 0) >= 1_000_000
-              ? "SUPER"
-              : planTier}
-          </span>
-          {planTier === "ENTERPRISE" && (promptLimit ?? 0) >= 1_000_000 ? (
-            <span className="tabular-nums opacity-80">∞</span>
-          ) : (
-            remaining != null && (
-              <span className="tabular-nums opacity-80">
-                {dailyLeft != null ? `${dailyLeft}d` : ""}
-                {dailyLeft != null ? " · " : ""}
-                {remaining} left
-              </span>
-            )
-          )}
+          <span className="font-semibold">{isSuper ? "SUPER" : planTier}</span>
+          {isSuper ? (
+            <span className="opacity-80">∞</span>
+          ) : remaining != null ? (
+            <span className="tabular-nums opacity-80">{remaining}</span>
+          ) : null}
         </button>
 
-        {/* Stripe fully off — Production Launch only if explicitly re-enabled */}
         {stripeConfigured ? (
           <ProductionLaunchButton stripeConfigured={stripeConfigured} />
         ) : null}
 
+        <div className="relative" ref={moreRef}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            aria-label="Viac možností"
+            aria-expanded={moreOpen}
+            onClick={() => setMoreOpen((v) => !v)}
+          >
+            <MoreHorizontal className="h-4 w-4" />
+          </Button>
+          {moreOpen && (
+            <div className="absolute right-0 top-[calc(100%+6px)] z-50 w-52 rounded-xl border border-border bg-card p-1 shadow-[var(--shadow-elevated)]">
+              <button
+                type="button"
+                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs hover:bg-muted"
+                onClick={() => {
+                  setMoreOpen(false);
+                  setCommandOpen(true);
+                }}
+              >
+                <Command className="h-3.5 w-3.5 text-muted-foreground" />
+                Hľadať
+                <kbd className="ml-auto font-mono text-[10px] opacity-50">⌘K</kbd>
+              </button>
+              <button
+                type="button"
+                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs hover:bg-muted"
+                onClick={() => {
+                  setMoreOpen(false);
+                  void navigate({ to: "/showcase" });
+                }}
+              >
+                <LayoutGrid className="h-3.5 w-3.5 text-muted-foreground" />
+                Showcase
+              </button>
+              <button
+                type="button"
+                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs hover:bg-muted"
+                onClick={() => {
+                  setMoreOpen(false);
+                  void navigate({ to: "/pricing", search: {} });
+                }}
+              >
+                Plán / limity
+              </button>
+              <button
+                type="button"
+                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs hover:bg-muted"
+                onClick={() => {
+                  setMoreOpen(false);
+                  toggleTheme();
+                }}
+              >
+                {theme === "dark" ? (
+                  <Sun className="h-3.5 w-3.5 text-muted-foreground" />
+                ) : (
+                  <Circle className="h-3.5 w-3.5 fill-muted-foreground/30 text-muted-foreground" />
+                )}
+                {theme === "dark" ? "Svetlý motív" : "Tmavý motív"}
+              </button>
+            </div>
+          )}
+        </div>
+
         {authEnabled && (
-          <div className="hidden sm:flex items-center shrink-0 ml-1">
+          <div className="hidden sm:flex items-center shrink-0">
             <SignedIn>
               <UserButton />
             </SignedIn>
@@ -229,7 +250,7 @@ export function TopBar() {
               <Link
                 to="/login"
                 search={{ redirect: "/studio" }}
-                className="text-xs font-medium px-3 h-9 inline-flex items-center rounded-xl border border-border hover:border-choco/40 hover:text-choco transition-colors"
+                className="text-xs font-medium px-2.5 h-8 inline-flex items-center rounded-xl border border-border hover:border-choco/40"
               >
                 Sign in
               </Link>

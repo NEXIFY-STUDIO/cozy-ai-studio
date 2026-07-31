@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Activity, RefreshCw, ShieldCheck, ShieldAlert } from "lucide-react";
+import {
+  Activity,
+  RefreshCw,
+  ChevronDown,
+} from "lucide-react";
 import {
   fetchActivationStats,
   type ActivationCounts,
@@ -22,13 +26,15 @@ function pct(from: number, to: number): string | null {
 }
 
 /**
- * Open-demo funnel: total + real vs smoke + Stripe gate (truthful).
+ * Funnel collapsed by default — one quiet row, expand for metrics.
+ * Stripe gate intentionally not shown (billing off / P4).
  */
 export function ActivationFunnelCard({ className }: { className?: string }) {
   const [data, setData] = useState<ActivationStatsResponse | null>(null);
   const [hours, setHours] = useState(24);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [open, setOpen] = useState(false);
   const [hitl, setHitl] = useState<{
     approved: number;
     rejected: number;
@@ -85,183 +91,130 @@ export function ActivationFunnelCard({ className }: { className?: string }) {
   }, [counts]);
 
   if (loading && !counts) {
-    return (
-      <div
-        className={cn(
-          "rounded-xl border border-border bg-muted/40 px-3 py-2 text-[11px] text-muted-foreground",
-          className,
-        )}
-      >
-        Načítavam funnel…
-      </div>
-    );
+    return null;
   }
 
   if (error && !counts) {
-    return (
-      <div
-        className={cn(
-          "rounded-xl border border-border bg-muted/40 px-3 py-2 text-[11px] text-muted-foreground flex items-center justify-between gap-2",
-          className,
-        )}
-      >
-        <span>Funnel nie je dostupný</span>
-        <button
-          type="button"
-          onClick={load}
-          className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-0.5 hover:bg-background"
-        >
-          <RefreshCw className="h-3 w-3" />
-          Retry
-        </button>
-      </div>
-    );
+    return null;
   }
 
   if (!counts) return null;
 
   const empty = totals === 0 && smokeTotals === 0;
-  const gate = data?.stripeGate;
 
   return (
     <div
       className={cn(
-        "rounded-xl border border-border bg-card/80 px-3 py-2.5 space-y-2",
+        "rounded-xl border border-border/70 bg-card/60 overflow-hidden",
         className,
       )}
     >
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-          <Activity className="h-3 w-3 text-choco" />
-          Funnel (reálne)
-        </p>
-        <div className="flex items-center gap-1.5">
-          {[24, 168].map((h) => (
-            <button
-              key={h}
-              type="button"
-              onClick={() => setHours(h)}
-              className={cn(
-                "rounded-md px-1.5 py-0.5 text-[10px] font-medium border",
-                hours === h
-                  ? "border-choco/40 bg-choco/10 text-foreground"
-                  : "border-transparent text-muted-foreground hover:bg-muted",
-              )}
-            >
-              {h === 24 ? "24h" : "7d"}
-            </button>
-          ))}
-          <span className="text-[10px] text-muted-foreground tabular-nums">
-            {totals} reálnych
-            {smokeTotals > 0 ? ` · ${smokeTotals} smoke` : ""}
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-muted/40 transition-colors"
+      >
+        <Activity className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+        <span className="text-[11px] font-medium text-muted-foreground">
+          Funnel
+        </span>
+        <span className="text-[11px] font-mono tabular-nums text-muted-foreground">
+          {totals}
+          {smokeTotals > 0 ? ` · ${smokeTotals} smoke` : ""}
+        </span>
+        {bottleneck && !empty && (
+          <span className="hidden sm:inline text-[10px] text-terracotta truncate">
+            {bottleneck.from}→{bottleneck.to} {bottleneck.rate}
           </span>
-          <button
-            type="button"
-            onClick={load}
-            disabled={loading}
-            title="Refresh"
-            className="rounded-md p-1 text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-50"
-          >
-            <RefreshCw className={cn("h-3 w-3", loading && "animate-spin")} />
-          </button>
-        </div>
-      </div>
-
-      {gate && (
-        <div
+        )}
+        <ChevronDown
           className={cn(
-            "flex items-start gap-2 rounded-lg border px-2.5 py-2 text-[11px] leading-snug",
-            gate.ready
-              ? "border-success/35 bg-success/10 text-foreground"
-              : "border-border bg-muted/50 text-muted-foreground",
+            "ml-auto h-3.5 w-3.5 text-muted-foreground transition-transform shrink-0",
+            open && "rotate-180",
           )}
-        >
-          {gate.ready ? (
-            <ShieldCheck className="h-3.5 w-3.5 text-success shrink-0 mt-0.5" />
-          ) : (
-            <ShieldAlert className="h-3.5 w-3.5 text-choco shrink-0 mt-0.5" />
-          )}
-          <div className="min-w-0">
-            <p className="font-medium text-foreground">
-              Stripe: {gate.ready ? "pripravené" : "zatiaľ nie"}
-            </p>
-            <p className="mt-0.5">{gate.reason}</p>
+        />
+      </button>
+
+      {open && (
+        <div className="border-t border-border px-3 py-2.5 space-y-2">
+          <div className="flex items-center justify-end gap-1.5">
+            {[24, 168].map((h) => (
+              <button
+                key={h}
+                type="button"
+                onClick={() => setHours(h)}
+                className={cn(
+                  "rounded-md px-1.5 py-0.5 text-[10px] font-medium border",
+                  hours === h
+                    ? "border-choco/40 bg-choco/10 text-foreground"
+                    : "border-transparent text-muted-foreground hover:bg-muted",
+                )}
+              >
+                {h === 24 ? "24h" : "7d"}
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={load}
+              disabled={loading}
+              title="Refresh"
+              className="rounded-md p-1 text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-50"
+            >
+              <RefreshCw className={cn("h-3 w-3", loading && "animate-spin")} />
+            </button>
           </div>
+
+          {empty ? (
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              Zatiaľ prázdne. Brief → Accept → Share — tu uvidíš konverziu.
+            </p>
+          ) : (
+            <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
+              {STEPS.map((s, i) => {
+                const n = counts[s.key] ?? 0;
+                const prev = i > 0 ? (counts[STEPS[i - 1].key] ?? 0) : null;
+                const conv = prev != null ? pct(prev, n) : null;
+                const weak = prev != null && prev >= 2 && n / prev < 0.5;
+                return (
+                  <div
+                    key={s.key}
+                    title={s.hint + (conv ? ` · ${conv} z predch.` : "")}
+                    className={cn(
+                      "rounded-lg border bg-background/70 px-1.5 py-1.5 text-center",
+                      weak
+                        ? "border-terracotta/40"
+                        : n > 0
+                          ? "border-success/25"
+                          : "border-border",
+                    )}
+                  >
+                    <p className="text-sm font-semibold tabular-nums leading-none">
+                      {n}
+                    </p>
+                    <p className="mt-0.5 text-[9px] text-muted-foreground truncate">
+                      {s.label}
+                    </p>
+                    {conv && (
+                      <p className="text-[9px] text-muted-foreground/80 tabular-nums">
+                        {conv}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {hitl && (hitl.approved > 0 || hitl.rejected > 0) && (
+            <p className="text-[10px] text-muted-foreground">
+              HitL: {hitl.approved} ok / {hitl.rejected} reject
+              {hitl.rejectRate != null
+                ? ` · ${Math.round(hitl.rejectRate * 100)}% reject`
+                : ""}
+            </p>
+          )}
         </div>
       )}
-
-      {empty ? (
-        <p className="text-[11px] text-muted-foreground leading-relaxed">
-          Zatiaľ prázdne. Spusti brief → Accept + Share → otvor{" "}
-          <span className="font-mono">/a/…</span> — tu uvidíš reálnu konverziu
-          (testovacie smoke eventy sa odpočítavajú).
-        </p>
-      ) : (
-        <>
-          <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
-            {STEPS.map((s, i) => {
-              const n = counts[s.key] ?? 0;
-              const prev = i > 0 ? (counts[STEPS[i - 1].key] ?? 0) : null;
-              const conv = prev != null ? pct(prev, n) : null;
-              const weak = prev != null && prev >= 2 && n / prev < 0.5;
-              return (
-                <div
-                  key={s.key}
-                  title={s.hint + (conv ? ` · ${conv} z predch.` : "")}
-                  className={cn(
-                    "rounded-lg border bg-background/70 px-1.5 py-1.5 text-center",
-                    weak
-                      ? "border-terracotta/40"
-                      : n > 0
-                        ? "border-success/25"
-                        : "border-border",
-                  )}
-                >
-                  <p className="text-sm font-semibold tabular-nums leading-none">
-                    {n}
-                  </p>
-                  <p className="text-[9px] text-muted-foreground mt-1 truncate">
-                    {s.label}
-                  </p>
-                  {conv && (
-                    <p
-                      className={cn(
-                        "text-[8px] tabular-nums mt-0.5",
-                        weak ? "text-terracotta" : "text-muted-foreground/80",
-                      )}
-                    >
-                      {conv}
-                    </p>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-          {bottleneck && (
-            <p className="text-[10px] text-terracotta leading-snug">
-              Drop: {bottleneck.from} → {bottleneck.to}
-              {bottleneck.rate ? ` (${bottleneck.rate})` : ""}.
-            </p>
-          )}
-          {(hitl && hitl.approved + hitl.rejected > 0) ||
-          (data?.counts?.reject ?? 0) > 0 ? (
-            <p className="text-[10px] text-muted-foreground leading-snug">
-              {hitl && hitl.approved + hitl.rejected > 0
-                ? `HitL DB: ${hitl.approved} approved · ${hitl.rejected} rejected${
-                    hitl.rejectRate != null
-                      ? ` · ${hitl.rejectRate}% reject`
-                      : ""
-                  }`
-                : null}
-            </p>
-          ) : null}
-        </>
-      )}
-
-      <p className="text-[10px] text-muted-foreground leading-snug">
-        Free publish = verejný <span className="font-mono">/a/…</span>. Stripe
-        až keď je brána pripravená (reálni používatelia, nie smoke testy).
-      </p>
     </div>
   );
 }
