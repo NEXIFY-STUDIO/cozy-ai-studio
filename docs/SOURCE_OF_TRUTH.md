@@ -21,7 +21,7 @@
 | Stripe Pro / Enterprise | **Not live** until `STRIPE_SECRET_KEY` + price IDs + webhook | UI must not claim otherwise |
 | Builder Kernel / Plugin SDK | **Library only** | Not the product path; do not market as shipped editor |
 | Figma → production | **Not shipped** | Do not claim on landing |
-| 1-click publish / custom domain | **Not sold as done** | Avoid marketing until launch pipeline is wired end-to-end |
+| 1-click publish / custom domain | **Partial** | Free = `/a/:id`. Redeploy via Vercel API when `VERCEL_TOKEN`+project set; full launch needs Stripe |
 
 ## Hard rules for copy & CTAs
 

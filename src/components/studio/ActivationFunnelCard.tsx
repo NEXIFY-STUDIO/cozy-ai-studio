@@ -1,19 +1,24 @@
-import { useEffect, useState } from "react";
-import { Activity } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Activity, RefreshCw } from "lucide-react";
 import {
   fetchActivationStats,
   type ActivationCounts,
 } from "@/lib/activation/client";
 import { cn } from "@/lib/utils";
 
-const STEPS: { key: keyof ActivationCounts; label: string }[] = [
-  { key: "brief_sent", label: "Brief" },
-  { key: "pipeline_done", label: "Done" },
-  { key: "accept", label: "Accept" },
-  { key: "share_created", label: "Share" },
-  { key: "share_viewed", label: "View" },
-  { key: "remix_opened", label: "Remix" },
+const STEPS: { key: keyof ActivationCounts; label: string; hint: string }[] = [
+  { key: "brief_sent", label: "Brief", hint: "Prompt odoslaný" },
+  { key: "pipeline_done", label: "Done", hint: "Pipeline OK" },
+  { key: "accept", label: "Accept", hint: "HitL accept" },
+  { key: "share_created", label: "Share", hint: "Public /a/…" },
+  { key: "share_viewed", label: "View", hint: "Niekto otvoril link" },
+  { key: "remix_opened", label: "Remix", hint: "Remix do Studio" },
 ];
+
+function pct(from: number, to: number): string | null {
+  if (from <= 0) return null;
+  return `${Math.min(100, Math.round((to / from) * 100))}%`;
+}
 
 /**
  * Open-demo funnel snapshot (last 24h). Truthful counts only — no vanity.
@@ -21,20 +26,45 @@ const STEPS: { key: keyof ActivationCounts; label: string }[] = [
 export function ActivationFunnelCard({ className }: { className?: string }) {
   const [counts, setCounts] = useState<ActivationCounts | null>(null);
   const [totals, setTotals] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
-  useEffect(() => {
-    let cancelled = false;
+  const load = useCallback(() => {
+    setLoading(true);
+    setError(false);
     void fetchActivationStats(24).then((s) => {
-      if (cancelled || !s?.ok) return;
+      if (!s?.ok) {
+        setError(true);
+        setLoading(false);
+        return;
+      }
       setCounts(s.counts);
       setTotals(s.totals);
+      setLoading(false);
     });
-    return () => {
-      cancelled = true;
-    };
   }, []);
 
-  if (!counts) {
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const bottleneck = useMemo(() => {
+    if (!counts) return null;
+    const vals = STEPS.map((s) => counts[s.key] ?? 0);
+    // first big drop: where next is much smaller than prev with prev>0
+    for (let i = 0; i < vals.length - 1; i++) {
+      if (vals[i] >= 2 && vals[i + 1] / vals[i] < 0.5) {
+        return {
+          from: STEPS[i].label,
+          to: STEPS[i + 1].label,
+          rate: pct(vals[i], vals[i + 1]),
+        };
+      }
+    }
+    return null;
+  }, [counts]);
+
+  if (loading && !counts) {
     return (
       <div
         className={cn(
@@ -46,6 +76,31 @@ export function ActivationFunnelCard({ className }: { className?: string }) {
       </div>
     );
   }
+
+  if (error && !counts) {
+    return (
+      <div
+        className={cn(
+          "rounded-xl border border-border bg-muted/40 px-3 py-2 text-[11px] text-muted-foreground flex items-center justify-between gap-2",
+          className,
+        )}
+      >
+        <span>Funnel unavailable</span>
+        <button
+          type="button"
+          onClick={load}
+          className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-0.5 hover:bg-background"
+        >
+          <RefreshCw className="h-3 w-3" />
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  if (!counts) return null;
+
+  const empty = totals === 0;
 
   return (
     <div
@@ -59,28 +114,80 @@ export function ActivationFunnelCard({ className }: { className?: string }) {
           <Activity className="h-3 w-3 text-choco" />
           Funnel 24h
         </p>
-        <span className="text-[10px] text-muted-foreground tabular-nums">
-          {totals} events
-        </span>
-      </div>
-      <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
-        {STEPS.map((s) => (
-          <div
-            key={s.key}
-            className="rounded-lg border border-border bg-background/70 px-1.5 py-1.5 text-center"
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] text-muted-foreground tabular-nums">
+            {totals} events
+          </span>
+          <button
+            type="button"
+            onClick={load}
+            disabled={loading}
+            title="Refresh"
+            className="rounded-md p-1 text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-50"
           >
-            <p className="text-sm font-semibold tabular-nums leading-none">
-              {counts[s.key] ?? 0}
-            </p>
-            <p className="text-[9px] text-muted-foreground mt-1 truncate">
-              {s.label}
-            </p>
-          </div>
-        ))}
+            <RefreshCw className={cn("h-3 w-3", loading && "animate-spin")} />
+          </button>
+        </div>
       </div>
+
+      {empty ? (
+        <p className="text-[11px] text-muted-foreground leading-relaxed">
+          Zatiaľ prázdne. Spusti brief → Accept + Share → otvor{" "}
+          <span className="font-mono">/a/…</span> — tu uvidíš konverziu.
+        </p>
+      ) : (
+        <>
+          <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
+            {STEPS.map((s, i) => {
+              const n = counts[s.key] ?? 0;
+              const prev = i > 0 ? (counts[STEPS[i - 1].key] ?? 0) : null;
+              const conv = prev != null ? pct(prev, n) : null;
+              const weak = prev != null && prev >= 2 && n / prev < 0.5;
+              return (
+                <div
+                  key={s.key}
+                  title={s.hint + (conv ? ` · ${conv} z predch.` : "")}
+                  className={cn(
+                    "rounded-lg border bg-background/70 px-1.5 py-1.5 text-center",
+                    weak
+                      ? "border-terracotta/40"
+                      : n > 0
+                        ? "border-success/25"
+                        : "border-border",
+                  )}
+                >
+                  <p className="text-sm font-semibold tabular-nums leading-none">
+                    {n}
+                  </p>
+                  <p className="text-[9px] text-muted-foreground mt-1 truncate">
+                    {s.label}
+                  </p>
+                  {conv && (
+                    <p
+                      className={cn(
+                        "text-[8px] tabular-nums mt-0.5",
+                        weak ? "text-terracotta" : "text-muted-foreground/80",
+                      )}
+                    >
+                      {conv}
+                    </p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          {bottleneck && (
+            <p className="text-[10px] text-terracotta leading-snug">
+              Drop: {bottleneck.from} → {bottleneck.to}
+              {bottleneck.rate ? ` (${bottleneck.rate})` : ""}.
+            </p>
+          )}
+        </>
+      )}
+
       <p className="text-[10px] text-muted-foreground leading-snug">
-        Free tier truth: Share = public <span className="font-mono">/a/…</span>{" "}
-        link (not paid deploy).
+        Free publish = public <span className="font-mono">/a/…</span>. Paid
+        Vercel deploy = až keď je wiring + (voliteľne) Stripe.
       </p>
     </div>
   );

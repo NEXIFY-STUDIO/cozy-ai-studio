@@ -25,8 +25,19 @@ export type LaunchJobInput = {
   projectName: string;
   preferredPlan: "PRO" | "ENTERPRISE";
   origin: string;
+  /** full = Stripe required; redeploy = Vercel only (no fake billing) */
+  mode?: "full" | "redeploy";
   signal?: AbortSignal;
 };
+
+export function isVercelDeployConfigured(): boolean {
+  return Boolean(
+    process.env.VERCEL_DEPLOY_HOOK_URL?.trim() ||
+      (process.env.VERCEL_TOKEN?.trim() &&
+        (process.env.VERCEL_PROJECT_ID?.trim() ||
+          process.env.VERCEL_PROJECT_NAME?.trim())),
+  );
+}
 
 export type LaunchEmitter = {
   emit: <T extends keyof LaunchSsePayloadMap>(
@@ -152,8 +163,20 @@ async function triggerVercelDeploy(projectName: string): Promise<{
 
   if (token && projectId) {
     const qs = teamId ? `?teamId=${encodeURIComponent(teamId)}` : "";
-    // Create deployment from git if configured; otherwise hook-less deploy API needs files.
-    // Prefer re-deploy of latest production:
+    const gitRepoId = process.env.VERCEL_GIT_REPO_ID?.trim();
+    const gitOrg = process.env.VERCEL_GIT_ORG?.trim() || "NEXIFY-STUDIO";
+    const gitRepo =
+      process.env.VERCEL_GIT_REPO?.trim() || "cozy-ai-studio";
+    const gitRef = process.env.VERCEL_GIT_REF?.trim() || "main";
+    const gitSource = gitRepoId
+      ? { type: "github" as const, repoId: gitRepoId, ref: gitRef }
+      : {
+          type: "github" as const,
+          org: gitOrg,
+          repo: gitRepo,
+          ref: gitRef,
+        };
+    // Production deploy from connected GitHub main (real API — no sleep fakes)
     const res = await fetch(
       `https://api.vercel.com/v13/deployments${qs}`,
       {
@@ -163,17 +186,11 @@ async function triggerVercelDeploy(projectName: string): Promise<{
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          name: projectId,
+          name: process.env.VERCEL_PROJECT_NAME?.trim() || "cozy-ai-studio",
           project: projectId,
           target: "production",
-          gitSource: process.env.VERCEL_GIT_REPO_ID
-            ? {
-                type: "github",
-                repoId: process.env.VERCEL_GIT_REPO_ID,
-                ref: process.env.VERCEL_GIT_REF || "main",
-              }
-            : undefined,
-          meta: { caiLaunch: "1", projectName },
+          gitSource,
+          meta: { caiLaunch: "1", projectName, mode: "redeploy" },
         }),
       },
     );
@@ -281,22 +298,34 @@ export async function runLaunchJob(
     }
   }
 
-  // ── 2. Billing: require active Stripe plan ───────────────────────────
+  const mode = input.mode === "redeploy" ? "redeploy" : "full";
+
+  // ── 2. Billing: require active Stripe plan (full mode only) ──────────
   {
     const t0 = Date.now();
     patch("billing", { status: "running" });
-    progress(16, "Billing…");
+    progress(16, mode === "redeploy" ? "Billing skipped…" : "Billing…");
 
-    if (!isStripeConfigured()) {
+    if (mode === "redeploy") {
+      plan = "PRO";
+      prepaidCredits = 0;
+      invoiceId = `redeploy_${Date.now().toString(36)}`;
+      patch("billing", {
+        status: "skipped",
+        durationMs: Date.now() - t0,
+        detail: "Redeploy mode — Stripe not required",
+      });
+      progress(24, "Billing skipped");
+    } else if (!isStripeConfigured()) {
       patch("billing", {
         status: "failed",
         durationMs: Date.now() - t0,
         detail: "STRIPE_SECRET_KEY not configured",
       });
       throw new Error(
-        "Stripe is not configured. Set STRIPE_SECRET_KEY and STRIPE_PRICE_PRO / STRIPE_PRICE_ENTERPRISE.",
+        "Stripe is not configured. Set STRIPE_SECRET_KEY and STRIPE_PRICE_PRO / STRIPE_PRICE_ENTERPRISE — or use redeploy mode with Vercel keys only.",
       );
-    }
+    } else {
 
     const snap = await getBillingSnapshot(input.userId);
     const activePaid =
@@ -332,12 +361,21 @@ export async function runLaunchJob(
       detail: `${plan} · ${snap.status}`,
     });
     progress(24, "Paid");
+    } // end full-mode stripe branch
   }
 
   // ── 3. Prepaid credits ledger ────────────────────────────────────────
   {
     const t0 = Date.now();
     patch("prepaid", { status: "running" });
+    if (mode === "redeploy") {
+      patch("prepaid", {
+        status: "skipped",
+        durationMs: Date.now() - t0,
+        detail: "No prepaid ledger in redeploy mode",
+      });
+      progress(34, "Credits skipped");
+    } else {
     progress(28, "Credits…");
     const sql = await getSql();
     await sql`
@@ -360,6 +398,7 @@ export async function runLaunchJob(
       detail: `${prepaidCredits.toLocaleString()} tokens reserved`,
     });
     progress(34, "Credits ready");
+    }
   }
 
   // ── 4. Environment ───────────────────────────────────────────────────
@@ -441,25 +480,26 @@ export async function runLaunchJob(
     const t0 = Date.now();
     patch("deploy", { status: "running" });
     progress(78, "Deploy…");
+    if (!isVercelDeployConfigured()) {
+      patch("deploy", {
+        status: "failed",
+        durationMs: Date.now() - t0,
+        detail:
+          "Missing VERCEL_DEPLOY_HOOK_URL or VERCEL_TOKEN+VERCEL_PROJECT_ID",
+      });
+      throw new Error(
+        "Vercel deploy not configured. Free publish still works via /a/:id Share.",
+      );
+    }
     const dep = await triggerVercelDeploy(input.projectName);
     if (!dep.ok) {
-      // Fallback: healthcheck current origin (already deployed app)
-      const originHealth = await healthcheck(input.origin, signal);
-      if (originHealth.ok) {
-        publishHost = new URL(input.origin).host;
-        patch("deploy", {
-          status: "done",
-          durationMs: Date.now() - t0,
-          detail: `Origin live (${dep.detail})`,
-        });
-      } else {
-        patch("deploy", {
-          status: "failed",
-          durationMs: Date.now() - t0,
-          detail: dep.detail,
-        });
-        throw new Error(dep.detail);
-      }
+      // Honest fail — never mark Deployed just because origin already serves HTML
+      patch("deploy", {
+        status: "failed",
+        durationMs: Date.now() - t0,
+        detail: dep.detail,
+      });
+      throw new Error(dep.detail);
     } else {
       if (dep.url) {
         try {
@@ -486,7 +526,14 @@ export async function runLaunchJob(
     const t0 = Date.now();
     patch("publish", { status: "running" });
     progress(90, "Publish…");
-    if (!publishHost) publishHost = domain;
+    if (!publishHost) {
+      const prodUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL?.trim();
+      if (prodUrl) {
+        publishHost = prodUrl.replace(/^https?:\/\//, "");
+      } else {
+        publishHost = domain;
+      }
+    }
     const url = publishHost.startsWith("http")
       ? publishHost
       : `https://${publishHost}`;
