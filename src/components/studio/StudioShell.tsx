@@ -16,6 +16,8 @@ import { CommandPalette } from "./CommandPalette";
 import { ProductionLaunchHost } from "./ProductionLaunch";
 import { cn } from "@/lib/utils";
 import { useBillingSync } from "@/hooks/useBillingSync";
+import { applyShareRemix } from "@/lib/share-preview";
+import { toast } from "sonner";
 
 function useIsDesktop() {
   const [isDesktop, setIsDesktop] = useState(false);
@@ -41,6 +43,28 @@ export function StudioShell() {
   useEffect(() => {
     document.documentElement.classList.toggle("dark", theme === "dark");
   }, [theme]);
+
+  // Remix from public share /a/:id → /studio?remix=
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const id = new URLSearchParams(window.location.search).get("remix")?.trim();
+    if (!id) return;
+    let cancelled = false;
+    void (async () => {
+      const ok = await applyShareRemix(id);
+      if (cancelled) return;
+      if (!ok) {
+        toast.error("Remix failed", { description: "Share not found or expired" });
+      }
+      // strip query so refresh doesn't re-apply
+      const url = new URL(window.location.href);
+      url.searchParams.delete("remix");
+      window.history.replaceState({}, "", url.pathname + url.search);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <div className="flex h-dvh flex-col overflow-hidden bg-background">

@@ -12,6 +12,9 @@ export type SharedPreview = {
   title: string;
   html: string;
   prompt_preview: string | null;
+  source_code: string | null;
+  source_language: string;
+  source_path: string;
   created_at: string;
   expires_at: string | null;
 };
@@ -31,6 +34,9 @@ export async function createSharedPreview(opts: {
   title?: string;
   projectId?: string | null;
   promptPreview?: string | null;
+  sourceCode?: string | null;
+  sourceLanguage?: string | null;
+  sourcePath?: string | null;
 }): Promise<{ id: string; path: string }> {
   const html = opts.html?.trim() || "";
   if (!html) {
@@ -58,16 +64,24 @@ export async function createSharedPreview(opts: {
   const id = newShareId();
   const title = (opts.title?.trim() || "Cozy preview").slice(0, 120);
   const promptPreview = (opts.promptPreview || "").slice(0, 280) || null;
+  const sourceCode = opts.sourceCode?.trim() || null;
+  const sourceLanguage = (opts.sourceLanguage || "tsx").slice(0, 32);
+  const sourcePath = (opts.sourcePath || "src/App.tsx").slice(0, 200);
+
   await sql`
     insert into shared_previews (
-      id, user_id, project_id, title, html, prompt_preview
+      id, user_id, project_id, title, html, prompt_preview,
+      source_code, source_language, source_path
     ) values (
       ${id},
       ${opts.userId},
       ${opts.projectId ?? null},
       ${title},
       ${html},
-      ${promptPreview}
+      ${promptPreview},
+      ${sourceCode},
+      ${sourceLanguage},
+      ${sourcePath}
     )
   `;
 
@@ -81,6 +95,7 @@ export async function getSharedPreview(
   const sql = await getSql();
   const rows = await sql<SharedPreview>`
     select id, user_id, project_id, title, html, prompt_preview,
+           source_code, source_language, source_path,
            created_at::text, expires_at::text
     from shared_previews
     where id = ${id}

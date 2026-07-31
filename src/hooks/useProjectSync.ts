@@ -1,11 +1,11 @@
 /**
  * Hydrate studio files/approvals/telemetry from server DB.
+ * Works in open demo (AUTH_PROVIDER=none → dev-user) and signed-in modes.
  * Persist file writes server-side (not only localStorage cozy-ai-studio-v1).
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useStudioStore, type PlanTier, type ProjectFile } from "@/stores/studio-store";
-import { authEnabled } from "@/lib/auth/client";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import {
   loadMyWorkspace,
@@ -29,26 +29,28 @@ export function useProjectSync() {
   });
   const [hydrated, setHydrated] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [cloudError, setCloudError] = useState<string | null>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSnapshot = useRef<string>("");
+  const hydratedOnce = useRef(false);
 
-  // Hydrate from server when signed in
+  // Hydrate from server when we have a user (incl. open-demo DEV_USER)
   useEffect(() => {
-    if (!authEnabled) {
-      setHydrated(true);
-      return;
-    }
     if (isPending) return;
     if (!user) {
       setHydrated(true);
       return;
     }
+    // Avoid re-hydrate loop when projectId updates from this effect
+    if (hydratedOnce.current) return;
 
     let cancelled = false;
     setSyncing(true);
+    setCloudError(null);
     void loadMyWorkspace({ data: projectId })
       .then((ws) => {
         if (cancelled) return;
+        hydratedOnce.current = true;
         setProjectId(ws.project.id);
         try {
           window.localStorage.setItem(PROJECT_ID_KEY, ws.project.id);
@@ -71,15 +73,19 @@ export function useProjectSync() {
           Object.values(filesMap)[0]?.content ??
           useStudioStore.getState().originalCode;
 
+        const hasCloudFiles = Object.keys(filesMap).length > 0;
+
         useStudioStore.setState({
           activeFile: active,
-          files:
-            Object.keys(filesMap).length > 0
-              ? filesMap
-              : useStudioStore.getState().files,
-          originalCode: activeContent,
-          modifiedCode: activeContent,
-          planTier: (ws.subscription?.plan_tier as PlanTier) ||
+          files: hasCloudFiles ? filesMap : useStudioStore.getState().files,
+          originalCode: hasCloudFiles
+            ? activeContent
+            : useStudioStore.getState().originalCode,
+          modifiedCode: hasCloudFiles
+            ? activeContent
+            : useStudioStore.getState().modifiedCode,
+          planTier:
+            (ws.subscription?.plan_tier as PlanTier) ||
             (ws.project.plan_tier as PlanTier) ||
             "FREE",
           promptsUsed: ws.usage.promptsUsed,
@@ -117,7 +123,6 @@ export function useProjectSync() {
             modifiedCode: pending.modified_code,
             language: pending.language,
           });
-          // stash approval id for resolve
           try {
             window.sessionStorage.setItem("cai-pending-approval-id", pending.id);
           } catch {
@@ -125,11 +130,35 @@ export function useProjectSync() {
           }
         }
 
-        lastSnapshot.current = JSON.stringify(filesMap);
+        lastSnapshot.current = JSON.stringify(
+          hasCloudFiles ? filesMap : useStudioStore.getState().files,
+        );
         setHydrated(true);
+
+        // First cloud project: push local starter files so refresh has content
+        if (!hasCloudFiles) {
+          const state = useStudioStore.getState();
+          const files = Object.values(state.files).map((f) => ({
+            path: f.path,
+            language: f.language,
+            content: f.content,
+          }));
+          if (files.length > 0) {
+            void saveMyProjectFiles({
+              data: {
+                projectId: ws.project.id,
+                files,
+                activeFile: state.activeFile,
+              },
+            }).catch((e) =>
+              console.warn("[project-sync] seed save failed", e),
+            );
+          }
+        }
       })
       .catch((e) => {
         console.warn("[project-sync] hydrate failed", e);
+        setCloudError(e instanceof Error ? e.message : "Cloud hydrate failed");
         setHydrated(true);
       })
       .finally(() => {
@@ -139,11 +168,13 @@ export function useProjectSync() {
     return () => {
       cancelled = true;
     };
-  }, [user, isPending, projectId]);
+    // projectId only as initial seed from localStorage — do not re-run on set
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, isPending]);
 
   // Debounced persist files → server
   const persistFiles = useCallback(async () => {
-    if (!authEnabled || !user || !projectId) return;
+    if (!user || !projectId) return;
     const state = useStudioStore.getState();
     const files = Object.values(state.files).map((f) => ({
       path: f.path,
@@ -163,8 +194,10 @@ export function useProjectSync() {
           activeFile: state.activeFile,
         },
       });
+      setCloudError(null);
     } catch (e) {
       console.warn("[project-sync] save failed", e);
+      setCloudError(e instanceof Error ? e.message : "Cloud save failed");
     }
   }, [user, projectId]);
 
@@ -184,7 +217,7 @@ export function useProjectSync() {
     };
   }, [hydrated, user, projectId, persistFiles]);
 
-  return { projectId, hydrated, syncing, persistFiles };
+  return { projectId, hydrated, syncing, persistFiles, cloudError };
 }
 
 /** Create server approval when HitL card is shown */
@@ -198,7 +231,6 @@ export async function persistPendingApproval(opts: {
   language: string;
   previewHtml: string;
 }) {
-  if (!authEnabled) return null;
   try {
     const row = await createMyApproval({
       data: {
@@ -227,7 +259,6 @@ export async function resolveServerApproval(
   status: "approved" | "rejected",
   rejectionReason?: string | null,
 ) {
-  if (!authEnabled) return;
   let approvalId: string | null = null;
   try {
     approvalId = window.sessionStorage.getItem("cai-pending-approval-id");
@@ -253,11 +284,10 @@ export async function persistTelemetry(entry: {
   latencyMs: number;
   projectId?: string | null;
 }) {
-  if (!authEnabled) return;
   try {
     await recordMyTelemetry({ data: entry });
   } catch {
-    /* offline / unauth */
+    /* offline */
   }
 }
 

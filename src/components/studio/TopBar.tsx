@@ -93,30 +93,28 @@ export function TopBar() {
                 : "Ready"}
         </div>
 
-        {authEnabled && (
-          <div
-            className={cn(
-              "hidden lg:flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-mono border",
-              syncing
-                ? "border-agents-blue/40 bg-agents-blue/10 text-agents-blue"
-                : projectId && hydrated
-                  ? "border-success/30 bg-success/10 text-success"
-                  : "border-border bg-muted text-muted-foreground",
-            )}
-            title={
-              projectId
-                ? `Cloud project ${projectId}`
-                : "Local only — sign in to sync"
-            }
-          >
-            {projectId ? (
-              <Cloud className="h-3 w-3" />
-            ) : (
-              <CloudOff className="h-3 w-3" />
-            )}
-            {syncing ? "Sync…" : projectId ? "Cloud" : "Local"}
-          </div>
-        )}
+        <div
+          className={cn(
+            "hidden lg:flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-mono border",
+            syncing
+              ? "border-agents-blue/40 bg-agents-blue/10 text-agents-blue"
+              : projectId && hydrated
+                ? "border-success/30 bg-success/10 text-success"
+                : "border-border bg-muted text-muted-foreground",
+          )}
+          title={
+            projectId
+              ? `Cloud project ${projectId}`
+              : "Waiting for cloud hydrate…"
+          }
+        >
+          {projectId ? (
+            <Cloud className="h-3 w-3" />
+          ) : (
+            <CloudOff className="h-3 w-3" />
+          )}
+          {syncing ? "Sync…" : projectId ? "Cloud" : "Local"}
+        </div>
       </div>
 
       <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">

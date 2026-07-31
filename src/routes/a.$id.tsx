@@ -82,12 +82,12 @@ function PublicSharePage() {
               <Sparkles className="h-3 w-3 text-choco" />
               Public preview
             </span>
-            <Link to="/studio">
+            <a href={`/studio?remix=${encodeURIComponent(data.id)}`}>
               <Button size="sm" className="h-8 gap-1.5">
                 <ExternalLink className="h-3.5 w-3.5" />
                 Remix in Studio
               </Button>
-            </Link>
+            </a>
           </div>
         </div>
       </header>
