@@ -17,7 +17,9 @@
     "format": "prettier --write .",
     "ship-gate": "node scripts/ship-gate.mjs",
     "test:dashboard-preview": "node scripts/dashboard-preview-contract.mjs",
-    "verify": "npm run typecheck && npm run lint && npm run build && npm run ship-gate && npm run test:dashboard-preview",
+    "test:visual": "node scripts/visual-regression.mjs",
+    "test:visual:update": "UPDATE_BASELINES=1 node scripts/visual-regression.mjs",
+    "verify": "npm run typecheck && npm run lint && npm run build && npm run ship-gate && npm run test:dashboard-preview && npm run test:visual",
     "prod-smoke": "node scripts/prod-smoke.mjs"
   },
   "dependencies": {
@@ -94,11 +96,13 @@
     "globals": "^15.15.0",
     "lightningcss": "^1.28.0",
     "nitro": "3.0.260603-beta",
+    "pixelmatch": "^7.2.0",
     "playwright": "^1.52.0",
+    "pngjs": "^7.0.0",
     "prettier": "^3.4.0",
     "typescript": "^5.7.0",
     "typescript-eslint": "^8.56.1",
     "vite": "^8.1.0"
   },
-  "description": "Cozy AI Studio \u2014 multi-agent visual IDE (Builder Kernel, Plugin SDK, Mistral gateway)"
+  "description": "Cozy AI Studio — multi-agent visual IDE (Builder Kernel, Plugin SDK, Mistral gateway)"
 }
