@@ -62,7 +62,7 @@ export function CommandPalette() {
         <div className="flex items-center border-b border-border px-3">
           <Sparkles className="h-4 w-4 text-terracotta mr-2 shrink-0" />
           <Command.Input
-            placeholder="Search commands, files, error demos…"
+            placeholder="Search commands and files…"
             className="h-12 w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
             autoFocus
           />
@@ -163,36 +163,38 @@ export function CommandPalette() {
             />
           </Command.Group>
 
-          <Command.Group
-            heading="Error handling examples"
-            className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-2 py-1.5 mt-1"
-          >
-            <Item
-              icon={AlertTriangle}
-              label="Simulate rate limit (429)"
-              onSelect={() => runQuick("simulate rate limit error")}
-            />
-            <Item
-              icon={WifiOff}
-              label="Simulate network error"
-              onSelect={() => runQuick("simulate network error")}
-            />
-            <Item
-              icon={Timer}
-              label="Simulate pipeline timeout"
-              onSelect={() => runQuick("simulate pipeline timeout")}
-            />
-            <Item
-              icon={AlertTriangle}
-              label="Simulate unhealable audit failure"
-              onSelect={() => runQuick("simulate unhealable audit failure")}
-            />
-            <Item
-              icon={ShieldCheck}
-              label="Demo auto-heal XSS recovery"
-              onSelect={() => runQuick("inject broken XSS for auto-heal demo")}
-            />
-          </Command.Group>
+          {import.meta.env.DEV && (
+            <Command.Group
+              heading="Error handling examples"
+              className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-2 py-1.5 mt-1"
+            >
+              <Item
+                icon={AlertTriangle}
+                label="Simulate rate limit (429)"
+                onSelect={() => runQuick("simulate rate limit error")}
+              />
+              <Item
+                icon={WifiOff}
+                label="Simulate network error"
+                onSelect={() => runQuick("simulate network error")}
+              />
+              <Item
+                icon={Timer}
+                label="Simulate pipeline timeout"
+                onSelect={() => runQuick("simulate pipeline timeout")}
+              />
+              <Item
+                icon={AlertTriangle}
+                label="Simulate unhealable audit failure"
+                onSelect={() => runQuick("simulate unhealable audit failure")}
+              />
+              <Item
+                icon={ShieldCheck}
+                label="Demo auto-heal XSS recovery"
+                onSelect={() => runQuick("inject broken XSS for auto-heal demo")}
+              />
+            </Command.Group>
+          )}
 
           <Command.Group
             heading="Files"

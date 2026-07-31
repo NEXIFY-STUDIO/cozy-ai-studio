@@ -36,6 +36,8 @@ export type RunPipelineOptions = {
 };
 
 function shouldUseDemo(forceDemo?: boolean): boolean {
+  // Never force mock path in production builds
+  if (import.meta.env.PROD) return isClientDemoPipeline();
   if (forceDemo) return true;
   return isClientDemoPipeline();
 }

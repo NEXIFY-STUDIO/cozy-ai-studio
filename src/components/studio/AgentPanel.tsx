@@ -221,20 +221,24 @@ export function AgentPanel() {
                 ))}
               </div>
               <div className="pt-1">
-                <button
-                  type="button"
-                  onClick={() => setShowErrorDemos((v) => !v)}
-                  className="text-[11px] text-muted-foreground hover:text-foreground underline-offset-2 hover:underline"
-                >
-                  {showErrorDemos ? "Skryť error demos" : "Dev: error demos"}
-                </button>
-                {showErrorDemos && (
-                  <div className="mt-2">
-                    <ErrorHandlingExamples
-                      onRun={(p) => void run(p)}
-                      disabled={isPipelineRunning}
-                    />
-                  </div>
+                {import.meta.env.DEV && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setShowErrorDemos((v) => !v)}
+                      className="text-[11px] text-muted-foreground hover:text-foreground underline-offset-2 hover:underline"
+                    >
+                      {showErrorDemos ? "Skryť error demos" : "Dev: error demos"}
+                    </button>
+                    {showErrorDemos && (
+                      <div className="mt-2">
+                        <ErrorHandlingExamples
+                          onRun={(p) => void run(p)}
+                          disabled={isPipelineRunning}
+                        />
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             </div>
