@@ -54,13 +54,13 @@ const FEATURES = [
   {
     icon: ShieldCheck,
     title: "Ty rozhoduješ",
-    body: "Human-in-the-loop karty pred acceptom. Server drží denný free cap pred modelom.",
+    body: "Karty Human-in-the-loop pred schválením. Server drží denný free limit pred modelom.",
     span: "",
   },
   {
     icon: Smartphone,
     title: "Mobile pair",
-    body: "Spáruj telefón a schvaľuj diff na ceste (WS companion).",
+    body: "Spáruj telefón a schvaľuj diff na ceste (mobilný companion).",
     span: "",
   },
   {
@@ -91,7 +91,7 @@ const STEPS = [
 
 const PROMPTS = [
   "Landing pre remeselnú kávu v Košiciach",
-  "Dashboard s metriky a dark mode",
+  "Dashboard s metrikami a dark mode",
   "Pricing stránka s tromi balíkmi",
 ];
 
@@ -192,8 +192,8 @@ function LandingPage() {
             </h1>
 
             <p className="text-base sm:text-xl text-muted-foreground leading-relaxed max-w-2xl mx-auto mb-8 text-pretty">
-              Napíš brief, sleduj agentov a diff, schváľ zmeny a zdieľaj public link (/a/…).
-              Bez inštalácie. Free má reálny denný limit (server 429 pred modelom).
+              Napíš brief, sleduj agentov a diff, schváľ zmeny a zdieľaj verejný odkaz (/a/…).
+              Bez inštalácie. Free má reálny denný limit (server vráti 429 pred volaním modelu).
             </p>
 
             <div
@@ -386,7 +386,7 @@ function LandingPage() {
                 To, čo reálne beží v studiu
               </h2>
               <p className="text-base sm:text-lg text-muted-foreground leading-relaxed">
-                Žiadne Figma import, Kernel marketplace ani fake Pro checkout.
+                Žiadny Figma import, Kernel marketplace ani falošný Pro checkout.
                 Brief → pipeline → diff → preview → Accept → share link.
               </p>
             </div>

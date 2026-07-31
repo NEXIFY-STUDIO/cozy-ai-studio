@@ -140,7 +140,7 @@ export function AgentPanel() {
           {showEmpty && (
             <div className="space-y-3 min-w-0">
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Vyber šablónu (≤60 s k preview) alebo napíš vlastný brief. Po
+                Vyber šablónu (do 60 s k náhľadu) alebo napíš vlastný brief. Po
                 dokončení: diff → Accept → Share v Live Preview.
               </p>
               <div className="grid gap-1.5 min-w-0">
@@ -220,7 +220,7 @@ export function AgentPanel() {
             <div className="rounded-xl border border-choco/30 bg-choco/10 px-3 py-2.5 text-xs leading-relaxed space-y-2">
               <p className="font-semibold text-foreground flex items-center gap-1.5">
                 <Share2 className="h-3.5 w-3.5 text-choco shrink-0" />
-                Free publish ready
+                Verejný odkaz je pripravený
               </p>
               <p className="text-muted-foreground font-mono text-[11px] truncate">
                 {lastShareId ? `/a/${lastShareId}` : lastShareUrl}
@@ -232,7 +232,7 @@ export function AgentPanel() {
                   rel="noreferrer"
                   className="inline-flex items-center gap-1 rounded-lg border border-choco/40 bg-background px-2.5 py-1.5 text-[11px] font-medium hover:border-choco"
                 >
-                  Open public link
+                  Otvoriť verejný odkaz
                 </a>
                 <button
                   type="button"
@@ -241,7 +241,7 @@ export function AgentPanel() {
                   }}
                   className="inline-flex items-center gap-1 rounded-lg border border-border bg-background px-2.5 py-1.5 text-[11px] font-medium"
                 >
-                  Copy link
+                  Kopírovať odkaz
                 </button>
               </div>
             </div>
@@ -317,7 +317,12 @@ export function AgentPanel() {
       <div className="shrink-0 border-t border-border bg-card p-2.5 sm:p-3 min-w-0">
         {dailyLeft != null && dailyLeft <= 3 && dailyLeft > 0 && (
           <p className="mb-2 text-[11px] text-amber-700 dark:text-amber-400 font-medium">
-            Zostáva {dailyLeft} free prompt{dailyLeft === 1 ? "" : "ov"} dnes
+            {(() => {
+              const n = dailyLeft;
+              const word =
+                n === 1 ? "prompt" : n >= 2 && n <= 4 ? "prompty" : "promptov";
+              return `Zostáva ešte ${n} free ${word} dnes`;
+            })()}
           </p>
         )}
         <div className="flex items-end gap-2 min-w-0">

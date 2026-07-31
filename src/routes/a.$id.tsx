@@ -133,7 +133,7 @@ function PublicSharePage() {
               ) : (
                 <Copy className="h-3.5 w-3.5" />
               )}
-              <span className="hidden sm:inline">Copy link</span>
+              <span className="hidden sm:inline">Kopírovať odkaz</span>
               <Link2 className="h-3.5 w-3.5 sm:hidden" />
             </Button>
             <a href={`/studio?remix=${encodeURIComponent(data.id)}`}>

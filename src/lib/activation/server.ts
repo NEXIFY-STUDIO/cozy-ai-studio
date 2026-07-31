@@ -154,14 +154,14 @@ export async function getActivationStats(
     let reason: string;
     if (ready) {
       reason =
-        "Real funnel holds — safe to wire Stripe when you want paid deploy.";
+        "Reálny funnel drží — Stripe môžeš zapnúť, keď budeš chcieť platený deploy.";
     } else if (realBriefs === 0 && empty.smoke.totals > 0) {
       reason =
-        "Only smoke/e2e traffic so far — wait for real Brief → Share users.";
+        "Zatiaľ len smoke/e2e testy — počkaj na reálnych používateľov Brief → Share.";
     } else if (realBriefs === 0) {
-      reason = "No real briefs yet. Open Studio and run a template.";
+      reason = "Zatiaľ žiadne reálne briefy. Otvor Studio a spusti šablónu.";
     } else {
-      reason = `Need more real usage (briefs ${realBriefs}/5 · accept ${realAccepts}/3 · share ${realShares}/3 · views ${realViews}/2).`;
+      reason = `Treba viac reálnej aktivácie (briefy ${realBriefs}/5 · accept ${realAccepts}/3 · share ${realShares}/3 · zobrazenia ${realViews}/2).`;
     }
     empty.stripeGate = {
       ready,

@@ -341,7 +341,7 @@ export function LivePreview() {
       {lastShareUrl && (
         <div className="flex items-center justify-between gap-2 border-b border-success/25 bg-success/10 px-3 py-1.5 text-[11px]">
           <span className="truncate font-mono text-muted-foreground">
-            Published {lastShareId ? `/a/${lastShareId}` : "link"}
+            Zverejnené {lastShareId ? `/a/${lastShareId}` : "odkaz"}
           </span>
           <div className="flex items-center gap-1.5 shrink-0">
             <a
@@ -350,14 +350,14 @@ export function LivePreview() {
               rel="noreferrer"
               className="rounded-md border border-success/40 bg-background px-2 py-0.5 font-medium hover:border-success"
             >
-              Open
+              Otvoriť
             </a>
             <button
               type="button"
               className="rounded-md border border-border bg-background px-2 py-0.5 font-medium"
               onClick={() => void navigator.clipboard.writeText(lastShareUrl)}
             >
-              Copy
+              Kopírovať
             </button>
           </div>
         </div>

@@ -62,9 +62,9 @@ export function ProductionLaunchButton({
     }
     if (!liveBilling && !isLive) {
       void navigate({ to: "/pricing", search: {} });
-      toast.message("Deploy not configured yet", {
+      toast.message("Deploy ešte nie je nastavený", {
         description:
-          "Free publish: Share → /a/:id. Paid full launch needs Stripe. Redeploy needs VERCEL_TOKEN + PROJECT_ID.",
+          "Free publish: Share → /a/:id. Platený full launch potrebuje Stripe. Redeploy potrebuje VERCEL_TOKEN + PROJECT_ID.",
       });
       return;
     }
@@ -99,8 +99,8 @@ export function ProductionLaunchButton({
         vercelReady
           ? liveBilling
             ? "Production launch (Stripe + Vercel)"
-            : "Redeploy production via Vercel (no Stripe)"
-          : "Vercel deploy keys missing — Limits / pricing"
+            : "Redeploy produkcie cez Vercel (bez Stripe)"
+          : "Chýbajú Vercel kľúče — Limity / cenník"
       }
     >
       <Rocket className="h-3.5 w-3.5" />
