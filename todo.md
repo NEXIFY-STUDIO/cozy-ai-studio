@@ -32,6 +32,7 @@
 | Prod smoke | `npm run prod-smoke` |
 | Publish A | `/a/:id` og tags + Studio free-publish CTAs |
 | Activation B | events + `/api/activation-stats` |
+| Funnel UI | Studio 24h funnel + share_viewed |
 
 ## Next
 
