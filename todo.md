@@ -22,13 +22,15 @@
 | Env | DATABASE_URL + Mistral + Supabase on Vercel prod (pooler eu-west-1) |
 | Share | Public `/a/:id` link + POST /api/share (clipboard) |
 | HitL | Accept + Share link (Shift+Enter); daily share soft-cap |
+| Persist | Open-demo cloud sync (dev-user) — hydrate + seed + debounced save |
+| Remix | `/a/:id` → Studio `?remix=` loads source + preview |
 
 ## Next
 
 | # | Item |
 |---|---|
-| P4 | Stripe only after activation (keep UI "Not live yet") |
-| Manual | STRIPE_* when activating; optional auth if enabling login |
+| ~~P4 Stripe~~ | skipped for now |
+| Later | Auth login optional · mobile WS · real deploy launch |
 
 ## Check
 

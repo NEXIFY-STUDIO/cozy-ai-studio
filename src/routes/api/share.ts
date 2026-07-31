@@ -37,6 +37,9 @@ export const Route = createFileRoute("/api/share")({
             path: `/a/${row.id}`,
             html: row.html,
             promptPreview: row.prompt_preview,
+            sourceCode: row.source_code,
+            sourceLanguage: row.source_language,
+            sourcePath: row.source_path,
             createdAt: row.created_at,
           });
         } catch (e) {
@@ -70,6 +73,9 @@ export const Route = createFileRoute("/api/share")({
           title?: string;
           projectId?: string;
           promptPreview?: string;
+          sourceCode?: string;
+          sourceLanguage?: string;
+          sourcePath?: string;
         };
         try {
           body = (await request.json()) as typeof body;
@@ -87,6 +93,9 @@ export const Route = createFileRoute("/api/share")({
             title: body.title,
             projectId: body.projectId ?? null,
             promptPreview: body.promptPreview ?? null,
+            sourceCode: body.sourceCode ?? null,
+            sourceLanguage: body.sourceLanguage ?? null,
+            sourcePath: body.sourcePath ?? null,
           });
           const origin = new URL(request.url).origin;
           const url = `${origin}${created.path}`;
