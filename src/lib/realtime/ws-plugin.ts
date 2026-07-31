@@ -49,8 +49,10 @@ export function realtimeWsPlugin(): Plugin {
         socket: { destroy: () => void },
         head: Buffer,
       ) => {
-        const url = req.url || "";
-        if (!url.startsWith("/api/ws")) return;
+        const raw = req.url || "";
+        const pathOnly = raw.split("?", 1)[0] || "";
+        // Exact path only — do not steal /api/ws/http
+        if (pathOnly !== "/api/ws") return;
         void (async () => {
           try {
             const serverWss = await ensureWss();

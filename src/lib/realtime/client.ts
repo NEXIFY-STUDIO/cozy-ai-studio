@@ -1,5 +1,5 @@
 /**
- * Browser realtime client — WebSocket first, HTTP long-poll fallback for prod.
+ * Browser realtime client — WebSocket first (local dev), HTTP long-poll on prod.
  */
 
 import type {
@@ -44,6 +44,18 @@ export type RealtimeClientHandlers = {
   onTransport?: (t: RealtimeTransport) => void;
 };
 
+/** Vercel / HTTPS hosts have no durable WS upgrade — skip straight to HTTP. */
+function preferHttpTransport(): boolean {
+  if (typeof window === "undefined") return false;
+  const host = window.location.hostname;
+  if (host === "localhost" || host === "127.0.0.1") return false;
+  // sandbox / vercel / any https deploy without native WS plugin
+  if (window.location.protocol === "https:") return true;
+  if (host.endsWith(".vercel.app")) return true;
+  if (host.includes("grok-sandbox") || host.includes("hades-www")) return true;
+  return Boolean(import.meta.env.PROD);
+}
+
 function wsUrl(): string {
   if (typeof window === "undefined") return "ws://127.0.0.1:8080/api/ws";
   const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
@@ -65,6 +77,9 @@ export class RealtimeClient {
 
   constructor(handlers: RealtimeClientHandlers = {}) {
     this.handlers = handlers;
+    if (preferHttpTransport()) {
+      this.wsFailed = true;
+    }
   }
 
   getStatus() {
@@ -87,7 +102,7 @@ export class RealtimeClient {
 
   connect() {
     this.intentionalClose = false;
-    if (this.wsFailed) {
+    if (this.wsFailed || preferHttpTransport()) {
       void this.connectHttp();
       return;
     }
@@ -133,6 +148,7 @@ export class RealtimeClient {
         this.dispatch(msg as ServerToClient);
       };
 
+      // Quiet fail — HTTP fallback is the real transport on many hosts
       ws.onerror = () => {
         clearTimeout(openTimeout);
         failToHttp();
@@ -170,6 +186,7 @@ export class RealtimeClient {
       const data = (await res.json()) as {
         clientId: string;
         messages?: ServerToClient[];
+        reauth?: boolean;
       };
       this.clientId = data.clientId;
       this.setStatus("open");
@@ -196,16 +213,23 @@ export class RealtimeClient {
           `/api/ws/http?clientId=${encodeURIComponent(this.clientId)}&waitMs=15000`,
           { signal },
         );
-        if (res.status === 404) {
-          // re-open
-          await this.connectHttp();
-          return;
-        }
         if (!res.ok) {
+          // Soft reauth path uses 200 + reauth; hard errors re-open
+          if (res.status === 404 || res.status === 410 || res.status === 409) {
+            await this.connectHttp();
+            return;
+          }
           await new Promise((r) => setTimeout(r, 800));
           continue;
         }
-        const data = (await res.json()) as { messages?: ServerToClient[] };
+        const data = (await res.json()) as {
+          messages?: ServerToClient[];
+          reauth?: boolean;
+        };
+        if (data.reauth) {
+          await this.connectHttp();
+          return;
+        }
         for (const m of data.messages ?? []) this.dispatch(m);
       } catch {
         if (signal.aborted) return;
@@ -267,8 +291,31 @@ export class RealtimeClient {
         }),
       })
         .then(async (res) => {
+          if (res.status === 404 || res.status === 410) {
+            await this.connectHttp();
+            // retry once after re-open
+            if (this.clientId) {
+              void fetch("/api/ws/http", {
+                method: "POST",
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({
+                  op: "send",
+                  clientId: this.clientId,
+                  message: msg,
+                }),
+              }).catch(() => undefined);
+            }
+            return;
+          }
           if (!res.ok) return;
-          const data = (await res.json()) as { messages?: ServerToClient[] };
+          const data = (await res.json()) as {
+            messages?: ServerToClient[];
+            reauth?: boolean;
+          };
+          if (data.reauth) {
+            await this.connectHttp();
+            return;
+          }
           for (const m of data.messages ?? []) this.dispatch(m);
         })
         .catch(() => {
@@ -335,7 +382,11 @@ export class RealtimeClient {
         body: JSON.stringify({ op: "close", clientId: this.clientId }),
       }).catch(() => undefined);
     }
-    this.ws?.close();
+    try {
+      this.ws?.close();
+    } catch {
+      /* ignore */
+    }
     this.ws = null;
     this.setStatus("closed");
   }
