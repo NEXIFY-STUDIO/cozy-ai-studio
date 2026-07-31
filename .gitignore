@@ -9,3 +9,7 @@ node_modules/
 # Never commit Vercel prebuilt output (breaks Git deploys)
 .vercel/
 .vercel/output/
+
+# Visual regression actuals / diffs (baselines live under tests/visual/baselines)
+screenshots/visual/
+screenshots/visual-regression-report.json
