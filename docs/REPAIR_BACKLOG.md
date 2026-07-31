@@ -68,7 +68,9 @@
 | **Remix** | `/studio?remix=` | **Done** |
 | **Monaco mobile** | desktop-only Diff | **This pass** |
 | **RLS** | app-layer user scoping + doc | **This pass** |
-| **Mobile WS** | companion pair | Later |
+| **Free publish A** | og tags + public link CTAs | **This pass** |
+| **Activation B** | funnel events + /api/activation-stats | **This pass** |
+| **Mobile WS** | companion pair PG | **Done** |
 | **Real deploy launch** | Vercel API | Later |
 
 ---

@@ -2,6 +2,7 @@
 import { toast } from "sonner";
 import { useStudioStore } from "@/stores/studio-store";
 import { getActiveProjectId } from "@/hooks/useProjectSync";
+import { trackActivation } from "@/lib/activation/client";
 
 export type ShareResult =
   | { mode: "link"; url: string; id: string }
@@ -53,6 +54,16 @@ export async function createPublicShareLink(opts: {
       path?: string;
     };
     if (!data.ok || !data.url || !data.id) return null;
+    try {
+      useStudioStore.setState({
+        lastShareUrl: data.url,
+        lastShareId: data.id,
+        lastShareAt: Date.now(),
+      });
+    } catch {
+      /* ignore */
+    }
+    void trackActivation("share_created", { id: data.id });
     return { url: data.url, id: data.id, path: data.path ?? `/a/${data.id}` };
   } catch {
     return null;
@@ -195,6 +206,7 @@ export async function applyShareRemix(shareId: string): Promise<boolean> {
     toast.success("Remixed into Studio", {
       description: path,
     });
+    void trackActivation("remix_opened", { shareId });
     return true;
   } catch {
     return false;

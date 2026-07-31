@@ -43,7 +43,13 @@ async function main() {
   if (share.id) {
     const page = await fetch(`${BASE}/a/${share.id}`);
     must(page.status === 200, `share page ${page.status}`);
+    const html = await page.text();
+    must(/<title>[^<]+Cozy share/i.test(html) || /og:title/i.test(html), "share page has title/og");
+    must(/prod-smoke|Cozy/i.test(html), "share page content");
   }
+
+  const act = await fetch(`${BASE}/api/activation-stats?hours=24`).then((r) => r.json());
+  must(act.ok === true && act.counts, "activation-stats ok");
 
   // pair open (does not require two peers)
   const pairOpen = await fetch(`${BASE}/api/ws/http`, {

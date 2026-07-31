@@ -40,6 +40,8 @@ export function LivePreview() {
   const setDevice = useStudioStore((s) => s.setDevice);
   const previewHtml = useStudioStore((s) => s.previewHtml);
   const previewKey = useStudioStore((s) => s.previewKey);
+  const lastShareUrl = useStudioStore((s) => s.lastShareUrl);
+  const lastShareId = useStudioStore((s) => s.lastShareId);
   const refreshPreview = useStudioStore((s) => s.refreshPreview);
 
   const wc = useWebContainerPreview();
@@ -334,6 +336,32 @@ export function LivePreview() {
           </div>
         </div>
       </div>
+
+      
+      {lastShareUrl && (
+        <div className="flex items-center justify-between gap-2 border-b border-success/25 bg-success/10 px-3 py-1.5 text-[11px]">
+          <span className="truncate font-mono text-muted-foreground">
+            Published {lastShareId ? `/a/${lastShareId}` : "link"}
+          </span>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <a
+              href={lastShareUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-md border border-success/40 bg-background px-2 py-0.5 font-medium hover:border-success"
+            >
+              Open
+            </a>
+            <button
+              type="button"
+              className="rounded-md border border-border bg-background px-2 py-0.5 font-medium"
+              onClick={() => void navigator.clipboard.writeText(lastShareUrl)}
+            >
+              Copy
+            </button>
+          </div>
+        </div>
+      )}
 
       {selectedLabel && inspectMode && (
         <div className="border-b border-border bg-choco/10 px-3 py-1.5 text-xs font-mono text-choco">
