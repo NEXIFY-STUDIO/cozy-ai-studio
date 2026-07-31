@@ -46,7 +46,7 @@ export function RejectionPoll() {
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-charcoal/25 backdrop-blur-sm p-4">
+    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-charcoal/25 backdrop-blur-sm p-4 pb-[max(1rem,env(safe-area-inset-bottom,1rem))] pt-[max(1rem,env(safe-area-inset-top,1rem))]">
       <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-elevated)]">
         <div className="flex items-start justify-between mb-3">
           <div>

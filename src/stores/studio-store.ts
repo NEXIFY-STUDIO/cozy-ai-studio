@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { TaskNode, PipelinePhase } from "@/lib/ai/types";
 import type { PipelineErrorCode, PipelineErrorAgent } from "@/lib/ai/errors";
+import { DEFAULT_DEVICE_ID, resolveDeviceId } from "@/lib/devices";
 
 export type AgentId = "G0_PLANNER" | "G1_CODER" | "G2_AUDITOR";
 export type AgentStatus = "idle" | "pending" | "in_progress" | "completed" | "failed";
@@ -398,12 +399,23 @@ function buildPreviewHtml(brand: string, headline: string, sub: string): string 
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet" />
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: Inter, system-ui, sans-serif; background: #F4F1EA; color: #1C1D21; min-height: 100vh; }
+    body {
+      font-family: Inter, system-ui, sans-serif;
+      background: #F4F1EA;
+      color: #1C1D21;
+      min-height: 100vh;
+      min-height: 100dvh;
+      /* Touch content starts below camera / Dynamic Island */
+      padding-top: env(safe-area-inset-top, 0px);
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+      padding-left: env(safe-area-inset-left, 0px);
+      padding-right: env(safe-area-inset-right, 0px);
+    }
     header { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.5rem; border-bottom: 1px solid rgba(28,29,33,0.1); }
     .logo { font-family: "Playfair Display", Georgia, serif; font-size: 1.35rem; font-weight: 700; }
     nav { display: flex; gap: 1.25rem; align-items: center; font-size: 0.875rem; color: rgba(28,29,33,0.55); }
@@ -463,15 +475,20 @@ const STARTER_PREVIEW = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       min-height: 100vh;
+      min-height: 100dvh;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 24px;
+      /* Live Preview injects device safe-area under camera housing */
+      padding: max(24px, env(safe-area-inset-top, 24px))
+        max(24px, env(safe-area-inset-right, 24px))
+        max(24px, env(safe-area-inset-bottom, 24px))
+        max(24px, env(safe-area-inset-left, 24px));
       font-family: Inter, system-ui, sans-serif;
       background: #F4F1EA;
       color: #1C1D21;
@@ -610,7 +627,7 @@ export const useStudioStore = create<StudioState>()(
       dailyUsed: 0,
       dailyLimit: 20,
       stripeConfigured: false,
-      device: "iphone-se",
+      device: "iphone-17-air",
       activeFile: "src/App.tsx",
       files: initialFiles,
       originalCode: STARTER_APP,
@@ -939,6 +956,7 @@ export const useStudioStore = create<StudioState>()(
       name: "cozy-ai-studio-v1",
       // Server is source of truth for files/plan/usage/telemetry.
       // Keep only UI prefs in localStorage (cozy-ai-studio-v1).
+      version: 2,
       partialize: (s) => ({
         theme: s.theme,
         device: s.device,
@@ -948,10 +966,29 @@ export const useStudioStore = create<StudioState>()(
         productionInvoiceId: s.productionInvoiceId,
         publishUrl: s.publishUrl,
       }),
+      migrate: (persisted, version) => {
+        const p = (persisted ?? {}) as Record<string, unknown>;
+        // v2: Option B primary device = iPhone 17 Air (was SE / legacy mobile)
+        if (version < 2) {
+          const raw = typeof p.device === "string" ? p.device : DEFAULT_DEVICE_ID;
+          // Upgrade default-era SE and legacy "mobile" → 17 Air; keep explicit other picks
+          if (!raw || raw === "iphone-se" || raw === "mobile") {
+            p.device = DEFAULT_DEVICE_ID;
+          } else {
+            p.device = resolveDeviceId(raw);
+          }
+        } else if (typeof p.device === "string") {
+          p.device = resolveDeviceId(p.device);
+        }
+        return p as typeof persisted;
+      },
       onRehydrateStorage: () => (state) => {
         if (typeof document === "undefined") return;
         const theme = state?.theme ?? "dark";
         document.documentElement.classList.toggle("dark", theme === "dark");
+        if (state) {
+          state.device = resolveDeviceId(state.device);
+        }
       },
     },
   ),

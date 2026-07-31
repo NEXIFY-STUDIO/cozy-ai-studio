@@ -19,6 +19,8 @@ import {
   DEVICE_PRESETS,
   FAMILY_LABEL,
   getDevice,
+  getSafeArea,
+  injectSafeAreaIntoHtml,
   resolveDeviceId,
   type DeviceFamily,
   type DevicePreset,
@@ -35,6 +37,53 @@ const FAMILY_ICON: Record<DeviceFamily, typeof Smartphone> = {
 
 const FAMILIES: DeviceFamily[] = ["iphone", "android", "tablet", "desktop"];
 
+/** Dynamic Island / camera housing chrome for Live Preview frame. */
+function DeviceChrome({ device }: { device: DevicePreset }) {
+  const chrome = device.chrome ?? "none";
+  if (chrome === "none" || device.family === "desktop") return null;
+
+  if (chrome === "dynamic-island") {
+    // iPhone 14 Pro+ / 17 Air — island sits in status bar; touch content starts below safe-top
+    return (
+      <div
+        className="pointer-events-none absolute left-0 right-0 top-0 z-20 flex justify-center"
+        data-device-chrome="dynamic-island"
+        style={{ height: getSafeArea(device).top }}
+        aria-hidden
+      >
+        <div
+          className="mt-[11px] h-[37px] w-[126px] rounded-full bg-black shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]"
+          title="Dynamic Island / camera — touch targets must stay below"
+        />
+      </div>
+    );
+  }
+
+  if (chrome === "notch") {
+    return (
+      <div
+        className="pointer-events-none absolute left-0 right-0 top-0 z-20 flex justify-center"
+        data-device-chrome="notch"
+        style={{ height: getSafeArea(device).top }}
+        aria-hidden
+      >
+        <div className="mt-0 h-[30px] w-[160px] rounded-b-[18px] bg-black" />
+      </div>
+    );
+  }
+
+  // home-button (SE): thin status bar only
+  return (
+    <div
+      className="pointer-events-none absolute left-0 right-0 top-0 z-20 flex justify-center py-1.5"
+      data-device-chrome="home-button"
+      aria-hidden
+    >
+      <div className="h-1 w-16 rounded-full bg-charcoal/20 dark:bg-white/20" />
+    </div>
+  );
+}
+
 export function LivePreview() {
   const deviceRaw = useStudioStore((s) => s.device);
   const setDevice = useStudioStore((s) => s.setDevice);
@@ -49,6 +98,7 @@ export function LivePreview() {
 
   const deviceId = resolveDeviceId(deviceRaw);
   const current = getDevice(deviceId);
+  const safeArea = getSafeArea(current);
 
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [inspectMode, setInspectMode] = useState(false);
@@ -64,6 +114,11 @@ export function LivePreview() {
     return map;
   }, []);
 
+  /** srcDoc with safe-area injection so content sits below camera housing */
+  const safePreviewHtml = useMemo(
+    () => injectSafeAreaIntoHtml(previewHtml, current),
+    [previewHtml, current],
+  );
 
   const pipelinePhase = useStudioStore((s) => s.pipelinePhase);
   const pendingApproval = useStudioStore((s) => s.pendingApproval);
@@ -83,7 +138,6 @@ export function LivePreview() {
   }, [refreshPreview, useWcFrame]);
 
   const onIframeLoad = useCallback(() => {
-    // Inspect only works on same-origin srcDoc; WC iframe is cross-origin
     if (useWcFrame) return;
     const iframe = iframeEl.current;
     if (!iframe?.contentDocument) return;
@@ -111,7 +165,7 @@ export function LivePreview() {
   }, [useWcFrame]);
 
   const toggleInspect = () => {
-    if (useWcFrame) return; // cross-origin
+    if (useWcFrame) return;
     setInspectMode((v) => {
       const next = !v;
       if (iframeEl.current) {
@@ -180,14 +234,21 @@ export function LivePreview() {
             ? String(wc.error)
             : "Live Runtime nie je dostupný — ukazujem rýchly HTML náhľad.";
 
+  const showChrome = !isDesktop && (current.chrome ?? "none") !== "none";
+
   return (
-    <div className="flex h-full min-h-0 w-full flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-[var(--shadow-glass)]">
+    <div
+      className="flex h-full min-h-0 w-full flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-[var(--shadow-glass)]"
+      data-preview-device={current.id}
+      data-safe-top={safeArea.top}
+      data-safe-bottom={safeArea.bottom}
+    >
       <div className="flex items-center justify-between gap-2 border-b border-border bg-muted/80 px-3 py-2.5 sm:px-4 min-w-0">
         <div className="flex items-center gap-2 min-w-0">
           <div className="min-w-0">
             <span className="font-serif text-sm font-semibold shrink-0 block">Live Preview</span>
             <span className="text-[11px] text-muted-foreground hidden sm:block">
-              Hot after Accept
+              Hot after Accept · safe under camera
             </span>
           </div>
           <span
@@ -230,6 +291,7 @@ export function LivePreview() {
               )}
               aria-expanded={pickerOpen}
               aria-haspopup="listbox"
+              data-device-picker
             >
               <FamilyIcon className="h-3.5 w-3.5 text-success shrink-0" />
               <span className="truncate">{current.label}</span>
@@ -261,12 +323,14 @@ export function LivePreview() {
                       <ul className="space-y-0.5">
                         {grouped[family].map((d) => {
                           const active = d.id === deviceId;
+                          const sa = getSafeArea(d);
                           return (
                             <li key={d.id}>
                               <button
                                 type="button"
                                 role="option"
                                 aria-selected={active}
+                                data-device-option={d.id}
                                 onClick={() => selectDevice(d.id)}
                                 className={cn(
                                   "flex w-full items-center gap-2 rounded-xl px-2.5 py-2 text-left text-xs transition-colors",
@@ -278,8 +342,9 @@ export function LivePreview() {
                                 <span className="min-w-0 flex-1 truncate font-medium">
                                   {d.label}
                                 </span>
-                                <span className="shrink-0 font-mono text-[11px] text-muted-foreground tabular-nums">
+                                <span className="shrink-0 font-mono text-[10px] text-muted-foreground tabular-nums">
                                   {d.width}×{d.height}
+                                  {sa.top > 0 ? ` · T${sa.top}` : ""}
                                 </span>
                               </button>
                             </li>
@@ -342,7 +407,6 @@ export function LivePreview() {
         </div>
       </div>
 
-      
       {lastShareUrl && (
         <div className="flex items-center justify-between gap-2 border-b border-success/25 bg-success/10 px-3 py-1.5 text-[11px]">
           <span className="truncate font-mono text-muted-foreground">
@@ -440,23 +504,16 @@ export function LivePreview() {
       <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-auto bg-dots-pattern p-3 sm:p-4">
         <div
           className={cn(
-            "transition-all duration-300 ease-out bg-white dark:bg-canvas-elevated overflow-hidden shadow-[var(--shadow-elevated)]",
+            "relative transition-all duration-300 ease-out bg-white dark:bg-canvas-elevated overflow-hidden shadow-[var(--shadow-elevated)]",
             isDesktop
               ? "h-full w-full rounded-xl border border-border"
               : "border-[5px] border-charcoal/20 dark:border-zinc-600",
           )}
           style={frameStyle}
+          data-device-frame={current.id}
         >
-          {!isDesktop && (
-            <div className="flex justify-center py-1.5 bg-charcoal/5 dark:bg-white/5">
-              <div
-                className={cn(
-                  "rounded-full bg-charcoal/20 dark:bg-white/20",
-                  current.family === "iphone" ? "h-1 w-16" : "h-1 w-10",
-                )}
-              />
-            </div>
-          )}
+          {showChrome && <DeviceChrome device={current} />}
+
           {useWcFrame && wcSrc ? (
             <iframe
               key={`wc-${previewKey}-${wcUrlBust}`}
@@ -465,25 +522,32 @@ export function LivePreview() {
               src={wcSrc}
               onLoad={onIframeLoad}
               allow="cross-origin-isolated"
-              className={cn(
-                "w-full border-0 bg-white",
-                isDesktop ? "h-full" : "h-[calc(100%-14px)]",
-              )}
+              className={cn("w-full border-0 bg-white", "h-full")}
             />
           ) : (
             <iframe
-              key={`doc-${previewKey}`}
+              key={`doc-${previewKey}-${current.id}`}
               ref={iframeEl}
               title="CAI srcDoc Preview"
-              srcDoc={previewHtml}
+              srcDoc={safePreviewHtml}
               onLoad={onIframeLoad}
               sandbox="allow-scripts allow-same-origin allow-forms"
-              className={cn(
-                "w-full border-0 bg-white",
-                isDesktop ? "h-full" : "h-[calc(100%-14px)]",
-              )}
+              className={cn("w-full border-0 bg-white", "h-full")}
+              data-safe-preview="1"
             />
           )}
+
+          {/* Home indicator for island phones */}
+          {(current.chrome === "dynamic-island" || current.chrome === "notch") &&
+            safeArea.bottom > 0 && (
+              <div
+                className="pointer-events-none absolute bottom-1.5 left-0 right-0 z-20 flex justify-center"
+                aria-hidden
+                data-home-indicator
+              >
+                <div className="h-[5px] w-[134px] rounded-full bg-black/80 dark:bg-white/70" />
+              </div>
+            )}
         </div>
 
         <div className="absolute bottom-3 right-3 flex flex-col items-end gap-1 z-10">
@@ -493,8 +557,11 @@ export function LivePreview() {
               {current.width}×{current.height}
             </span>
           </div>
-          <div className="rounded-md border border-border/80 bg-card/90 px-2 py-0.5 text-[11px] text-muted-foreground backdrop-blur-sm max-w-[12rem] truncate">
+          <div className="rounded-md border border-border/80 bg-card/90 px-2 py-0.5 text-[11px] text-muted-foreground backdrop-blur-sm max-w-[14rem] truncate">
             {current.label}
+            {safeArea.top > 0
+              ? ` · safe T${safeArea.top}/B${safeArea.bottom}`
+              : ""}
           </div>
         </div>
       </div>

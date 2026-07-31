@@ -33,7 +33,6 @@ function useIsDesktop() {
 
 export function StudioShell() {
   useBillingSync();
-  // hydrate/sync: TopBar mounts useProjectSync (Cloud badge)
 
   const theme = useStudioStore((s) => s.theme);
   const mobilePanel = useStudioStore((s) => s.mobilePanel);
@@ -56,7 +55,6 @@ export function StudioShell() {
       if (!ok) {
         toast.error("Remix failed", { description: "Share not found or expired" });
       }
-      // strip query so refresh doesn't re-apply
       const url = new URL(window.location.href);
       url.searchParams.delete("remix");
       window.history.replaceState({}, "", url.pathname + url.search);
@@ -67,15 +65,16 @@ export function StudioShell() {
   }, []);
 
   return (
-    <div className="flex h-dvh flex-col overflow-hidden bg-background">
+    <div
+      className="flex h-dvh flex-col overflow-hidden bg-background cosy-safe-shell"
+      data-studio-shell
+    >
+      {/* Top safe zone: keeps chrome BELOW Dynamic Island / camera on iPhone 17 Air */}
+      <div className="cosy-safe-top shrink-0" data-safe-top-spacer aria-hidden />
       <TopBar />
 
       {isDesktop ? (
         <div className="flex min-h-0 flex-1 p-3">
-          {/*
-            react-resizable-panels v4: bare numbers = pixels, strings = %.
-            Left rail needs a real % width so agent UI never collapses to ~28px.
-          */}
           <PanelGroup orientation="horizontal" className="min-h-0 flex-1">
             <Panel
               id="agents"
@@ -92,6 +91,7 @@ export function StudioShell() {
               defaultSize="40%"
               minSize="28%"
               className="min-h-0 min-w-0 overflow-hidden px-1.5"
+              data-diff-panel
             >
               <CodeDiffViewer />
             </Panel>
@@ -113,7 +113,11 @@ export function StudioShell() {
             {mobilePanel === "studio" && <CodeDiffViewer />}
             {mobilePanel === "preview" && <LivePreview />}
           </div>
-          <nav className="mt-2 flex shrink-0 items-center justify-around rounded-2xl border border-border bg-card p-1.5 shadow-sm">
+          {/* Bottom tab bar sits above Home Indicator */}
+          <nav
+            data-mobile-tabbar
+            className="mt-2 flex shrink-0 items-center justify-around rounded-2xl border border-border bg-card p-1.5 shadow-sm cosy-safe-bottom-pad"
+          >
             {(
               [
                 { id: "chat" as const, icon: MessageSquare, label: "Brief" },
@@ -144,6 +148,7 @@ export function StudioShell() {
       <RejectionPoll />
       <CommandPalette />
       <ProductionLaunchHost />
+      <div className="cosy-safe-bottom shrink-0" data-safe-bottom-spacer aria-hidden />
     </div>
   );
 }

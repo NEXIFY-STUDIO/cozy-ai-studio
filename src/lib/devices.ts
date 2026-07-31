@@ -1,9 +1,20 @@
 /**
- * Device frames for Live Preview — CSS viewport sizes (logical px).
- * Includes popular iPhone, Android, tablet and desktop presets.
+ * Device frames for Live Preview — CSS viewport sizes (logical px / points).
+ * Safe-area insets from Apple HIG + useyourloaf.com iPhone 17 screen sizes
+ * (portrait: top under Dynamic Island / camera, bottom above Home Indicator).
+ * Touch targets must sit INSIDE the safe rectangle — never under the camera.
  */
 
 export type DeviceFamily = "iphone" | "android" | "tablet" | "desktop";
+
+export type SafeAreaInsets = {
+  top: number;
+  bottom: number;
+  left: number;
+  right: number;
+};
+
+export type DeviceChrome = "none" | "home-button" | "notch" | "dynamic-island";
 
 export type DevicePreset = {
   id: string;
@@ -13,19 +24,76 @@ export type DevicePreset = {
   short: string;
   width: number;
   height: number;
-  /** Phone chrome radius */
+  /** Phone chrome radius (logical px) */
   radius?: number;
+  /** Portrait safe-area insets (logical px) — content/touch below camera */
+  safeArea?: SafeAreaInsets;
+  /** Status bar height (points) */
+  statusBar?: number;
+  /** Device frame chrome for Live Preview */
+  chrome?: DeviceChrome;
+  /** Scale factor (2x / 3x) */
+  scale?: number;
 };
 
 /** Legacy ids mapped to new presets (persist migration). */
 export const LEGACY_DEVICE_MAP: Record<string, string> = {
-  mobile: "iphone-se",
+  mobile: "iphone-17-air",
   tablet: "ipad-air",
   desktop: "desktop-fhd",
+  "iphone-se": "iphone-se",
 };
 
+const DI: SafeAreaInsets = { top: 59, bottom: 34, left: 0, right: 0 };
+const DI_17: SafeAreaInsets = { top: 62, bottom: 34, left: 0, right: 0 };
+/** iPhone 17 Air / iPhone Air — taller island inset (useyourloaf). */
+const DI_AIR: SafeAreaInsets = { top: 68, bottom: 34, left: 0, right: 0 };
+const NOTCH: SafeAreaInsets = { top: 47, bottom: 34, left: 0, right: 0 };
+const SE: SafeAreaInsets = { top: 20, bottom: 0, left: 0, right: 0 };
+const ANDROID: SafeAreaInsets = { top: 24, bottom: 16, left: 0, right: 0 };
+const TABLET: SafeAreaInsets = { top: 24, bottom: 20, left: 0, right: 0 };
+
 export const DEVICE_PRESETS: DevicePreset[] = [
-  // ── iPhone (most used + 17 line) ─────────────────────────────
+  // ── iPhone (17 Air first as primary target) ─────────────────
+  {
+    id: "iphone-17-air",
+    family: "iphone",
+    label: "iPhone 17 Air",
+    short: "17 Air",
+    width: 420,
+    height: 912,
+    radius: 55,
+    safeArea: DI_AIR,
+    statusBar: 54,
+    chrome: "dynamic-island",
+    scale: 3,
+  },
+  {
+    id: "iphone-17-pro",
+    family: "iphone",
+    label: "iPhone 17 Pro",
+    short: "17 Pro",
+    width: 402,
+    height: 874,
+    radius: 55,
+    safeArea: DI_17,
+    statusBar: 54,
+    chrome: "dynamic-island",
+    scale: 3,
+  },
+  {
+    id: "iphone-17-pro-max",
+    family: "iphone",
+    label: "iPhone 17 Pro Max",
+    short: "17 PM",
+    width: 440,
+    height: 956,
+    radius: 55,
+    safeArea: DI_17,
+    statusBar: 54,
+    chrome: "dynamic-island",
+    scale: 3,
+  },
   {
     id: "iphone-se",
     family: "iphone",
@@ -34,6 +102,10 @@ export const DEVICE_PRESETS: DevicePreset[] = [
     width: 375,
     height: 667,
     radius: 36,
+    safeArea: SE,
+    statusBar: 20,
+    chrome: "home-button",
+    scale: 2,
   },
   {
     id: "iphone-13",
@@ -43,6 +115,10 @@ export const DEVICE_PRESETS: DevicePreset[] = [
     width: 390,
     height: 844,
     radius: 44,
+    safeArea: NOTCH,
+    statusBar: 47,
+    chrome: "notch",
+    scale: 3,
   },
   {
     id: "iphone-14-pro",
@@ -52,6 +128,10 @@ export const DEVICE_PRESETS: DevicePreset[] = [
     width: 393,
     height: 852,
     radius: 48,
+    safeArea: DI,
+    statusBar: 54,
+    chrome: "dynamic-island",
+    scale: 3,
   },
   {
     id: "iphone-15",
@@ -61,6 +141,10 @@ export const DEVICE_PRESETS: DevicePreset[] = [
     width: 393,
     height: 852,
     radius: 48,
+    safeArea: DI,
+    statusBar: 54,
+    chrome: "dynamic-island",
+    scale: 3,
   },
   {
     id: "iphone-15-pro-max",
@@ -70,6 +154,10 @@ export const DEVICE_PRESETS: DevicePreset[] = [
     width: 430,
     height: 932,
     radius: 52,
+    safeArea: DI,
+    statusBar: 54,
+    chrome: "dynamic-island",
+    scale: 3,
   },
   {
     id: "iphone-16",
@@ -79,6 +167,10 @@ export const DEVICE_PRESETS: DevicePreset[] = [
     width: 393,
     height: 852,
     radius: 48,
+    safeArea: DI,
+    statusBar: 54,
+    chrome: "dynamic-island",
+    scale: 3,
   },
   {
     id: "iphone-16-pro",
@@ -88,6 +180,10 @@ export const DEVICE_PRESETS: DevicePreset[] = [
     width: 402,
     height: 874,
     radius: 50,
+    safeArea: DI_17,
+    statusBar: 54,
+    chrome: "dynamic-island",
+    scale: 3,
   },
   {
     id: "iphone-16-pro-max",
@@ -97,33 +193,10 @@ export const DEVICE_PRESETS: DevicePreset[] = [
     width: 440,
     height: 956,
     radius: 54,
-  },
-  {
-    id: "iphone-17-air",
-    family: "iphone",
-    label: "iPhone 17 Air",
-    short: "17 Air",
-    width: 420,
-    height: 912,
-    radius: 50,
-  },
-  {
-    id: "iphone-17-pro",
-    family: "iphone",
-    label: "iPhone 17 Pro",
-    short: "17 Pro",
-    width: 402,
-    height: 874,
-    radius: 50,
-  },
-  {
-    id: "iphone-17-pro-max",
-    family: "iphone",
-    label: "iPhone 17 Pro Max",
-    short: "17 PM",
-    width: 440,
-    height: 956,
-    radius: 54,
+    safeArea: DI_17,
+    statusBar: 54,
+    chrome: "dynamic-island",
+    scale: 3,
   },
 
   // ── Android ──────────────────────────────────────────────────
@@ -135,6 +208,9 @@ export const DEVICE_PRESETS: DevicePreset[] = [
     width: 360,
     height: 780,
     radius: 36,
+    safeArea: ANDROID,
+    chrome: "notch",
+    scale: 3,
   },
   {
     id: "galaxy-s24-ultra",
@@ -144,6 +220,9 @@ export const DEVICE_PRESETS: DevicePreset[] = [
     width: 384,
     height: 824,
     radius: 28,
+    safeArea: ANDROID,
+    chrome: "notch",
+    scale: 3,
   },
   {
     id: "galaxy-s25",
@@ -153,6 +232,9 @@ export const DEVICE_PRESETS: DevicePreset[] = [
     width: 360,
     height: 780,
     radius: 36,
+    safeArea: ANDROID,
+    chrome: "notch",
+    scale: 3,
   },
   {
     id: "galaxy-s25-ultra",
@@ -162,6 +244,9 @@ export const DEVICE_PRESETS: DevicePreset[] = [
     width: 412,
     height: 915,
     radius: 28,
+    safeArea: ANDROID,
+    chrome: "notch",
+    scale: 3,
   },
   {
     id: "pixel-8",
@@ -171,6 +256,9 @@ export const DEVICE_PRESETS: DevicePreset[] = [
     width: 412,
     height: 915,
     radius: 40,
+    safeArea: ANDROID,
+    chrome: "notch",
+    scale: 3,
   },
   {
     id: "pixel-9",
@@ -180,6 +268,9 @@ export const DEVICE_PRESETS: DevicePreset[] = [
     width: 412,
     height: 915,
     radius: 40,
+    safeArea: ANDROID,
+    chrome: "notch",
+    scale: 3,
   },
   {
     id: "pixel-9-pro-xl",
@@ -189,6 +280,9 @@ export const DEVICE_PRESETS: DevicePreset[] = [
     width: 448,
     height: 998,
     radius: 42,
+    safeArea: ANDROID,
+    chrome: "notch",
+    scale: 3,
   },
   {
     id: "oneplus-12",
@@ -198,6 +292,9 @@ export const DEVICE_PRESETS: DevicePreset[] = [
     width: 450,
     height: 1000,
     radius: 36,
+    safeArea: ANDROID,
+    chrome: "notch",
+    scale: 3,
   },
   {
     id: "xiaomi-14",
@@ -207,6 +304,9 @@ export const DEVICE_PRESETS: DevicePreset[] = [
     width: 393,
     height: 873,
     radius: 38,
+    safeArea: ANDROID,
+    chrome: "notch",
+    scale: 3,
   },
   {
     id: "nothing-phone-2",
@@ -216,6 +316,9 @@ export const DEVICE_PRESETS: DevicePreset[] = [
     width: 412,
     height: 915,
     radius: 36,
+    safeArea: ANDROID,
+    chrome: "notch",
+    scale: 3,
   },
 
   // ── Tablets ──────────────────────────────────────────────────
@@ -227,6 +330,9 @@ export const DEVICE_PRESETS: DevicePreset[] = [
     width: 744,
     height: 1133,
     radius: 24,
+    safeArea: TABLET,
+    chrome: "none",
+    scale: 2,
   },
   {
     id: "ipad-air",
@@ -236,6 +342,9 @@ export const DEVICE_PRESETS: DevicePreset[] = [
     width: 820,
     height: 1180,
     radius: 22,
+    safeArea: TABLET,
+    chrome: "none",
+    scale: 2,
   },
   {
     id: "ipad-pro-11",
@@ -245,6 +354,9 @@ export const DEVICE_PRESETS: DevicePreset[] = [
     width: 834,
     height: 1194,
     radius: 20,
+    safeArea: TABLET,
+    chrome: "none",
+    scale: 2,
   },
   {
     id: "ipad-pro-13",
@@ -254,6 +366,9 @@ export const DEVICE_PRESETS: DevicePreset[] = [
     width: 1024,
     height: 1366,
     radius: 20,
+    safeArea: TABLET,
+    chrome: "none",
+    scale: 2,
   },
   {
     id: "galaxy-tab-s9",
@@ -263,6 +378,9 @@ export const DEVICE_PRESETS: DevicePreset[] = [
     width: 800,
     height: 1280,
     radius: 16,
+    safeArea: TABLET,
+    chrome: "none",
+    scale: 2,
   },
   {
     id: "galaxy-tab-s9-ultra",
@@ -272,6 +390,9 @@ export const DEVICE_PRESETS: DevicePreset[] = [
     width: 920,
     height: 1440,
     radius: 16,
+    safeArea: TABLET,
+    chrome: "none",
+    scale: 2,
   },
 
   // ── Desktop ──────────────────────────────────────────────────
@@ -282,6 +403,7 @@ export const DEVICE_PRESETS: DevicePreset[] = [
     short: "HD",
     width: 1440,
     height: 900,
+    chrome: "none",
   },
   {
     id: "desktop-fhd",
@@ -290,6 +412,7 @@ export const DEVICE_PRESETS: DevicePreset[] = [
     short: "FHD",
     width: 1920,
     height: 1080,
+    chrome: "none",
   },
   {
     id: "desktop-qhd",
@@ -298,14 +421,20 @@ export const DEVICE_PRESETS: DevicePreset[] = [
     short: "QHD",
     width: 2560,
     height: 1440,
+    chrome: "none",
   },
 ];
 
-export const DEFAULT_DEVICE_ID = "iphone-se";
+/** Primary target for Option B mobile QA. */
+export const DEFAULT_DEVICE_ID = "iphone-17-air";
+
+export const IPHONE_17_AIR = DEVICE_PRESETS.find((d) => d.id === "iphone-17-air")!;
 
 export function resolveDeviceId(raw: string | undefined | null): string {
   if (!raw) return DEFAULT_DEVICE_ID;
-  if (LEGACY_DEVICE_MAP[raw]) return LEGACY_DEVICE_MAP[raw];
+  if (LEGACY_DEVICE_MAP[raw] && LEGACY_DEVICE_MAP[raw] !== raw) {
+    return LEGACY_DEVICE_MAP[raw];
+  }
   if (DEVICE_PRESETS.some((d) => d.id === raw)) return raw;
   return DEFAULT_DEVICE_ID;
 }
@@ -317,6 +446,86 @@ export function getDevice(id: string): DevicePreset {
 
 export function devicesByFamily(family: DeviceFamily): DevicePreset[] {
   return DEVICE_PRESETS.filter((d) => d.family === family);
+}
+
+export function getSafeArea(device: DevicePreset): SafeAreaInsets {
+  return (
+    device.safeArea ?? {
+      top: 0,
+      bottom: 0,
+      left: 0,
+      right: 0,
+    }
+  );
+}
+
+/**
+ * CSS snippet to inject into preview HTML so content/touch sits below the
+ * camera / Dynamic Island and above the Home Indicator.
+ */
+export function safeAreaCssVars(device: DevicePreset): string {
+  const sa = getSafeArea(device);
+  return `:root {
+  --safe-top: ${sa.top}px;
+  --safe-bottom: ${sa.bottom}px;
+  --safe-left: ${sa.left}px;
+  --safe-right: ${sa.right}px;
+  --device-w: ${device.width}px;
+  --device-h: ${device.height}px;
+}`;
+}
+
+/**
+ * Inject viewport-fit=cover + simulated safe-area env() into srcDoc HTML
+ * so generated previews respect the camera housing on iPhone 17 Air etc.
+ */
+export function injectSafeAreaIntoHtml(
+  html: string,
+  device: DevicePreset,
+): string {
+  if (!html || device.family === "desktop") return html;
+  const sa = getSafeArea(device);
+  if (sa.top === 0 && sa.bottom === 0) return html;
+
+  const inject = `<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<style data-cosy-safe-area>
+${safeAreaCssVars(device)}
+/* Simulate env(safe-area-inset-*) inside Live Preview iframe */
+html {
+  --sat: ${sa.top}px;
+  --sab: ${sa.bottom}px;
+  --sal: ${sa.left}px;
+  --sar: ${sa.right}px;
+}
+/* Touch / content must start BELOW camera (Dynamic Island) */
+body {
+  padding-top: max(0px, ${sa.top}px) !important;
+  padding-bottom: max(0px, ${sa.bottom}px) !important;
+  padding-left: max(0px, ${sa.left}px) !important;
+  padding-right: max(0px, ${sa.right}px) !important;
+  box-sizing: border-box;
+  min-height: 100%;
+}
+/* Prefer explicit safe helpers if authors use them */
+.safe-top, .pt-safe { padding-top: ${sa.top}px !important; }
+.safe-bottom, .pb-safe { padding-bottom: ${sa.bottom}px !important; }
+.safe-x { padding-left: ${sa.left}px !important; padding-right: ${sa.right}px !important; }
+</style>`;
+
+  // Upgrade existing viewport meta
+  let out = html.replace(
+    /<meta\s+name=["']viewport["'][^>]*>/i,
+    `<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />`,
+  );
+
+  if (/<\/head>/i.test(out)) {
+    out = out.replace(/<\/head>/i, `${inject}</head>`);
+  } else if (/<body[^>]*>/i.test(out)) {
+    out = out.replace(/<body([^>]*)>/i, `${inject}<body$1>`);
+  } else {
+    out = inject + out;
+  }
+  return out;
 }
 
 export const FAMILY_LABEL: Record<DeviceFamily, string> = {

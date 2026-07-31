@@ -116,11 +116,16 @@ function MobileCompanionPage() {
   const live = status === "paired" || status === "open";
 
   return (
-    <div className="min-h-dvh bg-background flex flex-col">
-      <header className="flex items-center justify-between border-b border-border px-4 h-14">
+    <div
+      className="min-h-dvh bg-background flex flex-col cosy-safe-shell"
+      data-mobile-companion
+    >
+      {/* Keep chrome BELOW Dynamic Island / camera on iPhone 17 Air */}
+      <div className="cosy-safe-top shrink-0" aria-hidden />
+      <header className="flex items-center justify-between border-b border-border px-4 h-14 cosy-safe-x shrink-0">
         <Link
           to="/studio"
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground"
+          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground min-h-11"
         >
           <ArrowLeft className="h-4 w-4" />
           Studio
@@ -129,7 +134,7 @@ function MobileCompanionPage() {
           <CozyLogo size="sm" variant="seal" />
           Remote Review
         </span>
-        <div className="relative p-2 text-muted-foreground" aria-label="Status">
+        <div className="relative p-2 text-muted-foreground min-h-11 min-w-11 flex items-center justify-center" aria-label="Status">
           {live ? (
             <Wifi className="h-4 w-4 text-success" />
           ) : (
@@ -141,7 +146,7 @@ function MobileCompanionPage() {
         </div>
       </header>
 
-      <div className="flex-1 flex flex-col items-center justify-center p-4 max-w-md mx-auto w-full">
+      <div className="flex-1 flex flex-col items-center justify-center p-4 max-w-md mx-auto w-full cosy-safe-x">
         {!paired ? (
           <div className="w-full space-y-4">
             <div className="text-center space-y-1">
@@ -167,7 +172,7 @@ function MobileCompanionPage() {
               />
             </label>
             <Button
-              className="w-full h-12 rounded-2xl gap-2"
+              className="w-full h-12 rounded-2xl gap-2 min-h-12"
               onClick={join}
               disabled={status === "connecting"}
             >
@@ -280,13 +285,17 @@ function MobileCompanionPage() {
                   WebSocket.
                 </p>
                 <Link to="/studio">
-                  <Button variant="outline">Back to studio</Button>
+                  <Button variant="outline" className="min-h-11">
+                    Back to studio
+                  </Button>
                 </Link>
               </div>
             )}
           </>
         )}
       </div>
+      {/* Home Indicator clearance */}
+      <div className="cosy-safe-bottom shrink-0" aria-hidden />
     </div>
   );
 }

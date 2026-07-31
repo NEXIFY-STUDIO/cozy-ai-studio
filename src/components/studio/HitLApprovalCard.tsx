@@ -158,7 +158,10 @@ export function HitLApprovalCard() {
   return (
     <div
       data-hitl-card
-      className="pointer-events-none fixed inset-x-0 bottom-3 z-50 flex justify-center px-3 sm:bottom-5"
+      data-hitl-overlay
+      role="dialog"
+      aria-label="Human-in-the-Loop approval"
+      className="pointer-events-none fixed inset-x-0 z-[60] flex justify-center cosy-fixed-bottom px-3 sm:px-4"
     >
       <div className="pointer-events-auto w-full max-w-lg space-y-2">
         {softBanner && (
@@ -206,7 +209,7 @@ export function HitLApprovalCard() {
             <Button
               type="button"
               className={cn(
-                "flex-1 h-10 rounded-xl gap-1.5 bg-[#D96B43] text-white hover:bg-[#C85A32] border-0",
+                "flex-1 min-h-11 h-11 rounded-xl gap-1.5 bg-[#D96B43] text-white hover:bg-[#C85A32] border-0",
                 pulse && "accept-pulse-once",
               )}
               disabled={blocked || sharing}
@@ -219,7 +222,7 @@ export function HitLApprovalCard() {
               type="button"
               variant="secondary"
               className={cn(
-                "flex-1 h-10 rounded-xl border border-[#D96B43]/35",
+                "flex-1 min-h-11 h-11 rounded-xl border border-[#D96B43]/35",
                 pulse && "accept-pulse-once",
               )}
               disabled={blocked || sharing}
@@ -231,7 +234,7 @@ export function HitLApprovalCard() {
             <Button
               type="button"
               variant="outline"
-              className="h-10 rounded-xl sm:w-auto"
+              className="min-h-11 h-11 rounded-xl sm:w-auto"
               disabled={sharing}
               onClick={onReject}
             >

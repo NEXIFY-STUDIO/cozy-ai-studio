@@ -52,7 +52,7 @@ export function TopBar() {
   };
 
   return (
-    <header className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-border bg-card/80 px-3 sm:px-4 backdrop-blur-md">
+    <header className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-border bg-card/80 px-3 sm:px-4 backdrop-blur-md cosy-safe-x">
       <div className="flex items-center gap-3 min-w-0">
         <Link to="/" className="flex items-center gap-2 shrink-0 group">
           <CozyLogo size="sm" variant="seal" className="group-hover:-translate-y-px transition-transform" />

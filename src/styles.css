@@ -137,6 +137,8 @@
     @apply bg-background text-foreground font-sans antialiased;
     font-feature-settings: "rlig" 1, "calt" 1;
     min-height: 100dvh;
+    /* iPhone 17 Air / notch devices: edge-to-edge with viewport-fit=cover */
+    min-height: -webkit-fill-available;
     line-height: 1.6;
     letter-spacing: 0.005em;
     text-rendering: optimizeLegibility;
@@ -178,6 +180,49 @@
     color: color-mix(in oklab, var(--color-muted-foreground) 85%, transparent);
     opacity: 1;
   }
+}
+
+/* ── iPhone 17 Air / Dynamic Island safe areas ─────────────────
+ * Touch targets MUST sit below the camera (safe-area-inset-top)
+ * and above the Home Indicator (safe-area-inset-bottom).
+ * Requires <meta name="viewport" content="…, viewport-fit=cover">.
+ */
+.cosy-safe-shell {
+  /* fill the visual viewport including under island when system allows */
+  min-height: 100dvh;
+  min-height: -webkit-fill-available;
+}
+
+.cosy-safe-top {
+  /* Real device: env() · simulator/desktop: 0 */
+  height: env(safe-area-inset-top, 0px);
+  min-height: env(safe-area-inset-top, 0px);
+  flex-shrink: 0;
+  pointer-events: none;
+}
+
+.cosy-safe-bottom {
+  height: env(safe-area-inset-bottom, 0px);
+  min-height: env(safe-area-inset-bottom, 0px);
+  flex-shrink: 0;
+  pointer-events: none;
+}
+
+.cosy-safe-bottom-pad {
+  /* Tab bar: keep labels above Home Indicator */
+  padding-bottom: max(0.25rem, env(safe-area-inset-bottom, 0px));
+}
+
+.cosy-safe-x {
+  padding-left: max(0.75rem, env(safe-area-inset-left, 0px));
+  padding-right: max(0.75rem, env(safe-area-inset-right, 0px));
+}
+
+/* Fixed overlays (HitL, modals) — lift above Home Indicator */
+.cosy-fixed-bottom {
+  bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
+  padding-left: max(0.75rem, env(safe-area-inset-left, 0px));
+  padding-right: max(0.75rem, env(safe-area-inset-right, 0px));
 }
 
 /* Readable body copy helper */
@@ -304,9 +349,29 @@
   background: color-mix(in oklab, var(--color-foreground) 34%, transparent);
 }
 
+@keyframes accept-pulse-once {
+  0% {
+    box-shadow: 0 0 0 0 rgba(217, 107, 67, 0.55);
+    transform: scale(1);
+  }
+  40% {
+    box-shadow: 0 0 0 10px rgba(217, 107, 67, 0);
+    transform: scale(1.03);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(217, 107, 67, 0);
+    transform: scale(1);
+  }
+}
+
+.accept-pulse-once {
+  animation: accept-pulse-once 1.1s ease-out 1;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .agent-pulse,
-  .stream-caret::after {
+  .stream-caret::after,
+  .accept-pulse-once {
     animation: none;
   }
   * {
