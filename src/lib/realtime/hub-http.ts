@@ -65,7 +65,8 @@ export async function handleWsHttp(request: Request): Promise<Response> {
     );
     if (!clientId) return json({ error: "clientId required" }, 400);
     const c = clients().get(clientId);
-    if (!c) return json({ error: "unknown client" }, 404);
+    // Soft reauth (200) — multi-instance / idle GC; client re-opens without red 404
+    if (!c) return json({ reauth: true, messages: [], clientId });
     c.lastPoll = Date.now();
 
     await drainPg(c);
@@ -123,7 +124,7 @@ export async function handleWsHttp(request: Request): Promise<Response> {
   if (body.op === "send") {
     const id = body.clientId || "";
     const c = clients().get(id);
-    if (!c) return json({ error: "unknown client" }, 404);
+    if (!c) return json({ reauth: true, messages: [], clientId: id });
     c.lastPoll = Date.now();
     const raw =
       typeof body.message === "string"
