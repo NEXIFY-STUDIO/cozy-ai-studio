@@ -1,0 +1,2 @@
+- Remix funnel: /a/:id has terracotta "Remix in Studio" CTA (mobile above-fold + desktop); applyShareRemix hydrates without auto-pipeline, tracks remix_opened {source:ui} [2026-07-31]
+- Commits: 77ed7eb (CTA), 979c5ba (applyShareRemix harden), 118bbec (prod-smoke remix asserts) [2026-07-31]
