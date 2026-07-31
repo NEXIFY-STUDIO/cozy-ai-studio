@@ -32,7 +32,7 @@ export function realtimeWsPlugin(): Plugin {
           socket.on("message", (data) => {
             const raw =
               typeof data === "string" ? data : data.toString("utf8");
-            hub.handleClientMessage(client, raw);
+            void hub.handleClientMessage(client, raw);
           });
           socket.on("close", () => {
             hub.unregisterSocket(client.id);

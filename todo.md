@@ -27,13 +27,16 @@
 | Docs | `docs/REPAIR_BACKLOG.md` restored from audit |
 | Mobile | Monaco desktop-only; lightweight FallbackDiff <1024px |
 | Security | `docs/SECURITY_MODEL.md` — app-layer user scoping (RLS note) |
+| Deploy fix | Removed tracked `.vercel/output` (was causing prod 500) |
+| Mobile pair | Postgres durable rooms (0007) for Vercel multi-instance |
+| Prod smoke | `npm run prod-smoke` |
 
 ## Next
 
 | # | Item |
 |---|---|
 | ~~P4 Stripe~~ | skipped for now |
-| Later | Auth login optional · mobile WS · real deploy launch |
+| Later | Auth login optional · real 1-click deploy launch |
 
 ## Check
 
