@@ -62,7 +62,7 @@ export function AgentPipeline({ compact = false }: { compact?: boolean }) {
     <div className="rounded-2xl border border-border bg-card p-2.5 sm:p-3 shadow-sm min-w-0 overflow-hidden">
       {/* Header — wraps, never crushes */}
       <div className="mb-2.5 flex flex-wrap items-center gap-2 min-w-0">
-        <h3 className="font-serif text-sm font-semibold shrink-0">Agenti</h3>
+        <h3 className="font-serif text-sm font-semibold shrink-0">Pipeline</h3>
         <div className="flex flex-1 flex-wrap items-center justify-end gap-1.5 min-w-0">
           {isPipelineRunning ? (
             <>
@@ -86,7 +86,16 @@ export function AgentPipeline({ compact = false }: { compact?: boolean }) {
               {(pipelineLatencyMs / 1000).toFixed(1)}s
             </span>
           ) : (
-            <span className="text-xs text-muted-foreground">G0 → G1 → G2</span>
+            <div className="flex items-center gap-1">
+              {(["G0", "G1", "G2"] as const).map((g) => (
+                <span
+                  key={g}
+                  className="rounded-full border border-border bg-muted/60 px-2 py-0.5 text-[10px] font-mono font-semibold text-muted-foreground"
+                >
+                  {g}
+                </span>
+              ))}
+            </div>
           )}
         </div>
       </div>

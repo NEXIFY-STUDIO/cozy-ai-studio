@@ -123,13 +123,18 @@ export function AgentPanel() {
           <RetryProgressBanner />
           <PipelineErrorPanel />
 
-          <div className="flex items-center justify-between gap-2 min-w-0 pt-1">
-            <div className="flex items-center gap-2 min-w-0">
-              <Sparkles className="h-4 w-4 text-success shrink-0" />
-              <span className="font-serif text-sm font-semibold truncate">Chat</span>
+          <div className="flex items-start justify-between gap-2 min-w-0 pt-1">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 min-w-0">
+                <Sparkles className="h-4 w-4 text-choco shrink-0" />
+                <span className="font-serif text-sm font-semibold truncate">Brief</span>
+              </div>
+              <p className="mt-0.5 text-[11px] text-muted-foreground pl-6">
+                Multi-agent pipeline
+              </p>
             </div>
             <span
-              className="text-[11px] text-muted-foreground tabular-nums shrink-0 font-mono"
+              className="text-[11px] text-muted-foreground tabular-nums shrink-0 font-mono pt-0.5"
               title="Server-enforced free caps"
             >
               {planTier}
@@ -139,10 +144,15 @@ export function AgentPanel() {
 
           {showEmpty && (
             <div className="space-y-3 min-w-0">
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                Vyber šablónu (do 60 s k náhľadu) alebo napíš vlastný brief. Po
-                dokončení: diff → Accept → Share v Live Preview.
-              </p>
+              <div className="rounded-xl border border-border/80 bg-[#F4F1EA]/60 dark:bg-muted/40 px-3 py-2.5 text-sm text-muted-foreground leading-relaxed">
+                <span className="font-semibold text-choco text-[10px] uppercase tracking-wider">
+                  Studio
+                </span>
+                <p className="mt-1 text-foreground/80">
+                  Speed Studio ready. Describe a UI change — agents G0→G1→G2 will
+                  propose a Diff for Accept.
+                </p>
+              </div>
               <div className="grid gap-1.5 min-w-0">
                 {TEMPLATES.map((t) => (
                   <button
@@ -340,7 +350,7 @@ export function AgentPanel() {
             placeholder={
               isPipelineRunning
                 ? "Agenti pracujú… Stop vpravo"
-                : "Brief… napr. landing pre kaviareň"
+                : "e.g. Warm hero for a pottery studio with terracotta CTA…"
             }
             className="min-h-[2.75rem] max-h-28 min-w-0 flex-1 resize-none rounded-xl border border-border bg-background px-3 py-2.5 text-sm leading-snug outline-none focus:border-choco focus:ring-1 focus:ring-choco/30 disabled:opacity-60 break-words"
             aria-label="Prompt"
@@ -358,13 +368,14 @@ export function AgentPanel() {
             </Button>
           ) : (
             <Button
-              size="icon"
-              className="h-11 w-11 shrink-0"
+              size="sm"
+              className="h-11 shrink-0 gap-1.5 rounded-xl bg-[#D96B43] px-3.5 text-xs font-semibold text-white hover:bg-[#C85A32] shadow-none"
               disabled={!input.trim()}
               onClick={() => void run(input.trim())}
-              aria-label="Odoslať prompt"
+              aria-label="Send brief"
             >
-              <Send className="h-4 w-4" />
+              <Send className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Send brief</span>
             </Button>
           )}
         </div>

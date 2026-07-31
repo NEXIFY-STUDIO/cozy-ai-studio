@@ -116,9 +116,9 @@ export function StudioShell() {
           <nav className="mt-2 flex shrink-0 items-center justify-around rounded-2xl border border-border bg-card p-1.5 shadow-sm">
             {(
               [
-                { id: "chat" as const, icon: MessageSquare, label: "Agenti" },
+                { id: "chat" as const, icon: MessageSquare, label: "Brief" },
                 { id: "studio" as const, icon: Code2, label: "Diff" },
-                { id: "preview" as const, icon: Eye, label: "Náhľad" },
+                { id: "preview" as const, icon: Eye, label: "Preview" },
               ] as const
             ).map(({ id, icon: Icon, label }) => (
               <button

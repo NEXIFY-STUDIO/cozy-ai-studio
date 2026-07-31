@@ -184,7 +184,12 @@ export function LivePreview() {
     <div className="flex h-full min-h-0 w-full flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-[var(--shadow-glass)]">
       <div className="flex items-center justify-between gap-2 border-b border-border bg-muted/80 px-3 py-2.5 sm:px-4 min-w-0">
         <div className="flex items-center gap-2 min-w-0">
-          <span className="font-serif text-sm font-semibold shrink-0">Live Preview</span>
+          <div className="min-w-0">
+            <span className="font-serif text-sm font-semibold shrink-0 block">Live Preview</span>
+            <span className="text-[11px] text-muted-foreground hidden sm:block">
+              Hot after Accept
+            </span>
+          </div>
           <span
             className={cn(
               "hidden sm:inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-mono",
