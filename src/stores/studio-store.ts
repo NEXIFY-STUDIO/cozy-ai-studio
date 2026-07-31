@@ -224,42 +224,140 @@ interface StudioState {
 
 const STARTER_APP = `import React from "react";
 
+/**
+ * Self-contained starter — NO Tailwind (WebContainer has no Tailwind build).
+ * Styles via <style> so Live Preview always renders layout correctly.
+ */
 export default function App() {
   return (
-    <main className="min-h-screen bg-[#F4F1EA] text-[#1C1D21] font-sans">
-      <header className="border-b border-black/10 px-6 py-4 flex items-center justify-between">
-        <h1 className="font-serif text-2xl font-bold tracking-tight">Aurora</h1>
-        <nav className="flex gap-6 text-sm text-black/60">
-          <a href="#features">Features</a>
-          <a href="#pricing">Pricing</a>
-          <button className="rounded-lg bg-[#D96B43] px-4 py-2 text-white font-medium">
-            Get started
-          </button>
-        </nav>
-      </header>
-      <section className="mx-auto max-w-3xl px-6 py-24 text-center">
-        <p className="mb-4 text-sm font-medium tracking-widest text-[#D96B43] uppercase">
-          Warm Brutalism
-        </p>
-        <h2 className="font-serif text-5xl font-bold leading-tight mb-6">
-          Design that feels handmade
-        </h2>
-        <p className="text-lg text-black/60 mb-10 max-w-xl mx-auto">
-          A starter landing page generated inside Cozy AI Studio. Edit with AI agents and watch the preview update live.
-        </p>
-        <div className="flex justify-center gap-3">
-          <button className="rounded-xl bg-[#D96B43] px-6 py-3 text-white font-medium shadow-[4px_4px_0_#1C1D21]">
-            Start building
-          </button>
-          <button className="rounded-xl border-2 border-[#1C1D21] px-6 py-3 font-medium">
-            View demo
-          </button>
-        </div>
-      </section>
-    </main>
+    <>
+      <style>{\`
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: Inter, system-ui, sans-serif; }
+        .page {
+          min-height: 100vh;
+          background: #F4F1EA;
+          color: #1C1D21;
+        }
+        .top {
+          display: flex;
+          flex-wrap: wrap;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          padding: 16px 20px;
+          border-bottom: 1px solid rgba(28,29,33,0.1);
+        }
+        .logo {
+          font-family: Georgia, "Playfair Display", serif;
+          font-size: 1.35rem;
+          font-weight: 700;
+        }
+        .nav {
+          display: flex;
+          flex-wrap: wrap;
+          align-items: center;
+          gap: 16px;
+          font-size: 0.875rem;
+          color: rgba(28,29,33,0.6);
+        }
+        .nav a { color: inherit; text-decoration: none; }
+        .btn {
+          background: #D96B43;
+          color: #fff;
+          border: none;
+          border-radius: 10px;
+          padding: 8px 14px;
+          font-weight: 500;
+          font-size: 0.875rem;
+          cursor: pointer;
+          box-shadow: 3px 3px 0 #1C1D21;
+        }
+        .hero {
+          max-width: 42rem;
+          margin: 0 auto;
+          padding: 64px 20px;
+          text-align: center;
+        }
+        .eyebrow {
+          font-size: 0.75rem;
+          letter-spacing: 0.14em;
+          text-transform: uppercase;
+          color: #D96B43;
+          font-weight: 600;
+          margin-bottom: 12px;
+        }
+        .hero h1 {
+          font-family: Georgia, "Playfair Display", serif;
+          font-size: clamp(2rem, 6vw, 3rem);
+          line-height: 1.12;
+          margin-bottom: 16px;
+        }
+        .hero p {
+          color: rgba(28,29,33,0.6);
+          font-size: 1.05rem;
+          line-height: 1.6;
+          margin-bottom: 28px;
+        }
+        .actions {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 12px;
+          justify-content: center;
+        }
+        .btn-outline {
+          background: transparent;
+          color: #1C1D21;
+          border: 2px solid #1C1D21;
+          border-radius: 12px;
+          padding: 12px 20px;
+          font-weight: 500;
+          cursor: pointer;
+        }
+        .btn-primary {
+          background: #D96B43;
+          color: #fff;
+          border: none;
+          border-radius: 12px;
+          padding: 12px 22px;
+          font-weight: 500;
+          cursor: pointer;
+          box-shadow: 4px 4px 0 #1C1D21;
+        }
+      \`}</style>
+      <main className="page">
+        <header className="top">
+          <div className="logo">Aurora</div>
+          <nav className="nav">
+            <a href="#features">Features</a>
+            <a href="#pricing">Pricing</a>
+            <button type="button" className="btn">
+              Get started
+            </button>
+          </nav>
+        </header>
+        <section className="hero">
+          <p className="eyebrow">Warm Brutalism</p>
+          <h1>Design that feels handmade</h1>
+          <p>
+            A starter landing page generated inside Cozy AI Studio. Edit with AI
+            agents and watch the preview update live.
+          </p>
+          <div className="actions">
+            <button type="button" className="btn-primary">
+              Start building
+            </button>
+            <button type="button" className="btn-outline">
+              View demo
+            </button>
+          </div>
+        </section>
+      </main>
+    </>
   );
 }
 `;
+
 
 const STARTER_STYLES = `/* Warm Brutalism tokens */
 :root {
