@@ -3,7 +3,7 @@
  * Used when DATABASE_URL is set; no-op when PGLite / no DB.
  */
 
-import { getSql, dbSource } from "@/lib/db";
+import { getSql, dbSource } from "../db";
 import type { DiffPendingPayload, ServerToClient } from "./protocol";
 
 export type PgRoom = {
