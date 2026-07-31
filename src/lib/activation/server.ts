@@ -10,7 +10,8 @@ export type ActivationEventName =
   | "accept"
   | "share_created"
   | "remix_opened"
-  | "share_viewed";
+  | "share_viewed"
+  | "reject";
 
 const ALLOWED = new Set<ActivationEventName>([
   "brief_sent",
@@ -19,6 +20,7 @@ const ALLOWED = new Set<ActivationEventName>([
   "share_created",
   "remix_opened",
   "share_viewed",
+  "reject",
 ]);
 
 function newId() {
@@ -67,6 +69,7 @@ export async function getActivationStats(
       share_created: 0,
       remix_opened: 0,
       share_viewed: 0,
+      reject: 0,
     },
     totals: 0,
   };

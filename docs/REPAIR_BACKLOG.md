@@ -69,9 +69,11 @@
 | **Monaco mobile** | desktop-only Diff | **This pass** |
 | **RLS** | app-layer user scoping + doc | **This pass** |
 | **Free publish A** | og tags + public link CTAs | **This pass** |
-| **Activation B** | funnel events + /api/activation-stats | **This pass** |
+| **Activation B** | funnel events + /api/activation-stats | **Done** |
+| **Telemetry P4** | HitL → DB + /api/telemetry-stats + reject event | **This pass** |
+| **P6 security** | indexes + SoT (no force RLS) | **This pass** |
 | **Mobile WS** | companion pair PG | **Done** |
-| **Real deploy launch** | Vercel API | Later |
+| **Real deploy launch** | Vercel redeploy mode (Prompt C) | **Done** |
 
 ---
 

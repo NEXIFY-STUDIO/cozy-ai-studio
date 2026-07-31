@@ -28,11 +28,21 @@ export function ActivationFunnelCard({ className }: { className?: string }) {
   const [totals, setTotals] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [hitl, setHitl] = useState<{
+    approved: number;
+    rejected: number;
+    rejectRate: number | null;
+  } | null>(null);
 
   const load = useCallback(() => {
     setLoading(true);
     setError(false);
-    void fetchActivationStats(24).then((s) => {
+    void Promise.all([
+      fetchActivationStats(24),
+      fetch("/api/telemetry-stats?hours=24")
+        .then((r) => r.json())
+        .catch(() => null),
+    ]).then(([s, tel]) => {
       if (!s?.ok) {
         setError(true);
         setLoading(false);
@@ -40,6 +50,14 @@ export function ActivationFunnelCard({ className }: { className?: string }) {
       }
       setCounts(s.counts);
       setTotals(s.totals);
+      if (tel && tel.ok) {
+        setHitl({
+          approved: Number(tel.approved) || 0,
+          rejected: Number(tel.rejected) || 0,
+          rejectRate:
+            tel.rejectRate == null ? null : Number(tel.rejectRate),
+        });
+      }
       setLoading(false);
     });
   }, []);
@@ -182,6 +200,21 @@ export function ActivationFunnelCard({ className }: { className?: string }) {
               {bottleneck.rate ? ` (${bottleneck.rate})` : ""}.
             </p>
           )}
+          {(hitl && hitl.approved + hitl.rejected > 0) ||
+          (counts.reject ?? 0) > 0 ? (
+            <p className="text-[10px] text-muted-foreground leading-snug">
+              {hitl && hitl.approved + hitl.rejected > 0
+                ? `HitL DB: ${hitl.approved} approved · ${hitl.rejected} rejected${
+                    hitl.rejectRate != null
+                      ? ` · ${hitl.rejectRate}% reject`
+                      : ""
+                  }`
+                : null}
+              {(counts.reject ?? 0) > 0
+                ? `${hitl && hitl.approved + hitl.rejected > 0 ? " · " : ""}Activation rejects: ${counts.reject}`
+                : ""}
+            </p>
+          ) : null}
         </>
       )}
 

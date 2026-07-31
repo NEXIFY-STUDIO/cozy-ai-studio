@@ -16,6 +16,7 @@ import {
   ensureMyProject,
 } from "@/lib/projects/functions";
 import { persistPendingApproval } from "@/hooks/useProjectSync";
+import { trackActivation } from "@/lib/activation/client";
 import { refreshAgentsQuota } from "@/hooks/useBillingSync";
 import {
   computeBackoffMs,
@@ -168,6 +169,7 @@ export async function runStudioPipeline(
         if (attempt > 0) {
           store.resetAgents();
           store.setPipelineRunning(true);
+          void trackActivation("brief_sent", { client: true });
           store.setPipelinePhase("planning");
           store.setPipelineProgress(0, `Retry ${attempt + 1}…`);
           store.setRetryState({

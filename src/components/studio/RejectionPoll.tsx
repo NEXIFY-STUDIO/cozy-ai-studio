@@ -6,6 +6,7 @@ import {
   persistTelemetry,
   resolveServerApproval,
 } from "@/hooks/useProjectSync";
+import { trackActivation } from "@/lib/activation/client";
 
 const options: {
   reason: NonNullable<RejectionReason>;
@@ -32,6 +33,7 @@ export function RejectionPoll() {
 
   const submit = (reason: RejectionReason) => {
     submitRejection(reason);
+    void trackActivation("reject", { reason: reason ?? null });
     void resolveServerApproval("rejected", reason);
     void persistTelemetry({
       prompt: lastPrompt,

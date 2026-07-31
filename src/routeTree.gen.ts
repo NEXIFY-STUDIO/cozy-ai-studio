@@ -24,6 +24,7 @@ import { Route as ApiMvpStatusRouteImport } from './routes/api/mvp-status'
 import { Route as ApiRtcRouteImport } from './routes/api/rtc'
 import { Route as ApiRuntimeStatusRouteImport } from './routes/api/runtime-status'
 import { Route as ApiShareRouteImport } from './routes/api/share'
+import { Route as ApiTelemetryStatsRouteImport } from './routes/api/telemetry-stats'
 import { Route as AuthCallbackRouteImport } from './routes/auth/callback'
 import { Route as ApiAgentsRunRouteImport } from './routes/api/agents/run'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
@@ -106,6 +107,11 @@ const ApiShareRoute = ApiShareRouteImport.update({
   path: '/api/share',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiTelemetryStatsRoute = ApiTelemetryStatsRouteImport.update({
+  id: '/api/telemetry-stats',
+  path: '/api/telemetry-stats',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthCallbackRoute = AuthCallbackRouteImport.update({
   id: '/auth/callback',
   path: '/auth/callback',
@@ -153,6 +159,7 @@ export interface FileRoutesByFullPath {
   '/api/rtc': typeof ApiRtcRoute
   '/api/runtime-status': typeof ApiRuntimeStatusRoute
   '/api/share': typeof ApiShareRoute
+  '/api/telemetry-stats': typeof ApiTelemetryStatsRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/api/agents/run': typeof ApiAgentsRunRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -176,6 +183,7 @@ export interface FileRoutesByTo {
   '/api/rtc': typeof ApiRtcRoute
   '/api/runtime-status': typeof ApiRuntimeStatusRoute
   '/api/share': typeof ApiShareRoute
+  '/api/telemetry-stats': typeof ApiTelemetryStatsRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/api/agents/run': typeof ApiAgentsRunRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -200,6 +208,7 @@ export interface FileRoutesById {
   '/api/rtc': typeof ApiRtcRoute
   '/api/runtime-status': typeof ApiRuntimeStatusRoute
   '/api/share': typeof ApiShareRoute
+  '/api/telemetry-stats': typeof ApiTelemetryStatsRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/api/agents/run': typeof ApiAgentsRunRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -225,6 +234,7 @@ export interface FileRouteTypes {
     | '/api/rtc'
     | '/api/runtime-status'
     | '/api/share'
+    | '/api/telemetry-stats'
     | '/auth/callback'
     | '/api/agents/run'
     | '/api/auth/$'
@@ -248,6 +258,7 @@ export interface FileRouteTypes {
     | '/api/rtc'
     | '/api/runtime-status'
     | '/api/share'
+    | '/api/telemetry-stats'
     | '/auth/callback'
     | '/api/agents/run'
     | '/api/auth/$'
@@ -271,6 +282,7 @@ export interface FileRouteTypes {
     | '/api/rtc'
     | '/api/runtime-status'
     | '/api/share'
+    | '/api/telemetry-stats'
     | '/auth/callback'
     | '/api/agents/run'
     | '/api/auth/$'
@@ -295,6 +307,7 @@ export interface RootRouteChildren {
   ApiRtcRoute: typeof ApiRtcRoute
   ApiRuntimeStatusRoute: typeof ApiRuntimeStatusRoute
   ApiShareRoute: typeof ApiShareRoute
+  ApiTelemetryStatsRoute: typeof ApiTelemetryStatsRoute
   AuthCallbackRoute: typeof AuthCallbackRoute
   ApiAgentsRunRoute: typeof ApiAgentsRunRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
@@ -410,6 +423,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiShareRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/telemetry-stats': {
+      id: '/api/telemetry-stats'
+      path: '/api/telemetry-stats'
+      fullPath: '/api/telemetry-stats'
+      preLoaderRoute: typeof ApiTelemetryStatsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth/callback': {
       id: '/auth/callback'
       path: '/auth/callback'
@@ -471,6 +491,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiRtcRoute: ApiRtcRoute,
   ApiRuntimeStatusRoute: ApiRuntimeStatusRoute,
   ApiShareRoute: ApiShareRoute,
+  ApiTelemetryStatsRoute: ApiTelemetryStatsRoute,
   AuthCallbackRoute: AuthCallbackRoute,
   ApiAgentsRunRoute: ApiAgentsRunRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
