@@ -252,7 +252,9 @@ Return ONLY a JSON object:
     { "id": string, "title": string, "agent": "G0_PLANNER"|"G1_CODER"|"G2_AUDITOR", "dependsOn": string[], "detail": string }
   ]
 }
-Create 3–7 concrete implementation tasks. Prefer React + TypeScript + Tailwind.`,
+Create 3–7 concrete implementation tasks. Prefer React + TypeScript.
+CRITICAL: Live Preview WebContainer has NO Tailwind. Plan for self-contained CSS
+via a <style> tag or inline style={{}} objects — never Tailwind-only classNames.`,
           },
           {
             role: "user",
@@ -381,7 +383,18 @@ Create 3–7 concrete implementation tasks. Prefer React + TypeScript + Tailwind
           {
             role: "system",
             content: `You are G1 Coder for Cozy AI Studio.
-Generate production-quality React + TypeScript (TSX) with Tailwind.
+Generate production-quality React + TypeScript (TSX).
+
+CRITICAL — Live Preview runtime (WebContainer) has NO Tailwind CSS build:
+- Do NOT use Tailwind utility classNames (no flex/gap/grid/p-4/rounded-2xl/md: etc. as the only styling).
+- Put ALL layout and visual styles in a single <style>{\`...\`}</style> block inside the component,
+  OR use style={{...}} objects. Semantic class names like className="kpi-card" are fine IF defined in <style>.
+- Nav links must have real spacing (display:flex; gap:...) so labels never mash together.
+- KPI / cards need white background, border, padding, border-radius, subtle box-shadow.
+- Colors: background #F4F1EA, text #1C1D21, accent #D96B43.
+- Mobile-first: use CSS media queries in <style>, not Tailwind breakpoints.
+- No new npm dependencies (no recharts/chart.js) — use CSS/SVG for charts if needed.
+
 Output a single JSON object (you may stream it) with shape:
 {
   "title": string,

@@ -198,94 +198,311 @@ li{margin-bottom:.4rem}li::before{content:"✓ ";color:#D96B43}
       return {
         title: "Metrics dashboard shell",
         description:
-          "Creates a warm brutalist analytics layout with KPI cards and a simple activity list.",
+          "Creates a warm analytics layout with KPI cards (self-contained CSS — no Tailwind).",
         affectedFiles: ["src/App.tsx"],
         filePath: "src/App.tsx",
         language: "typescript",
         plan: `Task Graph (G0):
-1. App shell with sidebar + main
-2. Four KPI cards (MRR, Users, Latency, Approvals)
-3. Activity feed from agent pipeline
-4. Responsive: stack on mobile, grid on desktop`,
+1. App shell with header nav (spaced links) + main
+2. Four KPI cards (Users, Revenue, Conversions, Active Users)
+3. Activity feed + performance bars
+4. Self-contained <style> CSS — WebContainer has no Tailwind
+5. Responsive: 1–2 cols mobile, 4 cols desktop`,
         auditNotes: [
+          "No Tailwind dependency — CSS in <style> tag",
           "No external scripts — XSS surface minimal",
           "Tabular nums for metrics",
           "Semantic headings hierarchy",
         ],
-        code: `import React from "react";
+        code: `import React, { useState } from "react";
 
-const kpis = [
-  { label: "MRR", value: "$12.4k", delta: "+8.2%" },
-  { label: "Active users", value: "2,481", delta: "+12%" },
-  { label: "Avg latency", value: "142ms", delta: "-18ms" },
-  { label: "Approvals", value: "94%", delta: "+2.1%" },
+type Kpi = { label: string; value: string; delta: string; positive: boolean };
+type Activity = { user: string; action: string; time: string; status: string };
+
+const KPIS: Kpi[] = [
+  { label: "Users", value: "1,245", delta: "+12%", positive: true },
+  { label: "Revenue", value: "$45,678", delta: "+8%", positive: true },
+  { label: "Conversions", value: "3.4%", delta: "-2%", positive: false },
+  { label: "Active Users", value: "892", delta: "+5%", positive: true },
 ];
 
-const activity = [
-  { agent: "G0", text: "Planned pricing section graph", time: "2m" },
-  { agent: "G1", text: "Streamed 186 lines of TSX", time: "1m" },
-  { agent: "G2", text: "Audit passed — 0 OWASP issues", time: "now" },
+const ACTIVITY: Activity[] = [
+  { user: "anna@cozy.dev", action: "Signed up", time: "2m", status: "ok" },
+  { user: "mark@studio.io", action: "Payment received", time: "14m", status: "ok" },
+  { user: "lee@aurora.app", action: "Feature used · Export", time: "31m", status: "ok" },
+  { user: "sam@build.me", action: "Invite accepted", time: "1h", status: "pending" },
 ];
+
+const NAV = ["Dashboard", "Analytics", "Settings"] as const;
 
 export default function App() {
+  const [active, setActive] = useState<(typeof NAV)[number]>("Dashboard");
+  const [menuOpen, setMenuOpen] = useState(false);
+
   return (
-    <div className="min-h-screen bg-[#F4F1EA] text-[#1C1D21] flex">
-      <aside className="hidden md:flex w-56 flex-col border-r border-black/10 p-5 gap-2">
-        <div className="font-serif text-xl font-bold mb-6">Aurora</div>
-        {["Overview", "Agents", "Billing", "Telemetry"].map((item, i) => (
+    <>
+      <style>{\`
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        .dash {
+          min-height: 100vh;
+          background: #F4F1EA;
+          color: #1C1D21;
+          font-family: Inter, system-ui, sans-serif;
+          padding-bottom: 32px;
+        }
+        .topbar {
+          display: flex;
+          flex-wrap: wrap;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          padding: 14px 16px;
+          border-bottom: 1px solid rgba(28,29,33,0.1);
+          background: rgba(244,241,234,0.95);
+        }
+        .brand {
+          font-family: Georgia, "Playfair Display", serif;
+          font-size: 1.35rem;
+          font-weight: 700;
+        }
+        .nav {
+          display: flex;
+          flex-wrap: wrap;
+          align-items: center;
+          gap: 8px 14px;
+        }
+        .nav-link {
+          background: transparent;
+          border: none;
+          color: rgba(28,29,33,0.65);
+          font-size: 0.875rem;
+          padding: 6px 10px;
+          border-radius: 8px;
+          cursor: pointer;
+        }
+        .nav-link.on {
+          background: rgba(217,107,67,0.12);
+          color: #C85A32;
+          font-weight: 600;
+        }
+        .logout {
+          background: #1C1D21;
+          color: #fff;
+          border: none;
+          border-radius: 8px;
+          padding: 6px 12px;
+          font-size: 0.8rem;
+          font-weight: 500;
+          cursor: pointer;
+        }
+        .burger {
+          display: none;
+          background: #fff;
+          border: 1px solid rgba(28,29,33,0.15);
+          border-radius: 8px;
+          padding: 8px 12px;
+          font-size: 0.8rem;
+          cursor: pointer;
+        }
+        @media (max-width: 520px) {
+          .burger { display: inline-flex; }
+          .nav.desktop { display: none; }
+          .nav.mobile {
+            display: flex;
+            width: 100%;
+            flex-direction: column;
+            align-items: stretch;
+            gap: 4px;
+            padding-top: 4px;
+          }
+        }
+        @media (min-width: 521px) {
+          .nav.mobile { display: none !important; }
+        }
+        .main { padding: 20px 16px; max-width: 1100px; margin: 0 auto; }
+        .title {
+          font-family: Georgia, "Playfair Display", serif;
+          font-size: 1.5rem;
+          font-weight: 700;
+          margin-bottom: 16px;
+        }
+        .kpis {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 12px;
+          margin-bottom: 20px;
+        }
+        @media (min-width: 420px) {
+          .kpis { grid-template-columns: 1fr 1fr; }
+        }
+        @media (min-width: 900px) {
+          .kpis { grid-template-columns: repeat(4, 1fr); }
+        }
+        .kpi {
+          background: #fff;
+          border: 1px solid rgba(28,29,33,0.1);
+          border-radius: 12px;
+          padding: 16px;
+          box-shadow: 0 6px 18px rgba(28,29,33,0.06);
+        }
+        .kpi-label {
+          font-size: 0.75rem;
+          color: rgba(28,29,33,0.55);
+          font-weight: 500;
+        }
+        .kpi-value {
+          font-family: Georgia, "Playfair Display", serif;
+          font-size: 1.65rem;
+          font-weight: 700;
+          margin-top: 6px;
+          font-variant-numeric: tabular-nums;
+        }
+        .kpi-delta {
+          font-size: 0.75rem;
+          font-weight: 600;
+          margin-top: 4px;
+        }
+        .kpi-delta.up { color: #15803D; }
+        .kpi-delta.down { color: #B45309; }
+        .panel {
+          background: #fff;
+          border: 1px solid rgba(28,29,33,0.1);
+          border-radius: 12px;
+          padding: 16px;
+          box-shadow: 0 6px 18px rgba(28,29,33,0.05);
+          margin-bottom: 16px;
+        }
+        .panel h2 {
+          font-family: Georgia, "Playfair Display", serif;
+          font-size: 1.05rem;
+          margin-bottom: 12px;
+        }
+        .bars {
+          display: flex;
+          align-items: flex-end;
+          gap: 8px;
+          height: 120px;
+          padding-top: 8px;
+        }
+        .bar {
+          flex: 1;
+          background: linear-gradient(180deg, #D96B43, #C85A32);
+          border-radius: 6px 6px 2px 2px;
+          min-width: 0;
+          opacity: 0.9;
+        }
+        .activity { list-style: none; }
+        .activity li {
+          display: grid;
+          grid-template-columns: 1fr auto;
+          gap: 4px 12px;
+          padding: 10px 8px;
+          font-size: 0.85rem;
+          border-radius: 8px;
+        }
+        .activity li:nth-child(odd) { background: rgba(244,241,234,0.7); }
+        .act-meta { color: rgba(28,29,33,0.5); font-size: 0.75rem; }
+        .status {
+          font-size: 0.7rem;
+          font-weight: 600;
+          padding: 2px 8px;
+          border-radius: 999px;
+          align-self: start;
+        }
+        .status.ok { background: rgba(21,128,61,0.12); color: #15803D; }
+        .status.pending { background: rgba(217,107,67,0.15); color: #C85A32; }
+      \`}</style>
+      <div className="dash">
+        <header className="topbar">
+          <div className="brand">Aurora</div>
           <button
-            key={item}
-            className={\`text-left rounded-lg px-3 py-2 text-sm \${
-              i === 0 ? "bg-[#D96B43] text-white" : "hover:bg-black/5"
-            }\`}
+            type="button"
+            className="burger"
+            onClick={() => setMenuOpen((v) => !v)}
+            aria-expanded={menuOpen}
           >
-            {item}
+            Menu
           </button>
-        ))}
-      </aside>
-      <main className="flex-1 p-6 md:p-8">
-        <header className="mb-8 flex items-end justify-between gap-4">
-          <div>
-            <p className="text-xs font-semibold tracking-widest text-[#D96B43] uppercase">
-              Dashboard
-            </p>
-            <h1 className="font-serif text-3xl font-bold mt-1">Studio health</h1>
-          </div>
-          <button className="rounded-xl bg-[#D96B43] px-4 py-2 text-sm text-white font-medium shadow-[3px_3px_0_#1C1D21]">
-            Run audit
-          </button>
-        </header>
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4 mb-8">
-          {kpis.map((k) => (
-            <div
-              key={k.label}
-              className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm"
-            >
-              <p className="text-xs text-black/50 font-medium">{k.label}</p>
-              <p className="font-serif text-3xl font-bold mt-2 tabular-nums">{k.value}</p>
-              <p className="text-xs text-[#15803D] mt-1 font-medium">{k.delta}</p>
-            </div>
-          ))}
-        </div>
-        <section className="rounded-2xl border border-black/10 bg-white p-5">
-          <h2 className="font-serif text-lg font-bold mb-4">Agent activity</h2>
-          <ul className="space-y-3">
-            {activity.map((a) => (
-              <li
-                key={a.text}
-                className="flex items-center gap-3 text-sm border-b border-black/5 pb-3 last:border-0"
+          <nav className="nav desktop" aria-label="Primary">
+            {NAV.map((item) => (
+              <button
+                key={item}
+                type="button"
+                className={"nav-link" + (active === item ? " on" : "")}
+                onClick={() => setActive(item)}
               >
-                <span className="rounded-md bg-[#D96B43]/15 text-[#C85A32] px-2 py-0.5 text-xs font-mono font-semibold">
-                  {a.agent}
-                </span>
-                <span className="flex-1">{a.text}</span>
-                <span className="text-black/40 text-xs tabular-nums">{a.time}</span>
-              </li>
+                {item}
+              </button>
             ))}
-          </ul>
-        </section>
-      </main>
-    </div>
+            <button type="button" className="logout">
+              Logout
+            </button>
+          </nav>
+          {menuOpen && (
+            <nav className="nav mobile" aria-label="Mobile">
+              {NAV.map((item) => (
+                <button
+                  key={item}
+                  type="button"
+                  className={"nav-link" + (active === item ? " on" : "")}
+                  onClick={() => {
+                    setActive(item);
+                    setMenuOpen(false);
+                  }}
+                >
+                  {item}
+                </button>
+              ))}
+              <button type="button" className="logout">
+                Logout
+              </button>
+            </nav>
+          )}
+        </header>
+
+        <main className="main">
+          <h1 className="title">Metrics Dashboard</h1>
+
+          <section className="kpis" aria-label="Key metrics">
+            {KPIS.map((k) => (
+              <article key={k.label} className="kpi">
+                <p className="kpi-label">{k.label}</p>
+                <p className="kpi-value">{k.value}</p>
+                <p className={"kpi-delta " + (k.positive ? "up" : "down")}>
+                  {k.delta}
+                </p>
+              </article>
+            ))}
+          </section>
+
+          <section className="panel" aria-label="Performance">
+            <h2>Performance Overview</h2>
+            <div className="bars" aria-hidden>
+              {[42, 68, 55, 80, 62, 90, 74].map((h, i) => (
+                <div key={i} className="bar" style={{ height: h + "%" }} />
+              ))}
+            </div>
+          </section>
+
+          <section className="panel" aria-label="Recent activity">
+            <h2>Recent activity</h2>
+            <ul className="activity">
+              {ACTIVITY.map((a) => (
+                <li key={a.user + a.time}>
+                  <div>
+                    <div>{a.action}</div>
+                    <div className="act-meta">
+                      {a.user} · {a.time}
+                    </div>
+                  </div>
+                  <span className={"status " + a.status}>{a.status}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        </main>
+      </div>
+    </>
   );
 }
 `,
@@ -293,40 +510,38 @@ export default function App() {
 <html><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet"/>
 <style>
-*{box-sizing:border-box;margin:0;padding:0}body{font-family:Inter,system-ui,sans-serif;background:#F4F1EA;color:#1C1D21;min-height:100vh;display:flex}
-aside{width:13rem;border-right:1px solid rgba(0,0,0,.1);padding:1.25rem;display:none;flex-direction:column;gap:.35rem}
-@media(min-width:768px){aside{display:flex}}
-.logo{font-family:"Playfair Display",serif;font-weight:700;font-size:1.2rem;margin-bottom:1.25rem}
-.nav{text-align:left;border:0;background:transparent;padding:.5rem .75rem;border-radius:.5rem;font-size:.85rem;cursor:pointer}
-.nav.on{background:#D96B43;color:#fff}
-main{flex:1;padding:1.5rem}
-.eyebrow{font-size:.65rem;letter-spacing:.14em;text-transform:uppercase;color:#D96B43;font-weight:600}
-h1{font-family:"Playfair Display",serif;font-size:1.75rem;margin:.25rem 0 1.5rem}
-.kpis{display:grid;gap:.75rem;grid-template-columns:1fr 1fr;margin-bottom:1.5rem}
+*{box-sizing:border-box;margin:0;padding:0}body{font-family:Inter,system-ui,sans-serif;background:#F4F1EA;color:#1C1D21;min-height:100vh;padding-bottom:2rem}
+.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;border-bottom:1px solid rgba(0,0,0,.1)}
+.logo{font-family:"Playfair Display",serif;font-weight:700;font-size:1.25rem}
+.nav{display:flex;flex-wrap:wrap;gap:12px;align-items:center;font-size:.875rem;color:rgba(28,29,33,.65)}
+.logout{background:#1C1D21;color:#fff;border:0;border-radius:8px;padding:6px 12px;font-size:.8rem}
+main{padding:20px 16px;max-width:1100px;margin:0 auto}
+h1{font-family:"Playfair Display",serif;font-size:1.5rem;margin-bottom:16px}
+.kpis{display:grid;gap:12px;grid-template-columns:1fr 1fr;margin-bottom:20px}
 @media(min-width:900px){.kpis{grid-template-columns:repeat(4,1fr)}}
-.kpi{background:#fff;border:1px solid rgba(0,0,0,.1);border-radius:1rem;padding:1rem}
-.kpi .l{font-size:.7rem;color:#888}.kpi .v{font-family:"Playfair Display",serif;font-size:1.6rem;font-weight:700;margin-top:.35rem}.kpi .d{font-size:.7rem;color:#15803D;margin-top:.2rem}
-.feed{background:#fff;border:1px solid rgba(0,0,0,.1);border-radius:1rem;padding:1rem}
-.feed h2{font-family:"Playfair Display",serif;font-size:1rem;margin-bottom:.75rem}
-.row{display:flex;gap:.6rem;align-items:center;font-size:.8rem;padding:.5rem 0;border-bottom:1px solid rgba(0,0,0,.05)}
-.tag{background:rgba(217,107,67,.15);color:#C85A32;font-family:ui-monospace,monospace;font-size:.65rem;font-weight:600;padding:.15rem .4rem;border-radius:.3rem}
+.kpi{background:#fff;border:1px solid rgba(0,0,0,.1);border-radius:12px;padding:16px;box-shadow:0 6px 18px rgba(0,0,0,.06)}
+.kpi .l{font-size:.75rem;color:#888}.kpi .v{font-family:"Playfair Display",serif;font-size:1.6rem;font-weight:700;margin-top:6px}.kpi .d{font-size:.75rem;color:#15803D;margin-top:4px}
+.panel{background:#fff;border:1px solid rgba(0,0,0,.1);border-radius:12px;padding:16px;margin-bottom:16px}
+.panel h2{font-family:"Playfair Display",serif;font-size:1rem;margin-bottom:12px}
+.bars{display:flex;align-items:flex-end;gap:8px;height:120px}
+.bar{flex:1;background:#D96B43;border-radius:6px 6px 2px 2px}
+.row{display:flex;justify-content:space-between;padding:10px 8px;font-size:.85rem}
+.row:nth-child(odd){background:rgba(244,241,234,.7)}
 </style></head><body>
-<aside><div class="logo">Aurora</div>
-<button class="nav on">Overview</button><button class="nav">Agents</button><button class="nav">Billing</button><button class="nav">Telemetry</button>
-</aside>
+<div class="top"><div class="logo">Aurora</div><nav class="nav"><span>Dashboard</span><span>Analytics</span><span>Settings</span><button class="logout">Logout</button></nav></div>
 <main>
-<p class="eyebrow">Dashboard</p>
-<h1>Studio health</h1>
+<h1>Metrics Dashboard</h1>
 <div class="kpis">
-  <div class="kpi"><div class="l">MRR</div><div class="v">$12.4k</div><div class="d">+8.2%</div></div>
-  <div class="kpi"><div class="l">Active users</div><div class="v">2,481</div><div class="d">+12%</div></div>
-  <div class="kpi"><div class="l">Avg latency</div><div class="v">142ms</div><div class="d">-18ms</div></div>
-  <div class="kpi"><div class="l">Approvals</div><div class="v">94%</div><div class="d">+2.1%</div></div>
+  <div class="kpi"><div class="l">Users</div><div class="v">1,245</div><div class="d">+12%</div></div>
+  <div class="kpi"><div class="l">Revenue</div><div class="v">$45,678</div><div class="d">+8%</div></div>
+  <div class="kpi"><div class="l">Conversions</div><div class="v">3.4%</div><div class="d" style="color:#B45309">-2%</div></div>
+  <div class="kpi"><div class="l">Active Users</div><div class="v">892</div><div class="d">+5%</div></div>
 </div>
-<div class="feed"><h2>Agent activity</h2>
-<div class="row"><span class="tag">G0</span><span style="flex:1">Planned pricing section graph</span><span style="color:#999;font-size:.7rem">2m</span></div>
-<div class="row"><span class="tag">G1</span><span style="flex:1">Streamed 186 lines of TSX</span><span style="color:#999;font-size:.7rem">1m</span></div>
-<div class="row"><span class="tag">G2</span><span style="flex:1">Audit passed — 0 OWASP issues</span><span style="color:#999;font-size:.7rem">now</span></div>
+<div class="panel"><h2>Performance Overview</h2><div class="bars"><div class="bar" style="height:42%"></div><div class="bar" style="height:68%"></div><div class="bar" style="height:55%"></div><div class="bar" style="height:80%"></div><div class="bar" style="height:62%"></div><div class="bar" style="height:90%"></div><div class="bar" style="height:74%"></div></div></div>
+<div class="panel"><h2>Recent activity</h2>
+<div class="row"><span>Signed up · anna@cozy.dev</span><span>2m</span></div>
+<div class="row"><span>Payment received · mark@studio.io</span><span>14m</span></div>
+<div class="row"><span>Feature used · lee@aurora.app</span><span>31m</span></div>
 </div>
 </main></body></html>`,
       };
