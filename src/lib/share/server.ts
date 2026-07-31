@@ -34,7 +34,7 @@ export async function createSharedPreview(opts: {
   title?: string;
   projectId?: string | null;
   promptPreview?: string | null;
-  sourceCode?: string | null;
+  sourceCode?: string | Record<string, string> | null;
   sourceLanguage?: string | null;
   sourcePath?: string | null;
 }): Promise<{ id: string; path: string }> {
@@ -64,7 +64,16 @@ export async function createSharedPreview(opts: {
   const id = newShareId();
   const title = (opts.title?.trim() || "Cozy preview").slice(0, 120);
   const promptPreview = (opts.promptPreview || "").slice(0, 280) || null;
-  const sourceCode = opts.sourceCode?.trim() || null;
+  let sourceCode: string | null = null;
+  if (typeof opts.sourceCode === "string") {
+    sourceCode = opts.sourceCode.trim() || null;
+  } else if (opts.sourceCode && typeof opts.sourceCode === "object") {
+    try {
+      sourceCode = JSON.stringify(opts.sourceCode);
+    } catch {
+      sourceCode = null;
+    }
+  }
   const sourceLanguage = (opts.sourceLanguage || "tsx").slice(0, 32);
   const sourcePath = (opts.sourcePath || "src/App.tsx").slice(0, 200);
 

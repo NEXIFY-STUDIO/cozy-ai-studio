@@ -74,7 +74,7 @@ export const Route = createFileRoute("/api/share")({
           title?: string;
           projectId?: string;
           promptPreview?: string;
-          sourceCode?: string;
+          sourceCode?: string | Record<string, string>;
           sourceLanguage?: string;
           sourcePath?: string;
         };

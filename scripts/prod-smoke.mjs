@@ -60,9 +60,7 @@ async function main() {
       html: "<!doctype html><html><body><h1>prod-smoke</h1></body></html>",
       title: "prod-smoke",
       promptPreview: "prod-smoke brief",
-      sourceCode: {
-        "src/App.tsx": "export default function App(){return <h1>smoke</h1>}",
-      },
+      sourceCode: "export default function App(){return <h1>smoke</h1>}",
     }),
   }).then((r) => r.json());
   must(share.ok && share.id, "share create");
