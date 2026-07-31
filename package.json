@@ -16,7 +16,8 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "ship-gate": "node scripts/ship-gate.mjs",
-    "verify": "npm run typecheck && npm run lint && npm run build && npm run ship-gate",
+    "test:dashboard-preview": "node scripts/dashboard-preview-contract.mjs",
+    "verify": "npm run typecheck && npm run lint && npm run build && npm run ship-gate && npm run test:dashboard-preview",
     "prod-smoke": "node scripts/prod-smoke.mjs"
   },
   "dependencies": {
