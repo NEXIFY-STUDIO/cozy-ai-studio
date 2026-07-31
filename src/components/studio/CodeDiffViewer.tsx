@@ -120,10 +120,12 @@ export function CodeDiffViewer() {
       <div className="flex items-center justify-between gap-3 border-b border-border bg-muted/80 px-4 py-2.5">
         <div className="flex items-center gap-2 min-w-0">
           <Code2 className="h-4 w-4 text-terracotta shrink-0" />
-          <span className="font-serif text-sm font-semibold truncate">Code Diff</span>
-          <span className="text-xs font-mono text-muted-foreground truncate hidden sm:inline">
-            {activeFile}
-          </span>
+          <div className="min-w-0">
+            <span className="font-serif text-sm font-semibold truncate block">Diff</span>
+            <span className="text-[11px] font-mono text-muted-foreground truncate hidden sm:block">
+              {activeFile || "preview/index.html"}
+            </span>
+          </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           {isPipelineRunning && (
@@ -198,7 +200,14 @@ export function CodeDiffViewer() {
       )}
 
       <div className={cn("relative min-h-0 flex-1 bg-canvas", isPipelineRunning && "stream-caret")}>
-        {!allowMonaco || monacoFailed || !monacoReady ? (
+        {!hasDiff && !isPipelineRunning ? (
+          <div className="flex h-full min-h-[12rem] flex-col items-center justify-center gap-2 px-6 text-center bg-[#F4F1EA]/40 dark:bg-canvas">
+            <p className="font-serif text-lg font-semibold text-foreground/80">No Diff yet</p>
+            <p className="max-w-sm text-sm text-muted-foreground leading-relaxed">
+              Send a brief. When G2 finishes, the Diff appears here for Human-in-the-loop Accept.
+            </p>
+          </div>
+        ) : !allowMonaco || monacoFailed || !monacoReady ? (
           <>
             {!allowMonaco && (
               <div className="absolute top-2 right-2 z-10 rounded-md border border-border bg-card/90 px-2 py-0.5 text-[10px] text-muted-foreground">

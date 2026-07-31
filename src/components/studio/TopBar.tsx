@@ -56,13 +56,18 @@ export function TopBar() {
       <div className="flex items-center gap-3 min-w-0">
         <Link to="/" className="flex items-center gap-2 shrink-0 group">
           <CozyLogo size="sm" variant="seal" className="group-hover:-translate-y-px transition-transform" />
-          <div className="hidden sm:block min-w-0">
-            <div className="font-serif text-base font-bold leading-none truncate">
-              Cozy
+          <div className="hidden sm:flex items-center gap-2 min-w-0">
+            <div className="min-w-0">
+              <div className="font-serif text-base font-bold leading-none truncate tracking-tight">
+                COSY Speed Studio
+              </div>
             </div>
-            <div className="text-xs text-muted-foreground font-mono mt-0.5">
-              AI Studio
-            </div>
+            <span
+              className="shrink-0 rounded-full border border-[#1C1D21]/15 bg-[#F4F1EA] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#1C1D21] dark:border-white/20 dark:bg-white/10 dark:text-white/90"
+              title="Option B — Brief → preview → share"
+            >
+              OPTION B
+            </span>
           </div>
         </Link>
 

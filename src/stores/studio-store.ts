@@ -448,11 +448,75 @@ function buildPreviewHtml(brand: string, headline: string, sub: string): string 
 
 export { buildPreviewHtml };
 
-const STARTER_PREVIEW = buildPreviewHtml(
-  "Aurora",
-  "Design that feels handmade",
-  "A starter landing page generated inside Cozy AI Studio.",
-);
+const STARTER_PREVIEW = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      font-family: Inter, system-ui, sans-serif;
+      background: #F4F1EA;
+      color: #1C1D21;
+    }
+    .card {
+      width: min(100%, 320px);
+      background: #fff;
+      border: 1px solid rgba(28,29,33,0.1);
+      border-radius: 16px;
+      padding: 28px 24px;
+      box-shadow: 0 10px 30px rgba(28,29,33,0.06);
+    }
+    .eyebrow {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: #D96B43;
+      margin-bottom: 10px;
+    }
+    h1 {
+      font-family: Georgia, "Playfair Display", serif;
+      font-size: 1.75rem;
+      line-height: 1.15;
+      margin-bottom: 12px;
+    }
+    p {
+      font-size: 0.9rem;
+      line-height: 1.55;
+      color: rgba(28,29,33,0.62);
+      margin-bottom: 20px;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: #1C1D21;
+      color: #fff;
+      border: none;
+      border-radius: 999px;
+      padding: 10px 18px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: default;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="eyebrow">Starter</div>
+    <h1>Hello, studio</h1>
+    <p>Send a brief on the left. Agents will propose a visual change you can Accept into this preview.</p>
+    <button type="button" class="btn">Get started</button>
+  </div>
+</body>
+</html>`;
 
 const initialFiles: Record<string, ProjectFile> = {
   "src/App.tsx": {
@@ -553,7 +617,7 @@ export const useStudioStore = create<StudioState>()(
           id: "welcome",
           role: "system",
           content:
-            "Cozy multi-agent pipeline ready. Describe a UI change — G0 plans, G1 codes, G2 audits.",
+            "Speed Studio ready. Describe a UI change — G0 plans, G1 codes, G2 audits.",
           timestamp: Date.now(),
         },
       ],
