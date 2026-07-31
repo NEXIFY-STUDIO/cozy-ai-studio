@@ -198,18 +198,19 @@ li{margin-bottom:.4rem}li::before{content:"✓ ";color:#D96B43}
       return {
         title: "Metrics dashboard shell",
         description:
-          "Creates a warm analytics layout with KPI cards (self-contained CSS — no Tailwind).",
+          "Warm analytics dashboard with KPI cards, CSS/SVG chart, and activity list (no Tailwind).",
         affectedFiles: ["src/App.tsx"],
         filePath: "src/App.tsx",
         language: "typescript",
         plan: `Task Graph (G0):
-1. App shell with header nav (spaced links) + main
-2. Four KPI cards (Users, Revenue, Conversions, Active Users)
-3. Activity feed + performance bars
-4. Self-contained <style> CSS — WebContainer has no Tailwind
-5. Responsive: 1–2 cols mobile, 4 cols desktop`,
+1. Header nav with spaced links (no mash)
+2. Four KPI cards
+3. Performance Overview CSS/SVG chart (no chart libs)
+4. Recent activity 6 rows, zebra stripes
+5. Self-contained <style> — WebContainer has no Tailwind
+6. Mobile 375px: overflow visible, padding-bottom 24px`,
         auditNotes: [
-          "No Tailwind dependency — CSS in <style> tag",
+          "No Tailwind / no Recharts — CSS+SVG only",
           "No external scripts — XSS surface minimal",
           "Tabular nums for metrics",
           "Semantic headings hierarchy",
@@ -217,7 +218,12 @@ li{margin-bottom:.4rem}li::before{content:"✓ ";color:#D96B43}
         code: `import React, { useState } from "react";
 
 type Kpi = { label: string; value: string; delta: string; positive: boolean };
-type Activity = { user: string; action: string; time: string; status: string };
+type Activity = {
+  time: string;
+  user: string;
+  action: string;
+  status: "ok" | "pending" | "failed";
+};
 
 const KPIS: Kpi[] = [
   { label: "Users", value: "1,245", delta: "+12%", positive: true },
@@ -227,13 +233,72 @@ const KPIS: Kpi[] = [
 ];
 
 const ACTIVITY: Activity[] = [
-  { user: "anna@cozy.dev", action: "Signed up", time: "2m", status: "ok" },
-  { user: "mark@studio.io", action: "Payment received", time: "14m", status: "ok" },
-  { user: "lee@aurora.app", action: "Feature used · Export", time: "31m", status: "ok" },
-  { user: "sam@build.me", action: "Invite accepted", time: "1h", status: "pending" },
+  { time: "2m", user: "anna@cozy.dev", action: "Signed up", status: "ok" },
+  { time: "14m", user: "mark@studio.io", action: "Payment received", status: "ok" },
+  { time: "31m", user: "lee@aurora.app", action: "Feature used · Export", status: "ok" },
+  { time: "1h", user: "sam@build.me", action: "Invite accepted", status: "pending" },
+  { time: "2h", user: "kim@north.co", action: "Trial started", status: "ok" },
+  { time: "3h", user: "rio@pixel.sk", action: "Card declined", status: "failed" },
 ];
 
 const NAV = ["Dashboard", "Analytics", "Settings"] as const;
+
+/** Simple SVG line + bars — no npm chart libs */
+function PerformanceChart() {
+  const values = [42, 55, 48, 68, 62, 80, 74, 90, 78, 88];
+  const w = 320;
+  const h = 120;
+  const pad = 8;
+  const max = Math.max(...values);
+  const step = (w - pad * 2) / (values.length - 1);
+  const points = values
+    .map((v, i) => {
+      const x = pad + i * step;
+      const y = h - pad - (v / max) * (h - pad * 2);
+      return x + "," + y;
+    })
+    .join(" ");
+  return (
+    <svg
+      viewBox={"0 0 " + w + " " + h}
+      width="100%"
+      height="140"
+      role="img"
+      aria-label="Revenue trend chart"
+      style={{ display: "block" }}
+    >
+      <defs>
+        <linearGradient id="area" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#D96B43" stopOpacity="0.35" />
+          <stop offset="100%" stopColor="#D96B43" stopOpacity="0.02" />
+        </linearGradient>
+      </defs>
+      <polyline
+        fill="none"
+        stroke="rgba(28,29,33,0.08)"
+        strokeWidth="1"
+        points={pad + "," + (h - pad) + " " + (w - pad) + "," + (h - pad)}
+      />
+      <polygon
+        fill="url(#area)"
+        points={points + " " + (w - pad) + "," + (h - pad) + " " + pad + "," + (h - pad)}
+      />
+      <polyline
+        fill="none"
+        stroke="#D96B43"
+        strokeWidth="2.5"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+        points={points}
+      />
+      {values.map((v, i) => {
+        const x = pad + i * step;
+        const y = h - pad - (v / max) * (h - pad * 2);
+        return <circle key={i} cx={x} cy={y} r="3.5" fill="#1C1D21" stroke="#F4F1EA" strokeWidth="1.5" />;
+      })}
+    </svg>
+  );
+}
 
 export default function App() {
   const [active, setActive] = useState<(typeof NAV)[number]>("Dashboard");
@@ -243,12 +308,18 @@ export default function App() {
     <>
       <style>{\`
         * { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body, #root {
+          min-height: auto;
+          overflow: visible;
+          height: auto;
+        }
         .dash {
-          min-height: 100vh;
+          min-height: auto;
+          overflow: visible;
           background: #F4F1EA;
           color: #1C1D21;
           font-family: Inter, system-ui, sans-serif;
-          padding-bottom: 32px;
+          padding-bottom: 24px;
         }
         .topbar {
           display: flex;
@@ -258,7 +329,10 @@ export default function App() {
           gap: 12px;
           padding: 14px 16px;
           border-bottom: 1px solid rgba(28,29,33,0.1);
-          background: rgba(244,241,234,0.95);
+          background: rgba(244,241,234,0.98);
+          position: sticky;
+          top: 0;
+          z-index: 2;
         }
         .brand {
           font-family: Georgia, "Playfair Display", serif;
@@ -319,7 +393,12 @@ export default function App() {
         @media (min-width: 521px) {
           .nav.mobile { display: none !important; }
         }
-        .main { padding: 20px 16px; max-width: 1100px; margin: 0 auto; }
+        .main {
+          padding: 20px 16px 24px;
+          max-width: 1100px;
+          margin: 0 auto;
+          overflow: visible;
+        }
         .title {
           font-family: Georgia, "Playfair Display", serif;
           font-size: 1.5rem;
@@ -330,7 +409,7 @@ export default function App() {
           display: grid;
           grid-template-columns: 1fr;
           gap: 12px;
-          margin-bottom: 20px;
+          margin-bottom: 16px;
         }
         @media (min-width: 420px) {
           .kpis { grid-template-columns: 1fr 1fr; }
@@ -371,46 +450,84 @@ export default function App() {
           padding: 16px;
           box-shadow: 0 6px 18px rgba(28,29,33,0.05);
           margin-bottom: 16px;
+          overflow: visible;
         }
         .panel h2 {
           font-family: Georgia, "Playfair Display", serif;
           font-size: 1.05rem;
+          margin-bottom: 4px;
+        }
+        .panel-sub {
+          font-size: 0.75rem;
+          color: rgba(28,29,33,0.5);
           margin-bottom: 12px;
+        }
+        .chart-wrap {
+          width: 100%;
+          overflow: visible;
+          margin-bottom: 8px;
         }
         .bars {
           display: flex;
           align-items: flex-end;
-          gap: 8px;
-          height: 120px;
-          padding-top: 8px;
+          gap: 6px;
+          height: 72px;
+          margin-top: 8px;
         }
         .bar {
           flex: 1;
           background: linear-gradient(180deg, #D96B43, #C85A32);
-          border-radius: 6px 6px 2px 2px;
+          border-radius: 4px 4px 2px 2px;
           min-width: 0;
-          opacity: 0.9;
+          opacity: 0.85;
         }
-        .activity { list-style: none; }
+        .activity {
+          list-style: none;
+          overflow: visible;
+        }
         .activity li {
           display: grid;
-          grid-template-columns: 1fr auto;
-          gap: 4px 12px;
+          grid-template-columns: 48px 1fr auto;
+          gap: 8px 12px;
+          align-items: start;
           padding: 10px 8px;
           font-size: 0.85rem;
           border-radius: 8px;
         }
-        .activity li:nth-child(odd) { background: rgba(244,241,234,0.7); }
-        .act-meta { color: rgba(28,29,33,0.5); font-size: 0.75rem; }
+        .activity li:nth-child(odd) {
+          background: rgba(244,241,234,0.85);
+        }
+        .activity li:nth-child(even) {
+          background: #fff;
+        }
+        .act-time {
+          font-variant-numeric: tabular-nums;
+          color: rgba(28,29,33,0.45);
+          font-size: 0.75rem;
+          padding-top: 2px;
+        }
+        .act-user {
+          color: rgba(28,29,33,0.5);
+          font-size: 0.75rem;
+          margin-top: 2px;
+        }
         .status {
           font-size: 0.7rem;
           font-weight: 600;
           padding: 2px 8px;
           border-radius: 999px;
-          align-self: start;
+          white-space: nowrap;
         }
         .status.ok { background: rgba(21,128,61,0.12); color: #15803D; }
         .status.pending { background: rgba(217,107,67,0.15); color: #C85A32; }
+        .status.failed { background: rgba(185,28,28,0.12); color: #B91C1C; }
+        @media (max-width: 375px) {
+          .main { padding: 16px 12px 24px; }
+          .activity li {
+            grid-template-columns: 40px 1fr;
+          }
+          .status { grid-column: 2; justify-self: start; }
+        }
       \`}</style>
       <div className="dash">
         <header className="topbar">
@@ -475,10 +592,14 @@ export default function App() {
             ))}
           </section>
 
-          <section className="panel" aria-label="Performance">
+          <section className="panel" aria-label="Performance Overview">
             <h2>Performance Overview</h2>
+            <p className="panel-sub">Last 10 periods · mock trend (SVG, no chart libs)</p>
+            <div className="chart-wrap">
+              <PerformanceChart />
+            </div>
             <div className="bars" aria-hidden>
-              {[42, 68, 55, 80, 62, 90, 74].map((h, i) => (
+              {[42, 55, 48, 68, 62, 80, 74, 90, 78, 88].map((h, i) => (
                 <div key={i} className="bar" style={{ height: h + "%" }} />
               ))}
             </div>
@@ -486,14 +607,14 @@ export default function App() {
 
           <section className="panel" aria-label="Recent activity">
             <h2>Recent activity</h2>
+            <p className="panel-sub">Latest user actions</p>
             <ul className="activity">
               {ACTIVITY.map((a) => (
-                <li key={a.user + a.time}>
+                <li key={a.time + a.user}>
+                  <span className="act-time">{a.time}</span>
                   <div>
                     <div>{a.action}</div>
-                    <div className="act-meta">
-                      {a.user} · {a.time}
-                    </div>
+                    <div className="act-user">{a.user}</div>
                   </div>
                   <span className={"status " + a.status}>{a.status}</span>
                 </li>
@@ -510,23 +631,29 @@ export default function App() {
 <html><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet"/>
 <style>
-*{box-sizing:border-box;margin:0;padding:0}body{font-family:Inter,system-ui,sans-serif;background:#F4F1EA;color:#1C1D21;min-height:100vh;padding-bottom:2rem}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{min-height:auto;overflow:visible;background:#F4F1EA;color:#1C1D21;font-family:Inter,system-ui,sans-serif;padding-bottom:24px}
 .top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;border-bottom:1px solid rgba(0,0,0,.1)}
 .logo{font-family:"Playfair Display",serif;font-weight:700;font-size:1.25rem}
 .nav{display:flex;flex-wrap:wrap;gap:12px;align-items:center;font-size:.875rem;color:rgba(28,29,33,.65)}
 .logout{background:#1C1D21;color:#fff;border:0;border-radius:8px;padding:6px 12px;font-size:.8rem}
-main{padding:20px 16px;max-width:1100px;margin:0 auto}
+main{padding:20px 16px 24px;max-width:1100px;margin:0 auto;overflow:visible}
 h1{font-family:"Playfair Display",serif;font-size:1.5rem;margin-bottom:16px}
-.kpis{display:grid;gap:12px;grid-template-columns:1fr 1fr;margin-bottom:20px}
+.kpis{display:grid;gap:12px;grid-template-columns:1fr 1fr;margin-bottom:16px}
 @media(min-width:900px){.kpis{grid-template-columns:repeat(4,1fr)}}
 .kpi{background:#fff;border:1px solid rgba(0,0,0,.1);border-radius:12px;padding:16px;box-shadow:0 6px 18px rgba(0,0,0,.06)}
 .kpi .l{font-size:.75rem;color:#888}.kpi .v{font-family:"Playfair Display",serif;font-size:1.6rem;font-weight:700;margin-top:6px}.kpi .d{font-size:.75rem;color:#15803D;margin-top:4px}
-.panel{background:#fff;border:1px solid rgba(0,0,0,.1);border-radius:12px;padding:16px;margin-bottom:16px}
-.panel h2{font-family:"Playfair Display",serif;font-size:1rem;margin-bottom:12px}
-.bars{display:flex;align-items:flex-end;gap:8px;height:120px}
-.bar{flex:1;background:#D96B43;border-radius:6px 6px 2px 2px}
-.row{display:flex;justify-content:space-between;padding:10px 8px;font-size:.85rem}
-.row:nth-child(odd){background:rgba(244,241,234,.7)}
+.panel{background:#fff;border:1px solid rgba(0,0,0,.1);border-radius:12px;padding:16px;margin-bottom:16px;overflow:visible}
+.panel h2{font-family:"Playfair Display",serif;font-size:1rem;margin-bottom:4px}
+.sub{font-size:.75rem;color:#888;margin-bottom:12px}
+.bars{display:flex;align-items:flex-end;gap:6px;height:72px}
+.bar{flex:1;background:#D96B43;border-radius:4px 4px 2px 2px}
+.row{display:grid;grid-template-columns:48px 1fr auto;gap:8px;padding:10px 8px;font-size:.85rem;border-radius:8px}
+.row:nth-child(odd){background:rgba(244,241,234,.85)}
+.time{color:#999;font-size:.75rem}
+.ok{font-size:.7rem;font-weight:600;color:#15803D;background:rgba(21,128,61,.12);padding:2px 8px;border-radius:999px}
+.pending{font-size:.7rem;font-weight:600;color:#C85A32;background:rgba(217,107,67,.15);padding:2px 8px;border-radius:999px}
+.failed{font-size:.7rem;font-weight:600;color:#B91C1C;background:rgba(185,28,28,.12);padding:2px 8px;border-radius:999px}
 </style></head><body>
 <div class="top"><div class="logo">Aurora</div><nav class="nav"><span>Dashboard</span><span>Analytics</span><span>Settings</span><button class="logout">Logout</button></nav></div>
 <main>
@@ -537,11 +664,17 @@ h1{font-family:"Playfair Display",serif;font-size:1.5rem;margin-bottom:16px}
   <div class="kpi"><div class="l">Conversions</div><div class="v">3.4%</div><div class="d" style="color:#B45309">-2%</div></div>
   <div class="kpi"><div class="l">Active Users</div><div class="v">892</div><div class="d">+5%</div></div>
 </div>
-<div class="panel"><h2>Performance Overview</h2><div class="bars"><div class="bar" style="height:42%"></div><div class="bar" style="height:68%"></div><div class="bar" style="height:55%"></div><div class="bar" style="height:80%"></div><div class="bar" style="height:62%"></div><div class="bar" style="height:90%"></div><div class="bar" style="height:74%"></div></div></div>
-<div class="panel"><h2>Recent activity</h2>
-<div class="row"><span>Signed up · anna@cozy.dev</span><span>2m</span></div>
-<div class="row"><span>Payment received · mark@studio.io</span><span>14m</span></div>
-<div class="row"><span>Feature used · lee@aurora.app</span><span>31m</span></div>
+<div class="panel"><h2>Performance Overview</h2><p class="sub">Last 10 periods · mock trend</p>
+<svg viewBox="0 0 320 120" width="100%" height="140"><polyline fill="none" stroke="#D96B43" stroke-width="2.5" points="8,78 42,62 76,70 110,46 144,52 178,32 212,38 246,18 280,30 312,22"/><circle cx="8" cy="78" r="3.5" fill="#1C1D21"/><circle cx="312" cy="22" r="3.5" fill="#1C1D21"/></svg>
+<div class="bars"><div class="bar" style="height:42%"></div><div class="bar" style="height:55%"></div><div class="bar" style="height:48%"></div><div class="bar" style="height:68%"></div><div class="bar" style="height:62%"></div><div class="bar" style="height:80%"></div><div class="bar" style="height:74%"></div><div class="bar" style="height:90%"></div><div class="bar" style="height:78%"></div><div class="bar" style="height:88%"></div></div>
+</div>
+<div class="panel"><h2>Recent activity</h2><p class="sub">Latest user actions</p>
+<div class="row"><span class="time">2m</span><div>Signed up<br/><span class="time">anna@cozy.dev</span></div><span class="ok">ok</span></div>
+<div class="row"><span class="time">14m</span><div>Payment received<br/><span class="time">mark@studio.io</span></div><span class="ok">ok</span></div>
+<div class="row"><span class="time">31m</span><div>Feature used · Export<br/><span class="time">lee@aurora.app</span></div><span class="ok">ok</span></div>
+<div class="row"><span class="time">1h</span><div>Invite accepted<br/><span class="time">sam@build.me</span></div><span class="pending">pending</span></div>
+<div class="row"><span class="time">2h</span><div>Trial started<br/><span class="time">kim@north.co</span></div><span class="ok">ok</span></div>
+<div class="row"><span class="time">3h</span><div>Card declined<br/><span class="time">rio@pixel.sk</span></div><span class="failed">failed</span></div>
 </div>
 </main></body></html>`,
       };
