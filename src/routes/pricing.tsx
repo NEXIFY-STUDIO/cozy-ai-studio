@@ -171,13 +171,12 @@ function PricingPage() {
     }
 
     if (!stripeConfigured) {
-      toast.message("Paid plans not live yet", {
+      toast.message("Stripe is off", {
         description:
-          "STRIPE_SECRET_KEY / STRIPE_PRICE_* are not configured. Free caps still apply.",
+          "Billing is disabled (P4 hold). Super Admin has unlimited access in Studio — no checkout needed.",
       });
       return;
     }
-
     setBusy(tier);
     try {
       const { url } = await createCheckout({ data: tier });

@@ -8,6 +8,10 @@ import {
   promptLimitForPlan,
   type PlanTier,
 } from "@/lib/stripe/config";
+import {
+  isSuperAdmin,
+  SUPER_ADMIN_PROMPT_LIMIT,
+} from "@/lib/auth/super-admin";
 
 export type ProjectRow = {
   id: string;
@@ -55,6 +59,27 @@ export async function ensureUserRow(userId: string, email?: string | null) {
     )
     on conflict ("id") do nothing
   `;
+
+  // Super-admin → ENTERPRISE row so UI / billing snapshot stay consistent
+  if (isSuperAdmin({ userId, email })) {
+    try {
+      await sql`
+        insert into subscriptions (
+          user_id, plan_tier, status, stripe_subscription_id, stripe_price_id,
+          cancel_at_period_end
+        )
+        values (
+          ${userId}, ${"ENTERPRISE"}, ${"active"}, ${null}, ${null}, ${false}
+        )
+        on conflict (user_id) do update set
+          plan_tier = ${"ENTERPRISE"},
+          status = ${"active"},
+          updated_at = CURRENT_TIMESTAMP
+      `;
+    } catch {
+      /* non-fatal */
+    }
+  }
 }
 
 export async function listProjectsForUser(userId: string): Promise<ProjectRow[]> {
@@ -206,6 +231,8 @@ export async function getDailyPromptCount(userId: string): Promise<number> {
 }
 
 export async function resolvePlanTier(userId: string): Promise<PlanTier> {
+  if (isSuperAdmin({ userId })) return "ENTERPRISE";
+
   const sql = await getSql();
   const sub = await sql<{ plan_tier: string; status: string }>`
     select plan_tier, status from subscriptions where user_id = ${userId} limit 1
@@ -224,6 +251,7 @@ export type QuotaCheck =
       promptLimit: number;
       dailyUsed: number;
       dailyLimit: number | null;
+      superAdmin?: boolean;
     }
   | {
       ok: false;
@@ -234,13 +262,37 @@ export type QuotaCheck =
       dailyUsed: number;
       dailyLimit: number | null;
       message: string;
+      superAdmin?: boolean;
     };
 
 /**
  * Hard server-side quota gate — call BEFORE any Mistral / model work.
  * FREE: daily + monthly caps. Paid: monthly only.
+ * Super-admin: always ok, ENTERPRISE, unlimited.
  */
 export async function assertPromptQuota(userId: string): Promise<QuotaCheck> {
+  if (isSuperAdmin({ userId })) {
+    await ensureUserRow(userId);
+    let promptsUsed = 0;
+    let dailyUsed = 0;
+    try {
+      const monthly = await getMonthlyUsage(userId);
+      promptsUsed = monthly.promptsUsed;
+      dailyUsed = await getDailyPromptCount(userId);
+    } catch {
+      /* usage tables optional for admin path */
+    }
+    return {
+      ok: true,
+      planTier: "ENTERPRISE",
+      promptsUsed,
+      promptLimit: SUPER_ADMIN_PROMPT_LIMIT,
+      dailyUsed,
+      dailyLimit: null,
+      superAdmin: true,
+    };
+  }
+
   const planTier = await resolvePlanTier(userId);
   const monthly = await getMonthlyUsage(userId);
   const promptLimit = promptLimitForPlan(planTier);

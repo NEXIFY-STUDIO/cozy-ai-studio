@@ -56,6 +56,7 @@ export const Route = createFileRoute("/api/agents/run")({
                 dailyUsed: quota.dailyUsed,
                 dailyLimit: quota.dailyLimit,
                 withinQuota: quota.ok,
+                superAdmin: Boolean(quota.superAdmin),
               }
             : null,
         });

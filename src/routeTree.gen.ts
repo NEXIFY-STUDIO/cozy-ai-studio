@@ -29,7 +29,6 @@ import { Route as AuthCallbackRouteImport } from './routes/auth/callback'
 import { Route as ApiAgentsRunRouteImport } from './routes/api/agents/run'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiLaunchRunRouteImport } from './routes/api/launch/run'
-import { Route as ApiOpsGoLiveCanvasRouteImport } from './routes/api/ops/go-live-canvas'
 import { Route as ApiStripeWebhookRouteImport } from './routes/api/stripe/webhook'
 import { Route as ApiWsHttpRouteImport } from './routes/api/ws/http'
 
@@ -133,11 +132,6 @@ const ApiLaunchRunRoute = ApiLaunchRunRouteImport.update({
   path: '/api/launch/run',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiOpsGoLiveCanvasRoute = ApiOpsGoLiveCanvasRouteImport.update({
-  id: '/api/ops/go-live-canvas',
-  path: '/api/ops/go-live-canvas',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ApiStripeWebhookRoute = ApiStripeWebhookRouteImport.update({
   id: '/api/stripe/webhook',
   path: '/api/stripe/webhook',
@@ -170,7 +164,6 @@ export interface FileRoutesByFullPath {
   '/api/agents/run': typeof ApiAgentsRunRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/launch/run': typeof ApiLaunchRunRoute
-  '/api/ops/go-live-canvas': typeof ApiOpsGoLiveCanvasRoute
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
   '/api/ws/http': typeof ApiWsHttpRoute
 }
@@ -195,7 +188,6 @@ export interface FileRoutesByTo {
   '/api/agents/run': typeof ApiAgentsRunRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/launch/run': typeof ApiLaunchRunRoute
-  '/api/ops/go-live-canvas': typeof ApiOpsGoLiveCanvasRoute
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
   '/api/ws/http': typeof ApiWsHttpRoute
 }
@@ -221,7 +213,6 @@ export interface FileRoutesById {
   '/api/agents/run': typeof ApiAgentsRunRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/launch/run': typeof ApiLaunchRunRoute
-  '/api/ops/go-live-canvas': typeof ApiOpsGoLiveCanvasRoute
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
   '/api/ws/http': typeof ApiWsHttpRoute
 }
@@ -248,7 +239,6 @@ export interface FileRouteTypes {
     | '/api/agents/run'
     | '/api/auth/$'
     | '/api/launch/run'
-    | '/api/ops/go-live-canvas'
     | '/api/stripe/webhook'
     | '/api/ws/http'
   fileRoutesByTo: FileRoutesByTo
@@ -273,7 +263,6 @@ export interface FileRouteTypes {
     | '/api/agents/run'
     | '/api/auth/$'
     | '/api/launch/run'
-    | '/api/ops/go-live-canvas'
     | '/api/stripe/webhook'
     | '/api/ws/http'
   id:
@@ -298,7 +287,6 @@ export interface FileRouteTypes {
     | '/api/agents/run'
     | '/api/auth/$'
     | '/api/launch/run'
-    | '/api/ops/go-live-canvas'
     | '/api/stripe/webhook'
     | '/api/ws/http'
   fileRoutesById: FileRoutesById
@@ -324,7 +312,6 @@ export interface RootRouteChildren {
   ApiAgentsRunRoute: typeof ApiAgentsRunRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiLaunchRunRoute: typeof ApiLaunchRunRoute
-  ApiOpsGoLiveCanvasRoute: typeof ApiOpsGoLiveCanvasRoute
   ApiStripeWebhookRoute: typeof ApiStripeWebhookRoute
   ApiWsHttpRoute: typeof ApiWsHttpRoute
 }
@@ -471,13 +458,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiLaunchRunRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/ops/go-live-canvas': {
-      id: '/api/ops/go-live-canvas'
-      path: '/api/ops/go-live-canvas'
-      fullPath: '/api/ops/go-live-canvas'
-      preLoaderRoute: typeof ApiOpsGoLiveCanvasRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/stripe/webhook': {
       id: '/api/stripe/webhook'
       path: '/api/stripe/webhook'
@@ -516,7 +496,6 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAgentsRunRoute: ApiAgentsRunRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiLaunchRunRoute: ApiLaunchRunRoute,
-  ApiOpsGoLiveCanvasRoute: ApiOpsGoLiveCanvasRoute,
   ApiStripeWebhookRoute: ApiStripeWebhookRoute,
   ApiWsHttpRoute: ApiWsHttpRoute,
 }

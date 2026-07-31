@@ -2,13 +2,14 @@ import { createFileRoute } from "@tanstack/react-router";
 import { getProductionEnvChecklist } from "@/lib/env/production";
 import { secretFingerprint } from "@/lib/security/mask-secret";
 import { resolveAuthProvider, supabaseConfiguredServer } from "@/lib/auth/mode";
+import { isStripeConfigured } from "@/lib/stripe/config";
 
 /**
  * GET /api/mvp-status — Option B Speed Studio readiness.
  * Booleans + fingerprints only. No DB client import (PGLite unsafe on edge).
  *
  * mvpReady  = demo spine live (Mistral + studio chrome); open demo may use AUTH_PROVIDER=none
- * sellReady = paid path (DB + Stripe) — P4 hold until activation
+ * sellReady = paid path (DB + Stripe) — OFF until STRIPE_ENABLED=true (P4)
  */
 export const Route = createFileRoute("/api/mvp-status")({
   server: {
@@ -25,9 +26,7 @@ export const Route = createFileRoute("/api/mvp-status")({
           // Open demo (Option B): AUTH_PROVIDER=none is intentional and valid.
           const authOk = supabaseOk || betterOk || auth === "none";
           const dbOk = Boolean(process.env.DATABASE_URL?.trim());
-          const stripeOk =
-            Boolean(process.env.STRIPE_SECRET_KEY?.trim()) &&
-            Boolean(process.env.STRIPE_PRICE_PRO?.trim());
+          const stripeOk = isStripeConfigured();
           const supabaseServiceRole = Boolean(
             process.env.SUPABASE_SERVICE_ROLE_KEY?.trim(),
           );
@@ -59,7 +58,7 @@ export const Route = createFileRoute("/api/mvp-status")({
 
           const mvpReady = optionBReady;
 
-          // Paid sell path only after Stripe (P4)
+          // Paid sell path only after Stripe explicitly enabled (P4)
           const sellReady =
             mvpReady && gates.databaseUrl && gates.stripeCheckout;
 
@@ -70,9 +69,8 @@ export const Route = createFileRoute("/api/mvp-status")({
           ].filter(Boolean);
 
           const missingForSell = [
-            !gates.databaseUrl && "DATABASE_URL",
             !gates.stripeCheckout &&
-              "STRIPE_SECRET_KEY + STRIPE_PRICE_PRO (+ webhook secret) — P4 after activation",
+              "STRIPE_ENABLED=true + STRIPE_SECRET_KEY + STRIPE_PRICE_PRO — P4 hold",
           ].filter(Boolean);
 
           const nextManual = [
@@ -80,10 +78,12 @@ export const Route = createFileRoute("/api/mvp-status")({
               "Set DATABASE_URL (Supabase pooler) on Vercel",
             !gates.mistralLive && "Set MISTRAL_API_KEY, DEMO_PIPELINE=false",
             !gates.stripeCheckout &&
-              "P4 hold: Stripe keys only after real activation",
-            auth === "supabase" &&
-              "Auth redirect: https://cozy-ai-studio.vercel.app/auth/callback",
+              "Stripe OFF (P4). Super-admin has unlimited studio access without billing.",
           ].filter(Boolean);
+
+          const site =
+            process.env.SITE_URL?.trim() ||
+            "https://canvas.h4ck3d.me";
 
           return Response.json({
             ok: mvpReady,
@@ -93,7 +93,7 @@ export const Route = createFileRoute("/api/mvp-status")({
             fullReady: checklist.ready && sellReady,
             service: "cozy-ai-studio",
             product: "option-b-speed-studio",
-            productionUrl: "https://cozy-ai-studio.vercel.app",
+            productionUrl: site,
             gates,
             prompts: {
               spine: ["brief", "preview", "share"],
@@ -113,7 +113,7 @@ export const Route = createFileRoute("/api/mvp-status")({
             nextManual:
               nextManual.length > 0
                 ? nextManual
-                : ["Option B spine live — Stripe optional (P4)"],
+                : ["Option B spine live — Stripe off · Super Admin unlimited"],
           });
         } catch (e) {
           const msg = e instanceof Error ? e.message : String(e);

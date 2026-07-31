@@ -190,22 +190,35 @@ export function TopBar() {
               : "border-choco/30 bg-choco/10 text-choco",
           )}
           title={
-            dailyLeft != null
-              ? `Daily left: ${dailyLeft} · Monthly left: ${remaining}`
-              : `Plan ${planTier}`
+            planTier === "ENTERPRISE" && (promptLimit ?? 0) >= 1_000_000
+              ? "Super Admin · unlimited"
+              : dailyLeft != null
+                ? `Daily left: ${dailyLeft} · Monthly left: ${remaining}`
+                : `Plan ${planTier}`
           }
         >
-          <span className="font-semibold">{planTier}</span>
-          {remaining != null && (
-            <span className="tabular-nums opacity-80">
-              {dailyLeft != null ? `${dailyLeft}d` : ""}
-              {dailyLeft != null ? " · " : ""}
-              {remaining} left
-            </span>
+          <span className="font-semibold">
+            {planTier === "ENTERPRISE" && (promptLimit ?? 0) >= 1_000_000
+              ? "SUPER"
+              : planTier}
+          </span>
+          {planTier === "ENTERPRISE" && (promptLimit ?? 0) >= 1_000_000 ? (
+            <span className="tabular-nums opacity-80">∞</span>
+          ) : (
+            remaining != null && (
+              <span className="tabular-nums opacity-80">
+                {dailyLeft != null ? `${dailyLeft}d` : ""}
+                {dailyLeft != null ? " · " : ""}
+                {remaining} left
+              </span>
+            )
           )}
         </button>
 
-        <ProductionLaunchButton stripeConfigured={stripeConfigured} />
+        {/* Stripe fully off — Production Launch only if explicitly re-enabled */}
+        {stripeConfigured ? (
+          <ProductionLaunchButton stripeConfigured={stripeConfigured} />
+        ) : null}
 
         {authEnabled && (
           <div className="hidden sm:flex items-center shrink-0 ml-1">

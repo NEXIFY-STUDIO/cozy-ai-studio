@@ -1,6 +1,9 @@
 /**
  * Stripe plan / price configuration from env.
  * Never put secrets in VITE_* vars.
+ *
+ * Stripe is OFF by default (Option B / P4 hold).
+ * Set STRIPE_ENABLED=true only when checkout should go live.
  */
 
 export type PaidPlanTier = "PRO" | "ENTERPRISE";
@@ -20,12 +23,20 @@ export function getStripeWebhookSecret(): string | null {
   return k || null;
 }
 
+/**
+ * Stripe is fully disabled unless STRIPE_ENABLED=true.
+ * Keys alone do NOT enable checkout (P4 hold / owner request).
+ */
 export function isStripeConfigured(): boolean {
-  return Boolean(getStripeSecretKey());
+  if (process.env.STRIPE_ENABLED === "true") {
+    return Boolean(getStripeSecretKey() && process.env.STRIPE_PRICE_PRO?.trim());
+  }
+  return false;
 }
 
 /** Price IDs — set in platform env, never hardcode live prices */
 export function getPriceId(plan: PaidPlanTier): string | null {
+  if (!isStripeConfigured()) return null;
   if (plan === "PRO") {
     return process.env.STRIPE_PRICE_PRO?.trim() || null;
   }
@@ -48,6 +59,9 @@ export function promptLimitForPlan(plan: PlanTier): number {
 }
 
 export function getAppOrigin(request?: Request): string {
+  if (process.env.SITE_URL?.trim()) {
+    return process.env.SITE_URL.trim().replace(/\/$/, "");
+  }
   if (process.env.BETTER_AUTH_URL?.trim()) {
     return process.env.BETTER_AUTH_URL.trim().replace(/\/$/, "");
   }
@@ -62,5 +76,5 @@ export function getAppOrigin(request?: Request): string {
       /* ignore */
     }
   }
-  return "http://127.0.0.1:8080";
+  return "https://canvas.h4ck3d.me";
 }

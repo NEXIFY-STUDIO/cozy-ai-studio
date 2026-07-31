@@ -27,6 +27,7 @@ export function useBillingSync() {
           promptLimit?: number;
           dailyUsed?: number;
           dailyLimit?: number | null;
+          superAdmin?: boolean;
         };
       };
       if (!j.quota || cancelled) return;
@@ -39,12 +40,19 @@ export function useBillingSync() {
           j.quota.dailyLimit === undefined || j.quota.dailyLimit === null
             ? null
             : Number(j.quota.dailyLimit),
+        stripeConfigured: false,
       });
+      if (j.quota.planTier) {
+        setPlanTier(j.quota.planTier as PlanTier);
+      }
     };
 
     setLoading(true);
     void (async () => {
       try {
+        // Always force Stripe off in client hydration (P4 hold / owner request)
+        setQuota({ stripeConfigured: false });
+
         if (authEnabled) {
           if (isPending) return;
           if (user) {
@@ -54,13 +62,9 @@ export function useBillingSync() {
               planTier: snap.planTier as PlanTier,
               promptsUsed: snap.promptsUsed,
               promptLimit: snap.promptLimit,
-              stripeConfigured: snap.stripeConfigured,
+              stripeConfigured: false,
             });
-          }
-        } else {
-          if (!cancelled) {
-            setPlanTier("FREE");
-            setQuota({ stripeConfigured: false, planTier: "FREE" });
+            setPlanTier(snap.planTier as PlanTier);
           }
         }
         await loadAgentsQuota();
@@ -81,7 +85,7 @@ export function useBillingSync() {
   const dailyUsed = useStudioStore((s) => s.dailyUsed);
   const dailyLimit = useStudioStore((s) => s.dailyLimit);
 
-  return { loading, error, stripeConfigured, dailyUsed, dailyLimit };
+  return { loading, error, stripeConfigured: false as boolean, dailyUsed, dailyLimit };
 }
 
 export async function refreshBillingFromServer() {
@@ -90,7 +94,7 @@ export async function refreshBillingFromServer() {
     planTier: snap.planTier as PlanTier,
     promptsUsed: snap.promptsUsed,
     promptLimit: snap.promptLimit,
-    stripeConfigured: snap.stripeConfigured,
+    stripeConfigured: false,
   });
   return snap;
 }
@@ -106,6 +110,7 @@ export async function refreshAgentsQuota() {
         promptLimit?: number;
         dailyUsed?: number;
         dailyLimit?: number | null;
+        superAdmin?: boolean;
       };
     };
     if (j.quota) {
@@ -118,7 +123,11 @@ export async function refreshAgentsQuota() {
           j.quota.dailyLimit === undefined || j.quota.dailyLimit === null
             ? null
             : Number(j.quota.dailyLimit),
+        stripeConfigured: false,
       });
+      if (j.quota.planTier) {
+        useStudioStore.getState().setPlanTier(j.quota.planTier as PlanTier);
+      }
     }
     return j.quota ?? null;
   } catch {

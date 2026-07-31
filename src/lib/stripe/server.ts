@@ -14,6 +14,10 @@ import {
   type PaidPlanTier,
   type PlanTier,
 } from "./config";
+import {
+  isSuperAdmin,
+  SUPER_ADMIN_PROMPT_LIMIT,
+} from "@/lib/auth/super-admin";
 
 let stripeSingleton: Stripe | null = null;
 
@@ -140,6 +144,34 @@ export async function findUserIdByCustomerId(
 export async function getBillingSnapshot(
   userId: string,
 ): Promise<BillingSnapshot> {
+  if (isSuperAdmin({ userId })) {
+    await ensureUserRow(userId);
+    const ym = `${new Date().getUTCFullYear()}-${String(new Date().getUTCMonth() + 1).padStart(2, "0")}`;
+    let promptsUsed = 0;
+    try {
+      const sql = await getSql();
+      const usage = await sql<{ prompts_used: number }>`
+        select prompts_used from usage_monthly
+        where user_id = ${userId} and year_month = ${ym} limit 1
+      `;
+      promptsUsed = Number(usage[0]?.prompts_used ?? 0);
+    } catch {
+      /* ignore */
+    }
+    return {
+      planTier: "ENTERPRISE",
+      status: "active",
+      stripeCustomerId: null,
+      stripeSubscriptionId: null,
+      currentPeriodEnd: null,
+      cancelAtPeriodEnd: false,
+      promptsUsed,
+      promptLimit: SUPER_ADMIN_PROMPT_LIMIT,
+      yearMonth: ym,
+      stripeConfigured: false,
+    };
+  }
+
   const sql = await getSql();
   const ym = `${new Date().getUTCFullYear()}-${String(new Date().getUTCMonth() + 1).padStart(2, "0")}`;
 
@@ -164,11 +196,14 @@ export async function getBillingSnapshot(
     where user_id = ${userId} and year_month = ${ym} limit 1
   `;
 
-  const planTier = (sub[0]?.plan_tier as PlanTier) || "FREE";
+  const status = sub[0]?.status ?? "inactive";
+  const rawTier = (sub[0]?.plan_tier as PlanTier) || "FREE";
+  const planTier =
+    status === "active" || status === "trialing" ? rawTier : "FREE";
 
   return {
     planTier,
-    status: sub[0]?.status ?? "inactive",
+    status,
     stripeCustomerId: cust[0]?.stripe_customer_id ?? null,
     stripeSubscriptionId: sub[0]?.stripe_subscription_id ?? null,
     currentPeriodEnd: sub[0]?.current_period_end ?? null,
