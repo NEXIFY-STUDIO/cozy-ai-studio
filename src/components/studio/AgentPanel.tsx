@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import {
   Send,
   Sparkles,
@@ -11,8 +11,14 @@ import {
   Square,
   CheckCircle2,
   Share2,
+  ImagePlus,
+  X,
 } from "lucide-react";
-import { useStudioStore } from "@/stores/studio-store";
+import { toast } from "sonner";
+import {
+  useStudioStore,
+  type ChatAttachment,
+} from "@/stores/studio-store";
 import { runStudioPipeline } from "@/lib/ai/run-studio-pipeline";
 import { AgentPipeline } from "./AgentPipeline";
 import {
@@ -24,6 +30,11 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { MobilePairPanel } from "./MobilePairPanel";
 import { ActivationFunnelCard } from "@/components/studio/ActivationFunnelCard";
+import {
+  ACCEPTED_IMAGE_ACCEPT,
+  MAX_ATTACHMENTS,
+  filesToAttachments,
+} from "@/lib/media/read-image-attachment";
 
 const TEMPLATES: {
   icon: typeof Coffee;
@@ -58,6 +69,9 @@ export function AgentPanel() {
   const [input, setInput] = useState("");
   const [filesOpen, setFilesOpen] = useState(false);
   const [showErrorDemos, setShowErrorDemos] = useState(false);
+  const [pendingMedia, setPendingMedia] = useState<ChatAttachment[]>([]);
+  const [dragOver, setDragOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const chat = useStudioStore((s) => s.chat);
   const files = useStudioStore((s) => s.files);
   const activeFile = useStudioStore((s) => s.activeFile);
@@ -103,11 +117,41 @@ export function AgentPanel() {
     }
   }, []);
 
-  const run = async (prompt: string) => {
-    if (isPipelineRunning) return;
-    setInput("");
-    await runStudioPipeline(prompt, { autoRetry: true });
+  const addMediaFiles = useCallback(
+    async (fileList: FileList | File[] | null | undefined) => {
+      if (!fileList || (Array.isArray(fileList) ? fileList.length === 0 : fileList.length === 0)) {
+        return;
+      }
+      const { attachments, errors } = await filesToAttachments(
+        fileList,
+        pendingMedia.length,
+      );
+      if (errors.length) {
+        toast.message("Some files skipped", {
+          description: errors.slice(0, 3).join(" · "),
+        });
+      }
+      if (attachments.length) {
+        setPendingMedia((prev) => [...prev, ...attachments].slice(0, MAX_ATTACHMENTS));
+      }
+    },
+    [pendingMedia.length],
+  );
+
+  const removeMedia = (id: string) => {
+    setPendingMedia((prev) => prev.filter((a) => a.id !== id));
   };
+
+  const run = async (prompt: string, media?: ChatAttachment[]) => {
+    if (isPipelineRunning) return;
+    const atts = media ?? pendingMedia;
+    if (!prompt.trim() && atts.length === 0) return;
+    setInput("");
+    setPendingMedia([]);
+    await runStudioPipeline(prompt, { autoRetry: true, attachments: atts });
+  };
+
+  const canSend = Boolean(input.trim()) || pendingMedia.length > 0;
 
   const userMessages = chat.filter((m) => m.role === "user");
   const showEmpty = userMessages.length === 0 && !isPipelineRunning && !pendingApproval;
@@ -272,6 +316,26 @@ export function AgentPanel() {
                       : "bg-background border border-border",
                 )}
               >
+                {m.attachments && m.attachments.length > 0 && (
+                  <div className="mb-2 flex flex-wrap gap-1.5">
+                    {m.attachments.map((a) => (
+                      <a
+                        key={a.id}
+                        href={a.dataUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="block overflow-hidden rounded-lg border border-border/80 bg-background"
+                        title={a.name}
+                      >
+                        <img
+                          src={a.dataUrl}
+                          alt={a.name}
+                          className="h-16 w-16 object-cover"
+                        />
+                      </a>
+                    ))}
+                  </div>
+                )}
                 {m.content}
               </div>
             ))}
@@ -324,7 +388,32 @@ export function AgentPanel() {
         <MobilePairPanel />
       </div>
 
-      <div className="shrink-0 border-t border-border bg-card p-2.5 sm:p-3 min-w-0">
+      <div
+        className={cn(
+          "shrink-0 border-t border-border bg-card p-2.5 sm:p-3 min-w-0 transition-colors",
+          dragOver && "bg-choco/5 border-choco/40",
+        )}
+        onDragEnter={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          if (!isPipelineRunning) setDragOver(true);
+        }}
+        onDragOver={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        }}
+        onDragLeave={(e) => {
+          e.preventDefault();
+          if (e.currentTarget === e.target) setDragOver(false);
+        }}
+        onDrop={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setDragOver(false);
+          if (isPipelineRunning) return;
+          void addMediaFiles(e.dataTransfer.files);
+        }}
+      >
         {dailyLeft != null && dailyLeft <= 3 && dailyLeft > 0 && (
           <p className="mb-2 text-[11px] text-amber-700 dark:text-amber-400 font-medium">
             {(() => {
@@ -335,12 +424,77 @@ export function AgentPanel() {
             })()}
           </p>
         )}
+
+        {pendingMedia.length > 0 && (
+          <div className="mb-2 flex flex-wrap gap-2">
+            {pendingMedia.map((a) => (
+              <div
+                key={a.id}
+                className="group relative h-14 w-14 overflow-hidden rounded-lg border border-border bg-background"
+              >
+                <img
+                  src={a.dataUrl}
+                  alt={a.name}
+                  className="h-full w-full object-cover"
+                />
+                <button
+                  type="button"
+                  onClick={() => removeMedia(a.id)}
+                  className="absolute right-0.5 top-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-black/70 text-white opacity-90 hover:opacity-100"
+                  aria-label={`Remove ${a.name}`}
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept={ACCEPTED_IMAGE_ACCEPT}
+          multiple
+          className="hidden"
+          onChange={(e) => {
+            void addMediaFiles(e.target.files);
+            e.target.value = "";
+          }}
+        />
+
         <div className="flex items-end gap-2 min-w-0">
+          <Button
+            type="button"
+            size="icon"
+            variant="secondary"
+            className="h-11 w-11 shrink-0 rounded-xl"
+            disabled={isPipelineRunning || pendingMedia.length >= MAX_ATTACHMENTS}
+            onClick={() => fileInputRef.current?.click()}
+            aria-label="Add media"
+            title="Add image (PNG, JPEG, WebP, GIF)"
+          >
+            <ImagePlus className="h-4 w-4" />
+          </Button>
           <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
+            onPaste={(e) => {
+              const items = e.clipboardData?.items;
+              if (!items) return;
+              const files: File[] = [];
+              for (const item of items) {
+                if (item.kind === "file" && item.type.startsWith("image/")) {
+                  const f = item.getAsFile();
+                  if (f) files.push(f);
+                }
+              }
+              if (files.length) {
+                e.preventDefault();
+                void addMediaFiles(files);
+              }
+            }}
             onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey && input.trim()) {
+              if (e.key === "Enter" && !e.shiftKey && canSend) {
                 e.preventDefault();
                 void run(input.trim());
               }
@@ -370,7 +524,7 @@ export function AgentPanel() {
             <Button
               size="sm"
               className="h-11 shrink-0 gap-1.5 rounded-xl bg-[#D96B43] px-3.5 text-xs font-semibold text-white hover:bg-[#C85A32] shadow-none"
-              disabled={!input.trim()}
+              disabled={!canSend}
               onClick={() => void run(input.trim())}
               aria-label="Send brief"
             >
@@ -379,6 +533,9 @@ export function AgentPanel() {
             </Button>
           )}
         </div>
+        <p className="mt-1.5 text-[10px] text-muted-foreground">
+          Media: PNG · JPEG · WebP · GIF · max {MAX_ATTACHMENTS} · paste or drop
+        </p>
       </div>
     </div>
   );
