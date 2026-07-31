@@ -117,12 +117,11 @@ function MobileCompanionPage() {
 
   return (
     <div
-      className="min-h-dvh bg-background flex flex-col cosy-safe-shell"
+      className="flex flex-col bg-background cosy-safe-shell"
       data-mobile-companion
+      data-safe-shell="pad"
     >
-      {/* Keep chrome BELOW Dynamic Island / camera on iPhone 17 Air */}
-      <div className="cosy-safe-top shrink-0" aria-hidden />
-      <header className="flex items-center justify-between border-b border-border px-4 h-14 cosy-safe-x shrink-0">
+      <header className="flex items-center justify-between border-b border-border px-4 h-14 shrink-0">
         <Link
           to="/studio"
           className="inline-flex items-center gap-1.5 text-sm text-muted-foreground min-h-11"
@@ -295,7 +294,6 @@ function MobileCompanionPage() {
         )}
       </div>
       {/* Home Indicator clearance */}
-      <div className="cosy-safe-bottom shrink-0" aria-hidden />
-    </div>
+          </div>
   );
 }

@@ -1,4 +1,5 @@
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
+import { installSafeAreaListener } from "@/lib/safe-area";
 import {
   Outlet,
   createRootRoute,
@@ -9,6 +10,9 @@ import { Toaster } from "sonner";
 import appCss from "@/styles.css?url";
 
 /** Inline: silver (dark) default before React hydrates; respect saved theme. */
+/** Inline: raise --sat-fallback on tall iOS when env(safe-area)=0 (in-app browsers). */
+const SAFE_AREA_BOOT = `(function(){try{var ua=navigator.userAgent||"";var ios=/iPhone|iPad|iPod/i.test(ua)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);if(!ios)return;var w=Math.min(screen.width,screen.height),h=Math.max(screen.width,screen.height);if(w<1||h/w<1.95)return;var d=document.createElement("div");d.style.cssText="position:fixed;visibility:hidden;padding-top:env(safe-area-inset-top,0px)";document.documentElement.appendChild(d);var pt=parseFloat(getComputedStyle(d).paddingTop)||0;d.remove();if(pt>=20)return;var air=h/w>=2.12||w>=414;var r=document.documentElement;r.style.setProperty("--sat-fallback",air?"68px":"59px");r.style.setProperty("--sab-fallback","34px");r.setAttribute("data-safe-fallback","1");}catch(e){}})();`;
+
 const THEME_BOOT = `(function(){try{var k="cozy-ai-studio-v1";var raw=localStorage.getItem(k);var t="dark";if(raw){var p=JSON.parse(raw);var s=p&&(p.state||p);if(s&&s.theme==="light")t="light";}var d=document.documentElement;if(t==="dark")d.classList.add("dark");else d.classList.remove("dark");}catch(e){document.documentElement.classList.add("dark");}})();`;
 
 export const Route = createRootRoute({
@@ -75,6 +79,7 @@ export const Route = createRootRoute({
 });
 
 function RootComponent() {
+  useEffect(() => installSafeAreaListener(), []);
   return (
     <RootDocument>
       <Outlet />
@@ -99,6 +104,7 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
       <head>
         <HeadContent />
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOT }} />
+        <script dangerouslySetInnerHTML={{ __html: SAFE_AREA_BOOT }} />
       </head>
       <body className="min-h-dvh bg-background text-foreground antialiased">
         {children}

@@ -47,23 +47,31 @@ must(lp.includes("injectSafeAreaIntoHtml"), "LivePreview injects safe area");
 must(lp.includes("dynamic-island") || lp.includes("DeviceChrome"), "LivePreview device chrome");
 must(lp.includes("data-device-frame"), "data-device-frame marker");
 
-// Studio shell safe spacers
+// Studio shell safe padding (under camera)
 const shell = readFileSync(resolve(ROOT, "src/components/studio/StudioShell.tsx"), "utf8");
-must(shell.includes("cosy-safe-top") || shell.includes("safe-area"), "StudioShell top safe zone");
-must(shell.includes("cosy-safe-bottom") || shell.includes("safe-bottom"), "StudioShell bottom safe zone");
+must(shell.includes("cosy-safe-shell"), "StudioShell cosy-safe-shell");
+must(shell.includes('data-safe-shell') || shell.includes("safe-area"), "StudioShell safe shell marker");
 must(shell.includes("data-mobile-tabbar"), "mobile tabbar marker");
+must(!shell.includes("data-safe-top-spacer"), "no legacy top spacer (pad shell)");
 
 // CSS utilities
 const css = readFileSync(resolve(ROOT, "src/styles.css"), "utf8");
 must(css.includes("safe-area-inset-top"), "CSS safe-area-inset-top");
 must(css.includes("safe-area-inset-bottom"), "CSS safe-area-inset-bottom");
-must(css.includes(".cosy-safe-top"), "CSS .cosy-safe-top");
+must(css.includes(".cosy-safe-shell"), "CSS .cosy-safe-shell");
+must(css.includes("var(--sat)") && css.includes("padding-top"), "CSS shell pads --sat under camera");
+must(css.includes(".cosy-sticky-top"), "CSS .cosy-sticky-top for landing");
 must(css.includes(".cosy-fixed-bottom"), "CSS .cosy-fixed-bottom for overlays");
 must(css.includes("accept-pulse-once"), "CSS accept-pulse-once");
+must(css.includes("--sat-fallback"), "CSS --sat-fallback for broken webviews");
 
-// Root viewport-fit=cover
+// Root viewport-fit=cover + safe-area boot
 const root = readFileSync(resolve(ROOT, "src/routes/__root.tsx"), "utf8");
 must(root.includes("viewport-fit=cover"), "root meta viewport-fit=cover");
+must(root.includes("SAFE_AREA_BOOT") || root.includes("sat-fallback"), "root SAFE_AREA_BOOT for iOS webviews");
+const safeLib = readFileSync(resolve(ROOT, "src/lib/safe-area.ts"), "utf8");
+must(safeLib.includes("applySafeAreaFallbacks"), "safe-area.ts applySafeAreaFallbacks");
+must(safeLib.includes("68"), "safe-area Air top 68 fallback");
 
 // Default device in store + migration to 17 Air
 const store = readFileSync(resolve(ROOT, "src/stores/studio-store.ts"), "utf8");
@@ -78,15 +86,14 @@ must(hitl.includes("min-h-11") || hitl.includes("min-h-12"), "HitL touch targets
 
 // Mobile companion under camera
 const mobile = readFileSync(resolve(ROOT, "src/routes/mobile.tsx"), "utf8");
-must(mobile.includes("cosy-safe-top"), "mobile companion top safe zone");
-must(mobile.includes("cosy-safe-bottom"), "mobile companion bottom safe zone");
+must(mobile.includes("cosy-safe-shell"), "mobile companion cosy-safe-shell");
+must(mobile.includes("data-mobile-companion"), "mobile companion marker");
 
 // Landing sticky header below camera
 const landing = readFileSync(resolve(ROOT, "src/routes/index.tsx"), "utf8");
-must(
-  landing.includes("safe-area-inset-top"),
-  "landing header pads safe-area-inset-top",
-);
+must(landing.includes("cosy-sticky-top") || landing.includes("safe-area"), "landing sticky under island");
+must(landing.includes("420×912") || landing.includes("420x912"), "landing mock shows 17 Air 420×912");
+must(!landing.includes("375×667"), "landing no longer SE 375×667");
 
 // ─── 2) Unit: inject uses padding-top under camera ─
 const injectFn = devicesSrc.includes("padding-top: max(0px, ${sa.top}px)");
@@ -142,9 +149,15 @@ async function browserPart() {
     const shellEl = await page.locator("[data-studio-shell]").count();
     must(shellEl >= 1, "data-studio-shell present");
 
-    // Safe top spacer exists (height 0 on desktop browser without notch env)
-    const topSpacer = page.locator("[data-safe-top-spacer]");
-    must((await topSpacer.count()) >= 1, "safe-top spacer in shell");
+    // Shell uses pad mode under camera
+    const shellPad = page.locator('[data-safe-shell="pad"]');
+    must((await shellPad.count()) >= 1, "studio shell data-safe-shell=pad");
+    const padTop = await page.evaluate(() => {
+      const el = document.querySelector("[data-studio-shell]");
+      if (!el) return -1;
+      return parseFloat(getComputedStyle(el).paddingTop) || 0;
+    });
+    must(padTop >= 0, `shell padding-top readable (got ${padTop})`);
 
     // Switch to Preview tab on mobile
     const previewTab = page.locator('button:has-text("Preview")').first();
@@ -255,8 +268,8 @@ async function browserPart() {
       "mobile companion shell",
     );
     must(
-      (await page.locator(".cosy-safe-top").count()) >= 1,
-      "mobile companion has cosy-safe-top",
+      (await page.locator('[data-safe-shell="pad"]').count()) >= 1,
+      "mobile companion pad shell",
     );
     await page.screenshot({
       path: resolve(OUT, "iphone-17-air-mobile-companion.png"),

@@ -66,11 +66,11 @@ export function StudioShell() {
 
   return (
     <div
-      className="flex h-dvh flex-col overflow-hidden bg-background cosy-safe-shell"
+      className="flex flex-col overflow-hidden bg-background cosy-safe-shell"
       data-studio-shell
+      data-safe-shell="pad"
     >
-      {/* Top safe zone: keeps chrome BELOW Dynamic Island / camera on iPhone 17 Air */}
-      <div className="cosy-safe-top shrink-0" data-safe-top-spacer aria-hidden />
+      {/* Shell padding (cosy-safe-shell) keeps TopBar BELOW Dynamic Island / camera */}
       <TopBar />
 
       {isDesktop ? (
@@ -116,7 +116,7 @@ export function StudioShell() {
           {/* Bottom tab bar sits above Home Indicator */}
           <nav
             data-mobile-tabbar
-            className="mt-2 flex shrink-0 items-center justify-around rounded-2xl border border-border bg-card p-1.5 shadow-sm cosy-safe-bottom-pad"
+            className="mt-2 mb-0.5 flex shrink-0 items-center justify-around rounded-2xl border border-border bg-card p-1.5 shadow-sm"
           >
             {(
               [
@@ -148,7 +148,6 @@ export function StudioShell() {
       <RejectionPoll />
       <CommandPalette />
       <ProductionLaunchHost />
-      <div className="cosy-safe-bottom shrink-0" data-safe-bottom-spacer aria-hidden />
     </div>
   );
 }

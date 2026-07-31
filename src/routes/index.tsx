@@ -113,7 +113,7 @@ function LandingPage() {
   };
 
   return (
-    <div className="min-h-dvh bg-background text-foreground overflow-x-hidden cosy-safe-shell">
+    <div className="min-h-dvh bg-background text-foreground overflow-x-hidden cosy-page">
       <div
         aria-hidden
         className="pointer-events-none fixed inset-0 -z-10"
@@ -123,7 +123,7 @@ function LandingPage() {
         <div className="absolute top-[40%] right-[-10%] h-[360px] w-[360px] rounded-full bg-choco-soft/40 blur-3xl dark:bg-choco/10" />
       </div>
 
-      <header className="sticky top-0 z-40 border-b border-border/70 bg-background/75 backdrop-blur-xl pt-[env(safe-area-inset-top,0px)]">
+      <header className="cosy-sticky-top border-b border-border/70 bg-background/85 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
           <Link to="/" className="flex items-center gap-2.5 group">
             <CozyLogo size="md" variant="seal" className="group-hover:-translate-y-px transition-transform" />
@@ -355,7 +355,7 @@ function LandingPage() {
                       Aurora Café
                     </p>
                     <p className="text-xs text-muted-foreground mt-1.5 max-w-[12rem] leading-relaxed">
-                      Mobilný frame · 375×667 · chocolate accent
+                      iPhone 17 Air · 420×912 · safe T68 · chocolate accent
                     </p>
                     <div className="mt-4 h-9 w-28 rounded-xl bg-choco text-white text-xs font-medium flex items-center justify-center">
                       Objednať
@@ -507,7 +507,7 @@ function LandingPage() {
         </section>
       </main>
 
-      <footer className="border-t border-border bg-muted/20 pb-[max(0px,env(safe-area-inset-bottom,0px))]">
+      <footer className="border-t border-border bg-muted/20">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 py-10 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
           <div className="flex items-center gap-2">
             <CozyLogo size="sm" variant="seal" />

@@ -183,46 +183,101 @@
 }
 
 /* ── iPhone 17 Air / Dynamic Island safe areas ─────────────────
- * Touch targets MUST sit below the camera (safe-area-inset-top)
- * and above the Home Indicator (safe-area-inset-bottom).
+ * Touch targets MUST sit BELOW the camera (safe-area-inset-top)
+ * and ABOVE the Home Indicator (safe-area-inset-bottom).
  * Requires <meta name="viewport" content="…, viewport-fit=cover">.
+ * Docs: useyourloaf.com/blog/iphone-17-screen-sizes
+ *   iPhone Air: 420×912 · portrait safe top 68 / bottom 34
+ *
+ * --sat/--sab set from env(); JS may raise --sat-fallback on tall iOS
+ * when a webview reports 0 (common in in-app browsers).
  */
+:root {
+  --sat: max(env(safe-area-inset-top, 0px), var(--sat-fallback, 0px));
+  --sab: max(env(safe-area-inset-bottom, 0px), var(--sab-fallback, 0px));
+  --sal: max(env(safe-area-inset-left, 0px), var(--sal-fallback, 0px));
+  --sar: max(env(safe-area-inset-right, 0px), var(--sar-fallback, 0px));
+}
+
+/* Full-screen app chrome (Studio, Mobile companion) — pad under island */
 .cosy-safe-shell {
-  /* fill the visual viewport including under island when system allows */
+  box-sizing: border-box;
   min-height: 100dvh;
   min-height: -webkit-fill-available;
+  height: 100dvh;
+  height: 100svh;
+  max-height: 100dvh;
+  padding-top: var(--sat);
+  padding-bottom: var(--sab);
+  padding-left: var(--sal);
+  padding-right: var(--sar);
 }
 
-.cosy-safe-top {
-  /* Real device: env() · simulator/desktop: 0 */
-  height: env(safe-area-inset-top, 0px);
-  min-height: env(safe-area-inset-top, 0px);
-  flex-shrink: 0;
-  pointer-events: none;
+/* Scroll pages (landing): NO shell pad — sticky header owns top inset */
+.cosy-page {
+  box-sizing: border-box;
+  min-height: 100dvh;
+  min-height: -webkit-fill-available;
+  padding-left: var(--sal);
+  padding-right: var(--sar);
+  padding-bottom: var(--sab);
 }
 
+/* Sticky top bar: background paints under island; controls sit BELOW camera */
+.cosy-sticky-top {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  padding-top: var(--sat);
+}
+
+/* Legacy empty spacers — zero when shell already pads (no double gap) */
+.cosy-safe-top,
 .cosy-safe-bottom {
-  height: env(safe-area-inset-bottom, 0px);
-  min-height: env(safe-area-inset-bottom, 0px);
+  display: none;
+  height: 0;
+  min-height: 0;
   flex-shrink: 0;
   pointer-events: none;
+}
+
+/* Only use spacer mode when shell is NOT padding (opt-in) */
+.cosy-safe-shell-spacers > .cosy-safe-top {
+  display: block;
+  height: var(--sat);
+  min-height: var(--sat);
+}
+.cosy-safe-shell-spacers > .cosy-safe-bottom {
+  display: block;
+  height: var(--sab);
+  min-height: var(--sab);
+}
+.cosy-safe-shell-spacers {
+  padding-top: 0;
+  padding-bottom: 0;
 }
 
 .cosy-safe-bottom-pad {
-  /* Tab bar: keep labels above Home Indicator */
-  padding-bottom: max(0.25rem, env(safe-area-inset-bottom, 0px));
+  /* Extra breathing room above Home Indicator when shell already padded */
+  padding-bottom: 0.25rem;
 }
 
 .cosy-safe-x {
-  padding-left: max(0.75rem, env(safe-area-inset-left, 0px));
-  padding-right: max(0.75rem, env(safe-area-inset-right, 0px));
+  padding-left: max(0.75rem, var(--sal));
+  padding-right: max(0.75rem, var(--sar));
 }
 
-/* Fixed overlays (HitL, modals) — lift above Home Indicator */
+/* Fixed overlays (HitL, modals) — above Home Indicator, never under camera */
 .cosy-fixed-bottom {
-  bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
-  padding-left: max(0.75rem, env(safe-area-inset-left, 0px));
-  padding-right: max(0.75rem, env(safe-area-inset-right, 0px));
+  bottom: max(0.75rem, var(--sab));
+  padding-left: max(0.75rem, var(--sal));
+  padding-right: max(0.75rem, var(--sar));
+}
+
+.cosy-fixed-top {
+  top: max(0.5rem, var(--sat));
+  padding-left: max(0.75rem, var(--sal));
+  padding-right: max(0.75rem, var(--sar));
 }
 
 /* Readable body copy helper */
