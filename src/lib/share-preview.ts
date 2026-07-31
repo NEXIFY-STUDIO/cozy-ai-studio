@@ -63,7 +63,7 @@ export async function createPublicShareLink(opts: {
     } catch {
       /* ignore */
     }
-    void trackActivation("share_created", { id: data.id });
+    void trackActivation("share_created", { id: data.id, source: "ui" });
     return { url: data.url, id: data.id, path: data.path ?? `/a/${data.id}` };
   } catch {
     return null;
@@ -160,53 +160,147 @@ export async function sharePreviewHtml(
   }
 }
 
-/** Apply a public share into the current studio session (Remix). */
+/** Normalize sourceCode from API (string | accidental object | JSON map). */
+function resolveSourceCode(
+  raw: unknown,
+  preferredPath: string,
+  html: string,
+): { path: string; code: string; language: string } {
+  const fallback = {
+    path: preferredPath || "src/App.tsx",
+    language: "tsx",
+    code: `export default function App() {\n  return (\n    <div dangerouslySetInnerHTML={{ __html: ${JSON.stringify(html || "")} }} />\n  );\n}\n`,
+  };
+
+  if (raw == null) return fallback;
+
+  // Plain source string
+  if (typeof raw === "string") {
+    const trimmed = raw.trim();
+    if (!trimmed) return fallback;
+    // Accidental JSON-serialized file map from older bug
+    if (trimmed.startsWith("{") && trimmed.includes(":")) {
+      try {
+        const parsed = JSON.parse(trimmed) as Record<string, unknown>;
+        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+          const keys = Object.keys(parsed);
+          const primary =
+            keys.find((k) => k === preferredPath) ||
+            keys.find((k) => /App\.(tsx|jsx|ts|js)$/i.test(k)) ||
+            keys[0];
+          const val = primary != null ? parsed[primary] : null;
+          if (typeof val === "string" && val.trim()) {
+            const lang = primary.endsWith(".css")
+              ? "css"
+              : primary.endsWith(".json")
+                ? "json"
+                : "tsx";
+            return { path: primary, code: val, language: lang };
+          }
+        }
+      } catch {
+        /* treat as normal source */
+      }
+    }
+    // Valid TSX/JS source
+    if (
+      trimmed.includes("export") ||
+      trimmed.includes("function") ||
+      trimmed.includes("const ") ||
+      trimmed.includes("<")
+    ) {
+      return { path: preferredPath || "src/App.tsx", code: trimmed, language: "tsx" };
+    }
+    // Unknown string — still use it rather than crash
+    return { path: preferredPath || "src/App.tsx", code: trimmed, language: "tsx" };
+  }
+
+  // Object map path → content
+  if (typeof raw === "object" && !Array.isArray(raw)) {
+    const map = raw as Record<string, unknown>;
+    const keys = Object.keys(map);
+    const primary =
+      keys.find((k) => k === preferredPath) ||
+      keys.find((k) => /App\.(tsx|jsx|ts|js)$/i.test(k)) ||
+      keys[0];
+    const val = primary != null ? map[primary] : null;
+    if (typeof val === "string" && val.trim()) {
+      const lang = primary!.endsWith(".css")
+        ? "css"
+        : primary!.endsWith(".json")
+          ? "json"
+          : "tsx";
+      return { path: primary!, code: val, language: lang };
+    }
+  }
+
+  return fallback;
+}
+
+/** Apply a public share into the current studio session (Remix). Open demo — no auth. */
 export async function applyShareRemix(shareId: string): Promise<boolean> {
+  const id = shareId?.trim();
+  if (!id) return false;
+
   try {
-    const res = await fetch(`/api/share?id=${encodeURIComponent(shareId)}`);
+    const res = await fetch(`/api/share?id=${encodeURIComponent(id)}`);
     if (!res.ok) return false;
     const data = (await res.json()) as {
       ok?: boolean;
       html?: string;
       title?: string;
-      sourceCode?: string | null;
+      sourceCode?: string | Record<string, string> | null;
       sourceLanguage?: string | null;
       sourcePath?: string | null;
       promptPreview?: string | null;
     };
     if (!data.ok) return false;
 
-    const path = data.sourcePath || "src/App.tsx";
-    const language = data.sourceLanguage || "tsx";
-    const code =
-      data.sourceCode?.trim() ||
-      `export default function App() {\n  return (\n    <div dangerouslySetInnerHTML={{ __html: ${JSON.stringify(data.html || "")} }} />\n  );\n}\n`;
+    const html = typeof data.html === "string" ? data.html : "";
+    const preferredPath =
+      (typeof data.sourcePath === "string" && data.sourcePath.trim()) ||
+      "src/App.tsx";
+    const resolved = resolveSourceCode(data.sourceCode, preferredPath, html);
+    const language =
+      (typeof data.sourceLanguage === "string" && data.sourceLanguage.trim()) ||
+      resolved.language;
 
     const state = useStudioStore.getState();
     const files = {
       ...state.files,
-      [path]: { path, language, content: code },
+      [resolved.path]: {
+        path: resolved.path,
+        language,
+        content: resolved.code,
+      },
     };
+
     useStudioStore.setState({
       files,
-      activeFile: path,
-      originalCode: code,
-      modifiedCode: code,
+      activeFile: resolved.path,
+      originalCode: resolved.code,
+      modifiedCode: resolved.code,
       language,
-      previewHtml: data.html || state.previewHtml,
+      previewHtml: html || state.previewHtml,
       previewKey: state.previewKey + 1,
+      lastPrompt: data.promptPreview?.trim() || state.lastPrompt,
+      // clear any pending HitL from previous session
+      pendingApproval: null,
+      preflightReport: null,
+      mobilePanel: "preview",
     });
-    if (data.promptPreview) {
-      try {
-        sessionStorage.setItem("cozy-landing-prompt", data.promptPreview);
-      } catch {
-        /* ignore */
-      }
-    }
-    toast.success("Remixed into Studio", {
-      description: path,
+
+    // Do NOT set cozy-landing-prompt — that would auto-run pipeline.
+    // Remix only hydrates code + preview.
+
+    toast.success("Remix loaded — uprav a Share znova", {
+      description: resolved.path,
     });
-    void trackActivation("remix_opened", { shareId });
+    void trackActivation("remix_opened", {
+      shareId: id,
+      source: "ui",
+      path: resolved.path,
+    });
     return true;
   } catch {
     return false;
