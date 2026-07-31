@@ -152,6 +152,8 @@ export default defineConfig(({ command }) => ({
     host: "0.0.0.0",
     port: 8080,
     strictPort: true,
+    // tunnels (cloudflare / localtunnel) + Vercel preview hosts
+    allowedHosts: true,
     // credentialless: WebContainer-friendly without blocking Grok preview assets
     headers: {
       "Cross-Origin-Embedder-Policy": "credentialless",
@@ -162,6 +164,7 @@ export default defineConfig(({ command }) => ({
     host: "0.0.0.0",
     port: 8080,
     strictPort: true,
+    allowedHosts: true,
     headers: {
       "Cross-Origin-Embedder-Policy": "credentialless",
       "Cross-Origin-Opener-Policy": "same-origin",
