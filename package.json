@@ -16,7 +16,8 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "ship-gate": "node scripts/ship-gate.mjs",
-    "verify": "npm run typecheck && npm run lint && npm run build && npm run ship-gate"
+    "verify": "npm run typecheck && npm run lint && npm run build && npm run ship-gate",
+    "prod-smoke": "node scripts/prod-smoke.mjs"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.3",

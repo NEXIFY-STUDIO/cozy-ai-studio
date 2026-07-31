@@ -8,6 +8,13 @@ import type {
   RealtimeRole,
   ServerToClient,
 } from "./protocol";
+import {
+  pgFindRoomByCode,
+  pgFindRoomByProject,
+  pgPublishEvent,
+  pgSetPendingDiff,
+  pgUpsertRoom,
+} from "./hub-pg";
 
 export type HubSocket = {
   id: string;
@@ -55,8 +62,39 @@ function genCode(): string {
   return out;
 }
 
+
 function genId() {
   return `c_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+/** Ensure in-memory room exists for a PG room row */
+function hydrateRoomFromPg(row: {
+  id: string;
+  project_id: string;
+  pair_code: string;
+  code_expires_at: string;
+  pending_diff: DiffPendingPayload | null;
+}): Room {
+  const s = state();
+  let room = s.rooms.get(row.id);
+  if (!room) {
+    room = {
+      id: row.id,
+      projectId: row.project_id,
+      pairCode: row.pair_code,
+      codeExpiresAt: Date.parse(row.code_expires_at) || Date.now() + 30 * 60_000,
+      sockets: new Set(),
+      pendingDiff: row.pending_diff,
+    };
+    s.rooms.set(room.id, room);
+    s.codeToRoom.set(room.pairCode.toUpperCase(), room.id);
+  } else {
+    room.pairCode = row.pair_code;
+    room.codeExpiresAt = Date.parse(row.code_expires_at) || room.codeExpiresAt;
+    if (row.pending_diff) room.pendingDiff = row.pending_diff;
+    s.codeToRoom.set(room.pairCode.toUpperCase(), room.id);
+  }
+  return room;
 }
 
 export function registerSocket(
@@ -98,6 +136,8 @@ function broadcast(
     if (exceptId && id === exceptId) continue;
     s.sockets.get(id)?.send(msg);
   }
+  // Durable fan-out for other serverless instances
+  void pgPublishEvent(room.id, msg, exceptId);
 }
 
 function leaveRoom(sock: HubSocket) {
@@ -123,10 +163,10 @@ function leaveRoom(sock: HubSocket) {
   }
 }
 
-export function createOrRefreshPair(
+export async function createOrRefreshPair(
   sock: HubSocket,
   projectId: string,
-): { code: string; roomId: string; projectId: string; expiresAt: number } {
+): Promise<{ code: string; roomId: string; projectId: string; expiresAt: number }> {
   leaveRoom(sock);
   const s = state();
   // Reuse room for same project if desktop reconnects
@@ -135,6 +175,10 @@ export function createOrRefreshPair(
   );
   if (!room) {
     room = [...s.rooms.values()].find((r) => r.projectId === projectId);
+  }
+  if (!room) {
+    const fromPg = await pgFindRoomByProject(projectId);
+    if (fromPg) room = hydrateRoomFromPg(fromPg);
   }
   if (!room) {
     const code = genCode();
@@ -160,6 +204,14 @@ export function createOrRefreshPair(
   sock.roomId = room.id;
   room.sockets.add(sock.id);
 
+  await pgUpsertRoom({
+    id: room.id,
+    projectId: room.projectId,
+    pairCode: room.pairCode,
+    codeExpiresAt: room.codeExpiresAt,
+    pendingDiff: room.pendingDiff,
+  });
+
   return {
     code: room.pairCode,
     roomId: room.id,
@@ -168,17 +220,20 @@ export function createOrRefreshPair(
   };
 }
 
-export function joinWithCode(
+export async function joinWithCode(
   sock: HubSocket,
   pairCode: string,
-): { roomId: string; projectId: string; peers: number } | { error: string } {
+): Promise<{ roomId: string; projectId: string; peers: number } | { error: string }> {
   leaveRoom(sock);
   const code = pairCode.trim().toUpperCase();
   const s = state();
-  const roomId = s.codeToRoom.get(code);
-  if (!roomId) return { error: "Invalid or expired pair code" };
-  const room = s.rooms.get(roomId);
-  if (!room) return { error: "Room not found" };
+  let roomId = s.codeToRoom.get(code);
+  let room = roomId ? s.rooms.get(roomId) : undefined;
+  if (!room) {
+    const fromPg = await pgFindRoomByCode(code);
+    if (fromPg) room = hydrateRoomFromPg(fromPg);
+  }
+  if (!room) return { error: "Invalid or expired pair code" };
   if (room.codeExpiresAt < Date.now()) {
     s.codeToRoom.delete(code);
     return { error: "Pair code expired — generate a new one on desktop" };
@@ -207,11 +262,11 @@ export function joinWithCode(
   };
 }
 
-export function joinAsDesktop(
+export async function joinAsDesktop(
   sock: HubSocket,
   projectId: string,
-): { roomId: string; projectId: string; peers: number; code: string; expiresAt: number } {
-  const pair = createOrRefreshPair(sock, projectId);
+): Promise<{ roomId: string; projectId: string; peers: number; code: string; expiresAt: number }> {
+  const pair = await createOrRefreshPair(sock, projectId);
   const room = state().rooms.get(pair.roomId)!;
   return {
     roomId: pair.roomId,
@@ -230,6 +285,7 @@ export function publishDiffPending(
   const room = state().rooms.get(sock.roomId);
   if (!room) return { error: "Room gone" };
   room.pendingDiff = payload;
+  void pgSetPendingDiff(room.id, payload);
   broadcast(room, { type: "diff.pending", payload }, sock.id);
   // also echo to sender so multi-desktop works
   sock.send({ type: "diff.pending", payload });
@@ -247,6 +303,7 @@ export function publishDecision(
   if (!room) return { error: "Room gone" };
   if (room.pendingDiff?.approvalId === approvalId) {
     room.pendingDiff = null;
+    void pgSetPendingDiff(room.id, null);
   }
   const msg: ServerToClient =
     decision === "accept"
@@ -265,10 +322,10 @@ export function publishDecision(
   return { ok: true };
 }
 
-export function handleClientMessage(
+export async function handleClientMessage(
   sock: HubSocket,
   raw: string,
-): void {
+): Promise<void> {
   let msg: unknown;
   try {
     msg = JSON.parse(raw);
@@ -292,7 +349,7 @@ export function handleClientMessage(
         sock.send({ type: "error", message: "projectId required" });
         break;
       }
-      const pair = createOrRefreshPair(sock, projectId);
+      const pair = await createOrRefreshPair(sock, projectId);
       sock.send({
         type: "pair_code",
         code: pair.code,
@@ -314,7 +371,7 @@ export function handleClientMessage(
       const pairCode = m.pairCode ? String(m.pairCode) : "";
       const projectId = m.projectId ? String(m.projectId) : "";
       if (role === "mobile" && pairCode) {
-        const joined = joinWithCode(sock, pairCode);
+        const joined = await joinWithCode(sock, pairCode);
         if ("error" in joined) {
           sock.send({ type: "error", message: joined.error });
         } else {
@@ -327,7 +384,7 @@ export function handleClientMessage(
           });
         }
       } else if (role === "desktop" && projectId) {
-        const joined = joinAsDesktop(sock, projectId);
+        const joined = await joinAsDesktop(sock, projectId);
         sock.send({
           type: "pair_code",
           code: joined.code,

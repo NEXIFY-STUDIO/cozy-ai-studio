@@ -1,6 +1,7 @@
 /**
- * HTTP long-poll adapter for the same in-memory hub used by WebSocket.
+ * HTTP long-poll adapter for the same hub used by WebSocket.
  * Production (Vercel) has no WS upgrade — clients fall back here.
+ * Pair rooms dual-write to Postgres so multi-instance works.
  */
 
 import {
@@ -9,12 +10,14 @@ import {
   unregisterSocket,
   type HubSocket,
 } from "./hub";
+import { pgPollEvents } from "./hub-pg";
 import type { ServerToClient } from "./protocol";
 
 type HttpClient = {
   sock: HubSocket;
   queue: ServerToClient[];
   lastPoll: number;
+  lastEventId: number;
 };
 
 const g = globalThis as typeof globalThis & {
@@ -36,6 +39,20 @@ function json(body: unknown, status = 200) {
   });
 }
 
+async function drainPg(c: HttpClient) {
+  const roomId = c.sock.roomId;
+  if (!roomId) return;
+  const events = await pgPollEvents(roomId, c.lastEventId, c.sock.id);
+  const seen = new Set(c.queue.map((m) => JSON.stringify(m)));
+  for (const ev of events) {
+    c.lastEventId = Math.max(c.lastEventId, ev.id);
+    const key = JSON.stringify(ev.payload);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    c.queue.push(ev.payload);
+  }
+}
+
 /** POST /api/ws/http  body: { op: "open" } | { op: "send", clientId, message } | { op: "close", clientId } */
 export async function handleWsHttp(request: Request): Promise<Response> {
   if (request.method === "GET") {
@@ -51,12 +68,15 @@ export async function handleWsHttp(request: Request): Promise<Response> {
     if (!c) return json({ error: "unknown client" }, 404);
     c.lastPoll = Date.now();
 
+    await drainPg(c);
+
     const deadline = Date.now() + waitMs;
     while (c.queue.length === 0 && Date.now() < deadline) {
-      await new Promise((r) => setTimeout(r, 120));
+      await new Promise((r) => setTimeout(r, 200));
+      await drainPg(c);
     }
     const messages = c.queue.splice(0, c.queue.length);
-    return json({ clientId, messages });
+    return json({ clientId, messages, lastEventId: c.lastEventId });
   }
 
   if (request.method !== "POST") {
@@ -79,8 +99,12 @@ export async function handleWsHttp(request: Request): Promise<Response> {
     const sock = registerSocket((msg) => {
       queue.push(msg);
     });
-    clients().set(sock.id, { sock, queue, lastPoll: Date.now() });
-    // drain welcome that was already pushed
+    clients().set(sock.id, {
+      sock,
+      queue,
+      lastPoll: Date.now(),
+      lastEventId: 0,
+    });
     const c = clients().get(sock.id)!;
     const initial = c.queue.splice(0, c.queue.length);
     return json({ clientId: sock.id, transport: "http", messages: initial });
@@ -105,10 +129,11 @@ export async function handleWsHttp(request: Request): Promise<Response> {
       typeof body.message === "string"
         ? body.message
         : JSON.stringify(body.message ?? {});
-    handleClientMessage(c.sock, raw);
+    await handleClientMessage(c.sock, raw);
+    await drainPg(c);
     // return any immediately queued replies
     const messages = c.queue.splice(0, c.queue.length);
-    return json({ ok: true, messages });
+    return json({ ok: true, messages, lastEventId: c.lastEventId });
   }
 
   return json({ error: "unknown op" }, 400);
