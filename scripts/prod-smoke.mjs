@@ -61,6 +61,7 @@ async function main() {
       title: "prod-smoke",
       promptPreview: "prod-smoke brief",
       sourceCode: "export default function App(){return <h1>smoke</h1>}",
+      meta: { source: "prod-smoke" },
     }),
   }).then((r) => r.json());
   must(share.ok && share.id, "share create");
@@ -138,6 +139,9 @@ async function main() {
   must("reject" in (act.counts || {}), "reject metric present");
   must((act.counts?.brief_sent ?? 0) >= 1, "brief_sent counted");
   must((act.counts?.share_created ?? 0) >= 1, "share_created counted");
+  must(act.stripeGate && typeof act.stripeGate.ready === "boolean", "stripeGate present");
+  must(act.real && typeof act.real.totals === "number", "real totals present");
+  must(act.smoke && typeof act.smoke.totals === "number", "smoke totals present");
 
   const tel = await fetch(`${BASE}/api/telemetry-stats?hours=24`).then((r) =>
     r.json(),

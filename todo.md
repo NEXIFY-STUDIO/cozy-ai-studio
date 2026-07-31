@@ -38,6 +38,7 @@
 | Telemetry P4 | HitL approve/reject → DB; reject activation; /api/telemetry-stats |
 | P6 security | 0009 indexes + SECURITY_MODEL (no force RLS) |
 | P7 full smoke | activation write + optional Mistral SSE + remix route |
+| Activation dashboard | real vs smoke + Stripe gate in Studio funnel |
 
 ## Next
 

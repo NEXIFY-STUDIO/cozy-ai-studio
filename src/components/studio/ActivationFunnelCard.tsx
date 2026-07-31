@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Activity, RefreshCw } from "lucide-react";
+import { Activity, RefreshCw, ShieldCheck, ShieldAlert } from "lucide-react";
 import {
   fetchActivationStats,
   type ActivationCounts,
+  type ActivationStatsResponse,
 } from "@/lib/activation/client";
 import { cn } from "@/lib/utils";
 
@@ -21,11 +22,11 @@ function pct(from: number, to: number): string | null {
 }
 
 /**
- * Open-demo funnel snapshot (last 24h). Truthful counts only — no vanity.
+ * Open-demo funnel: total + real vs smoke + Stripe gate (truthful).
  */
 export function ActivationFunnelCard({ className }: { className?: string }) {
-  const [counts, setCounts] = useState<ActivationCounts | null>(null);
-  const [totals, setTotals] = useState(0);
+  const [data, setData] = useState<ActivationStatsResponse | null>(null);
+  const [hours, setHours] = useState(24);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [hitl, setHitl] = useState<{
@@ -38,8 +39,8 @@ export function ActivationFunnelCard({ className }: { className?: string }) {
     setLoading(true);
     setError(false);
     void Promise.all([
-      fetchActivationStats(24),
-      fetch("/api/telemetry-stats?hours=24")
+      fetchActivationStats(hours),
+      fetch(`/api/telemetry-stats?hours=${hours}`)
         .then((r) => r.json())
         .catch(() => null),
     ]).then(([s, tel]) => {
@@ -48,28 +49,29 @@ export function ActivationFunnelCard({ className }: { className?: string }) {
         setLoading(false);
         return;
       }
-      setCounts(s.counts);
-      setTotals(s.totals);
+      setData(s);
       if (tel && tel.ok) {
         setHitl({
           approved: Number(tel.approved) || 0,
           rejected: Number(tel.rejected) || 0,
-          rejectRate:
-            tel.rejectRate == null ? null : Number(tel.rejectRate),
+          rejectRate: tel.rejectRate == null ? null : Number(tel.rejectRate),
         });
       }
       setLoading(false);
     });
-  }, []);
+  }, [hours]);
 
   useEffect(() => {
     load();
   }, [load]);
 
+  const counts = data?.real?.counts ?? data?.counts ?? null;
+  const totals = data?.real?.totals ?? data?.totals ?? 0;
+  const smokeTotals = data?.smoke?.totals ?? 0;
+
   const bottleneck = useMemo(() => {
     if (!counts) return null;
     const vals = STEPS.map((s) => counts[s.key] ?? 0);
-    // first big drop: where next is much smaller than prev with prev>0
     for (let i = 0; i < vals.length - 1; i++) {
       if (vals[i] >= 2 && vals[i + 1] / vals[i] < 0.5) {
         return {
@@ -118,7 +120,8 @@ export function ActivationFunnelCard({ className }: { className?: string }) {
 
   if (!counts) return null;
 
-  const empty = totals === 0;
+  const empty = totals === 0 && smokeTotals === 0;
+  const gate = data?.stripeGate;
 
   return (
     <div
@@ -130,11 +133,27 @@ export function ActivationFunnelCard({ className }: { className?: string }) {
       <div className="flex items-center justify-between gap-2">
         <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
           <Activity className="h-3 w-3 text-choco" />
-          Funnel 24h
+          Funnel (real)
         </p>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
+          {[24, 168].map((h) => (
+            <button
+              key={h}
+              type="button"
+              onClick={() => setHours(h)}
+              className={cn(
+                "rounded-md px-1.5 py-0.5 text-[10px] font-medium border",
+                hours === h
+                  ? "border-choco/40 bg-choco/10 text-foreground"
+                  : "border-transparent text-muted-foreground hover:bg-muted",
+              )}
+            >
+              {h === 24 ? "24h" : "7d"}
+            </button>
+          ))}
           <span className="text-[10px] text-muted-foreground tabular-nums">
-            {totals} events
+            {totals} real
+            {smokeTotals > 0 ? ` · ${smokeTotals} smoke` : ""}
           </span>
           <button
             type="button"
@@ -148,10 +167,34 @@ export function ActivationFunnelCard({ className }: { className?: string }) {
         </div>
       </div>
 
+      {gate && (
+        <div
+          className={cn(
+            "flex items-start gap-2 rounded-lg border px-2.5 py-2 text-[11px] leading-snug",
+            gate.ready
+              ? "border-success/35 bg-success/10 text-foreground"
+              : "border-border bg-muted/50 text-muted-foreground",
+          )}
+        >
+          {gate.ready ? (
+            <ShieldCheck className="h-3.5 w-3.5 text-success shrink-0 mt-0.5" />
+          ) : (
+            <ShieldAlert className="h-3.5 w-3.5 text-choco shrink-0 mt-0.5" />
+          )}
+          <div className="min-w-0">
+            <p className="font-medium text-foreground">
+              Stripe gate: {gate.ready ? "ready" : "hold"}
+            </p>
+            <p className="mt-0.5">{gate.reason}</p>
+          </div>
+        </div>
+      )}
+
       {empty ? (
         <p className="text-[11px] text-muted-foreground leading-relaxed">
           Zatiaľ prázdne. Spusti brief → Accept + Share → otvor{" "}
-          <span className="font-mono">/a/…</span> — tu uvidíš konverziu.
+          <span className="font-mono">/a/…</span> — tu uvidíš reálnu konverziu
+          (smoke sa odpočítava).
         </p>
       ) : (
         <>
@@ -201,7 +244,7 @@ export function ActivationFunnelCard({ className }: { className?: string }) {
             </p>
           )}
           {(hitl && hitl.approved + hitl.rejected > 0) ||
-          (counts.reject ?? 0) > 0 ? (
+          (data?.counts?.reject ?? 0) > 0 ? (
             <p className="text-[10px] text-muted-foreground leading-snug">
               {hitl && hitl.approved + hitl.rejected > 0
                 ? `HitL DB: ${hitl.approved} approved · ${hitl.rejected} rejected${
@@ -210,17 +253,14 @@ export function ActivationFunnelCard({ className }: { className?: string }) {
                       : ""
                   }`
                 : null}
-              {(counts.reject ?? 0) > 0
-                ? `${hitl && hitl.approved + hitl.rejected > 0 ? " · " : ""}Activation rejects: ${counts.reject}`
-                : ""}
             </p>
           ) : null}
         </>
       )}
 
       <p className="text-[10px] text-muted-foreground leading-snug">
-        Free publish = public <span className="font-mono">/a/…</span>. Paid
-        Vercel deploy = až keď je wiring + (voliteľne) Stripe.
+        Free publish = public <span className="font-mono">/a/…</span>. Stripe
+        až keď gate = ready (reálni useri, nie smoke).
       </p>
     </div>
   );

@@ -50,10 +50,40 @@ export async function recordActivationEvent(opts: {
   }
 }
 
+function emptyCounts(): Record<ActivationEventName, number> {
+  return {
+    brief_sent: 0,
+    pipeline_done: 0,
+    accept: 0,
+    share_created: 0,
+    remix_opened: 0,
+    share_viewed: 0,
+    reject: 0,
+  };
+}
+
 export type ActivationStats = {
   windowHours: number;
   counts: Record<ActivationEventName, number>;
   totals: number;
+  /** Organic / product traffic (excludes smoke markers) */
+  real: {
+    counts: Record<ActivationEventName, number>;
+    totals: number;
+  };
+  smoke: {
+    counts: Record<ActivationEventName, number>;
+    totals: number;
+  };
+  /** Honest gate: enough real funnel to consider Stripe */
+  stripeGate: {
+    ready: boolean;
+    reason: string;
+    realBriefs: number;
+    realAccepts: number;
+    realShares: number;
+    realViews: number;
+  };
 };
 
 export async function getActivationStats(
@@ -62,31 +92,85 @@ export async function getActivationStats(
   const hours = Math.min(168, Math.max(1, windowHours));
   const empty: ActivationStats = {
     windowHours: hours,
-    counts: {
-      brief_sent: 0,
-      pipeline_done: 0,
-      accept: 0,
-      share_created: 0,
-      remix_opened: 0,
-      share_viewed: 0,
-      reject: 0,
-    },
+    counts: emptyCounts(),
     totals: 0,
+    real: { counts: emptyCounts(), totals: 0 },
+    smoke: { counts: emptyCounts(), totals: 0 },
+    stripeGate: {
+      ready: false,
+      reason: "No data yet",
+      realBriefs: 0,
+      realAccepts: 0,
+      realShares: 0,
+      realViews: 0,
+    },
   };
   try {
     const sql = await getSql();
-    const rows = await sql<{ event: string; n: number }>`
-      select event, count(*)::int as n
+    const rows = await sql<{ event: string; n: number; kind: string }>`
+      select
+        event,
+        count(*)::int as n,
+        case
+          when meta is not null
+            and (
+              meta->>'source' in ('prod-smoke', 'ship-gate', 'e2e')
+              or meta->>'e2e' = 'true'
+              or meta->>'smoke' = 'true'
+            )
+          then 'smoke'
+          else 'real'
+        end as kind
       from activation_events
       where created_at >= CURRENT_TIMESTAMP - (${hours} * interval '1 hour')
-      group by event
+      group by 1, 3
     `;
+
     for (const r of rows) {
-      if (ALLOWED.has(r.event as ActivationEventName)) {
-        empty.counts[r.event as ActivationEventName] = Number(r.n) || 0;
-      }
+      if (!ALLOWED.has(r.event as ActivationEventName)) continue;
+      const ev = r.event as ActivationEventName;
+      const n = Number(r.n) || 0;
+      empty.counts[ev] += n;
+      if (r.kind === "smoke") empty.smoke.counts[ev] += n;
+      else empty.real.counts[ev] += n;
     }
     empty.totals = Object.values(empty.counts).reduce((a, b) => a + b, 0);
+    empty.real.totals = Object.values(empty.real.counts).reduce(
+      (a, b) => a + b,
+      0,
+    );
+    empty.smoke.totals = Object.values(empty.smoke.counts).reduce(
+      (a, b) => a + b,
+      0,
+    );
+
+    const realBriefs = empty.real.counts.brief_sent;
+    const realAccepts = empty.real.counts.accept;
+    const realShares = empty.real.counts.share_created;
+    const realViews = empty.real.counts.share_viewed;
+    // Gate: meaningful organic path — not just smoke shares
+    const ready =
+      realBriefs >= 5 && realAccepts >= 3 && realShares >= 3 && realViews >= 2;
+    let reason: string;
+    if (ready) {
+      reason =
+        "Real funnel holds — safe to wire Stripe when you want paid deploy.";
+    } else if (realBriefs === 0 && empty.smoke.totals > 0) {
+      reason =
+        "Only smoke/e2e traffic so far — wait for real Brief → Share users.";
+    } else if (realBriefs === 0) {
+      reason = "No real briefs yet. Open Studio and run a template.";
+    } else {
+      reason = `Need more real usage (briefs ${realBriefs}/5 · accept ${realAccepts}/3 · share ${realShares}/3 · views ${realViews}/2).`;
+    }
+    empty.stripeGate = {
+      ready,
+      reason,
+      realBriefs,
+      realAccepts,
+      realShares,
+      realViews,
+    };
     return empty;
   } catch (e) {
     console.warn("[activation] stats failed", e);

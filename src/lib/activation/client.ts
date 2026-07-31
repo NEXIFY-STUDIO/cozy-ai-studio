@@ -26,21 +26,30 @@ export async function trackActivation(
 
 export type ActivationCounts = Record<ClientActivationEvent, number>;
 
-export async function fetchActivationStats(hours = 24): Promise<{
+export type ActivationStatsResponse = {
   ok: boolean;
   counts: ActivationCounts;
   totals: number;
   windowHours: number;
-} | null> {
+  real?: { counts: ActivationCounts; totals: number };
+  smoke?: { counts: ActivationCounts; totals: number };
+  stripeGate?: {
+    ready: boolean;
+    reason: string;
+    realBriefs: number;
+    realAccepts: number;
+    realShares: number;
+    realViews: number;
+  };
+};
+
+export async function fetchActivationStats(
+  hours = 24,
+): Promise<ActivationStatsResponse | null> {
   try {
     const res = await fetch(`/api/activation-stats?hours=${hours}`);
     if (!res.ok) return null;
-    return (await res.json()) as {
-      ok: boolean;
-      counts: ActivationCounts;
-      totals: number;
-      windowHours: number;
-    };
+    return (await res.json()) as ActivationStatsResponse;
   } catch {
     return null;
   }
