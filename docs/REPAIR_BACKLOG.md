@@ -71,7 +71,8 @@
 | **Free publish A** | og tags + public link CTAs | **This pass** |
 | **Activation B** | funnel events + /api/activation-stats | **Done** |
 | **Telemetry P4** | HitL → DB + /api/telemetry-stats + reject event | **This pass** |
-| **P6 security** | indexes + SoT (no force RLS) | **This pass** |
+| **P6 security** | indexes + SoT (no force RLS) | **Done** |
+| **P7 smoke** | full spine prod-smoke | **Done** |
 | **Mobile WS** | companion pair PG | **Done** |
 | **Real deploy launch** | Vercel redeploy mode (Prompt C) | **Done** |
 

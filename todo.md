@@ -37,6 +37,7 @@
 | Prompt C | Honest Vercel redeploy mode (no fake Deployed); env keys on Vercel |
 | Telemetry P4 | HitL approve/reject → DB; reject activation; /api/telemetry-stats |
 | P6 security | 0009 indexes + SECURITY_MODEL (no force RLS) |
+| P7 full smoke | activation write + optional Mistral SSE + remix route |
 
 ## Next
 
