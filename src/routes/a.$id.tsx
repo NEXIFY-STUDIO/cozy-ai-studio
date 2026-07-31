@@ -1,6 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { ArrowLeft, Check, Copy, ExternalLink, Link2, Sparkles } from "lucide-react";
+import {
+  ArrowLeft,
+  Check,
+  Copy,
+  ExternalLink,
+  Link2,
+  Sparkles,
+  Wand2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CozyLogo } from "@/components/brand/CozyLogo";
 import { getSharedPreview } from "@/lib/share/server";
@@ -23,6 +31,7 @@ export const Route = createFileRoute("/a/$id")({
         html: row.html,
         promptPreview: row.prompt_preview,
         createdAt: row.created_at,
+        hasSource: Boolean(row.source_code?.trim()),
       };
     } catch {
       return { notFound: true as const, id: params.id, error: true as const };
@@ -73,13 +82,17 @@ function PublicSharePage() {
           This link may have expired or never existed.
         </p>
         <Link to="/studio" className="mt-6">
-          <Button>Open Studio</Button>
+          <Button className="bg-[#D96B43] text-white hover:bg-[#C85A32] border-0">
+            Open Studio
+          </Button>
         </Link>
       </div>
     );
   }
 
   const publicPath = `/a/${data.id}`;
+  const remixHref = `/studio?remix=${encodeURIComponent(data.id)}`;
+
   const copyLink = async () => {
     const url =
       typeof window !== "undefined"
@@ -133,19 +146,35 @@ function PublicSharePage() {
               ) : (
                 <Copy className="h-3.5 w-3.5" />
               )}
-              <span className="hidden sm:inline">Kopírovať odkaz</span>
+              <span className="hidden sm:inline">Kopírovať</span>
               <Link2 className="h-3.5 w-3.5 sm:hidden" />
             </Button>
-            <a href={`/studio?remix=${encodeURIComponent(data.id)}`}>
-              <Button size="sm" className="h-8 gap-1.5">
-                <ExternalLink className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Remix</span>
-                <span className="sm:hidden">Remix</span>
+            <a href={remixHref} className="hidden sm:block">
+              <Button
+                size="sm"
+                className="h-8 gap-1.5 bg-[#D96B43] text-white hover:bg-[#C85A32] border-0"
+              >
+                <Wand2 className="h-3.5 w-3.5" />
+                Remix in Studio
               </Button>
             </a>
           </div>
         </div>
       </header>
+
+      {/* Mobile-first primary CTA — above the fold */}
+      <div className="shrink-0 border-b border-[#D96B43]/25 bg-[#D96B43]/10 px-3 py-3 sm:hidden">
+        <a href={remixHref} className="block">
+          <Button className="h-11 w-full gap-2 rounded-xl bg-[#D96B43] text-white hover:bg-[#C85A32] border-0 text-sm font-semibold shadow-[3px_3px_0_#1C1D21]">
+            <Wand2 className="h-4 w-4" />
+            Remix in Studio
+            <ExternalLink className="h-3.5 w-3.5 opacity-80" />
+          </Button>
+        </a>
+        <p className="mt-1.5 text-center text-[11px] text-muted-foreground">
+          Otvorí Studio s týmto kódom — bez prihlásenia
+        </p>
+      </div>
 
       {data.promptPreview && (
         <div className="shrink-0 border-b border-border bg-muted/40 px-3 py-1.5 text-[11px] text-muted-foreground truncate">
@@ -160,6 +189,18 @@ function PublicSharePage() {
           sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
           className="h-full w-full rounded-xl border border-border bg-white shadow-[var(--shadow-glass)]"
         />
+      </div>
+
+      <div className="hidden sm:flex shrink-0 items-center justify-center gap-3 border-t border-border bg-card/90 px-4 py-2.5">
+        <p className="text-xs text-muted-foreground">
+          Páči sa ti? Uprav v Studio a zdieľaj znova.
+        </p>
+        <a href={remixHref}>
+          <Button className="h-9 gap-1.5 rounded-xl bg-[#D96B43] text-white hover:bg-[#C85A32] border-0">
+            <Wand2 className="h-4 w-4" />
+            Remix in Studio
+          </Button>
+        </a>
       </div>
     </div>
   );
