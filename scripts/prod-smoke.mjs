@@ -74,14 +74,35 @@ async function main() {
       "share page has title/og",
     );
     must(/prod-smoke|Cozy/i.test(html), "share page content");
+    must(
+      /Remix in Studio/i.test(html),
+      "share page Remix in Studio CTA",
+    );
+    must(
+      new RegExp(`/studio\\?remix=${share.id}`).test(html) ||
+        html.includes(`remix=${share.id}`),
+      "share page remix href",
+    );
 
-    // remix route loads
+    // remix route loads (SSR shell; client hydrate fires remix_opened)
     const remix = await fetch(
       `${BASE}/studio?remix=${encodeURIComponent(share.id)}`,
     );
     must(remix.status === 200, `studio remix route ${remix.status}`);
     const remixHtml = await remix.text();
     must(/Studio|FREE|Funnel|Share/i.test(remixHtml), "studio shell on remix");
+
+    // Ensure activation endpoint accepts remix_opened (write path)
+    const remixAct = await fetch(`${BASE}/api/activation-stats`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        event: "remix_opened",
+        meta: { source: "prod-smoke", shareId: share.id },
+      }),
+    });
+    const remixActBody = await remixAct.json().catch(() => ({}));
+    must(remixAct.ok && remixActBody.ok, "activation POST remix_opened");
   }
 
   // Optional live Mistral SSE (uses 1 daily credit)
@@ -137,6 +158,7 @@ async function main() {
   must(act.ok === true && act.counts, "activation-stats ok");
   must("share_viewed" in (act.counts || {}), "share_viewed metric present");
   must("reject" in (act.counts || {}), "reject metric present");
+  must("remix_opened" in (act.counts || {}), "remix_opened metric present");
   must((act.counts?.brief_sent ?? 0) >= 1, "brief_sent counted");
   must((act.counts?.share_created ?? 0) >= 1, "share_created counted");
   must(act.stripeGate && typeof act.stripeGate.ready === "boolean", "stripeGate present");
