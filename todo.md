@@ -33,13 +33,15 @@
 | Publish A | `/a/:id` og tags + Studio free-publish CTAs |
 | Activation B | events + `/api/activation-stats` |
 | Funnel UI | Studio 24h funnel + share_viewed |
+| Funnel polish | conversion %, drop callout, refresh |
+| Prompt C | Honest Vercel redeploy mode (no fake Deployed); env keys on Vercel |
 
 ## Next
 
 | # | Item |
 |---|---|
-| ~~P4 Stripe~~ | skipped for now |
-| Later | Auth login optional · real 1-click deploy launch |
+| ~~P4 Stripe~~ | hold until activation |
+| Optional | full launch with Stripe checkout |
 
 ## Check
 

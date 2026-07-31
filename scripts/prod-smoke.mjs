@@ -77,6 +77,11 @@ async function main() {
     must(Boolean(code), `pair code ${code || "missing"}`);
   }
 
+  const launch = await fetch(`${BASE}/api/launch/run`).then((r) => r.json());
+  must(launch.ok === true, "launch/run GET ok");
+  must("vercelReady" in launch, "vercelReady field");
+  // do not require vercelReady true in smoke if env lag — just schema
+
   const landing = await fetch(`${BASE}/`);
   const html = await landing.text();
   must(landing.status === 200, "landing 200");

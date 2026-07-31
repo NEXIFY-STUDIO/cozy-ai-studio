@@ -37,18 +37,51 @@ export function ProductionLaunchButton({
   const storeStripe = useStudioStore((s) => s.stripeConfigured);
   const liveBilling = stripeConfigured ?? storeStripe;
   const navigate = useNavigate();
+  const [vercelReady, setVercelReady] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetch("/api/launch/run")
+      .then((r) => r.json())
+      .then((j: { vercelReady?: boolean }) => {
+        if (!cancelled) setVercelReady(Boolean(j.vercelReady));
+      })
+      .catch(() => {
+        if (!cancelled) setVercelReady(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const onClick = () => {
+    // Prompt C: real Vercel redeploy without Stripe when keys present
+    if (vercelReady) {
+      setOpen(true);
+      return;
+    }
     if (!liveBilling && !isLive) {
       void navigate({ to: "/pricing", search: {} });
-      toast.message("Deploy requires live billing", {
+      toast.message("Deploy not configured yet", {
         description:
-          "Free studio works now. Production deploy opens after Stripe keys are set.",
+          "Free publish: Share → /a/:id. Paid full launch needs Stripe. Redeploy needs VERCEL_TOKEN + PROJECT_ID.",
       });
       return;
     }
     setOpen(true);
   };
+
+  const label = isLive
+    ? "Live"
+    : isRunning
+      ? "Deploying…"
+      : vercelReady
+        ? liveBilling
+          ? "Deploy"
+          : "Redeploy"
+        : liveBilling
+          ? "Deploy"
+          : "Limits";
 
   return (
     <Button
@@ -57,29 +90,23 @@ export function ProductionLaunchButton({
       className={cn(
         "h-9 text-xs gap-1.5",
         isLive && "bg-success hover:bg-success/90 text-white border-success",
-        !liveBilling && !isLive && "text-muted-foreground",
+        !vercelReady && !liveBilling && !isLive && "text-muted-foreground",
         className,
       )}
       onClick={onClick}
       disabled={isRunning}
       title={
-        liveBilling
-          ? "Open production launch"
-          : "Stripe not configured — opens limits"
+        vercelReady
+          ? liveBilling
+            ? "Production launch (Stripe + Vercel)"
+            : "Redeploy production via Vercel (no Stripe)"
+          : "Vercel deploy keys missing — Limits / pricing"
       }
     >
       <Rocket className="h-3.5 w-3.5" />
-      <span className="hidden sm:inline">
-        {isLive
-          ? "Live"
-          : isRunning
-            ? "Deploying…"
-            : liveBilling
-              ? "Deploy"
-              : "Limits"}
-      </span>
+      <span className="hidden sm:inline">{label}</span>
       <span className="sm:hidden">
-        {isLive ? "Live" : liveBilling ? "Prod" : "Plan"}
+        {isLive ? "Live" : vercelReady ? "Prod" : "Plan"}
       </span>
     </Button>
   );
@@ -98,6 +125,8 @@ export function ProductionLaunchHost() {
 function ProductionLaunchModal({ onClose }: { onClose: () => void }) {
   const planTier = useStudioStore((s) => s.planTier);
   const setPlanTier = useStudioStore((s) => s.setPlanTier);
+  const storeStripe = useStudioStore((s) => s.stripeConfigured);
+  const liveBilling = storeStripe;
   const setPublishUrl = useStudioStore((s) => s.setPublishUrl);
   const addTelemetry = useStudioStore((s) => s.addTelemetry);
   const addChat = useStudioStore((s) => s.addChat);
@@ -160,8 +189,10 @@ function ProductionLaunchModal({ onClose }: { onClose: () => void }) {
     const t0 = Date.now();
 
     try {
+      const launchMode =
+        liveBilling || storeStripe ? ("full" as const) : ("redeploy" as const);
       const result = await runProductionLaunch(
-        { projectName, preferredPlan: selectedPlan },
+        { projectName, preferredPlan: selectedPlan, mode: launchMode },
         {
           signal: ac.signal,
           onSteps: setSteps,

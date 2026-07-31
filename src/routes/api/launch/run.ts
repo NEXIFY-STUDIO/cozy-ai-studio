@@ -4,7 +4,10 @@ import {
 } from "@/lib/auth/request-user.server";
 import { UnauthorizedError } from "@/lib/auth/verify.server";
 import { getAppOrigin } from "@/lib/stripe/config";
-import { runLaunchJob } from "@/lib/production/launch-run.server";
+import {
+  isVercelDeployConfigured,
+  runLaunchJob,
+} from "@/lib/production/launch-run.server";
 import { encodeLaunchSse } from "@/lib/production/launch-protocol";
 import { auth } from "@/lib/auth/server";
 
@@ -18,6 +21,8 @@ export const Route = createFileRoute("/api/launch/run")({
         } catch {
           userId = null;
         }
+        const vercelReady = isVercelDeployConfigured();
+        const stripe = Boolean(process.env.STRIPE_SECRET_KEY?.trim());
         return Response.json({
           ok: true,
           endpoint: "POST /api/launch/run",
@@ -25,7 +30,12 @@ export const Route = createFileRoute("/api/launch/run")({
           authenticated: Boolean(userId),
           vercelHook: Boolean(process.env.VERCEL_DEPLOY_HOOK_URL?.trim()),
           vercelToken: Boolean(process.env.VERCEL_TOKEN?.trim()),
-          stripe: Boolean(process.env.STRIPE_SECRET_KEY?.trim()),
+          vercelReady,
+          stripe,
+          modes: {
+            redeploy: vercelReady,
+            full: vercelReady && stripe,
+          },
         });
       },
       POST: async ({ request }) => {
@@ -48,6 +58,7 @@ export const Route = createFileRoute("/api/launch/run")({
         let body: {
           projectName?: string;
           preferredPlan?: "PRO" | "ENTERPRISE";
+          mode?: "full" | "redeploy";
         };
         try {
           body = (await request.json()) as typeof body;
@@ -61,6 +72,17 @@ export const Route = createFileRoute("/api/launch/run")({
         const projectName = (body.projectName ?? "cai-app").trim() || "cai-app";
         const preferredPlan =
           body.preferredPlan === "ENTERPRISE" ? "ENTERPRISE" : "PRO";
+        const mode = body.mode === "redeploy" ? "redeploy" : "full";
+        if (mode === "redeploy" && !isVercelDeployConfigured()) {
+          return Response.json(
+            {
+              error: "VERCEL_NOT_CONFIGURED",
+              message:
+                "Set VERCEL_DEPLOY_HOOK_URL or VERCEL_TOKEN+VERCEL_PROJECT_ID. Free publish: Share → /a/:id.",
+            },
+            { status: 503 },
+          );
+        }
 
         // Resolve email from session
         let email: string | null = null;
@@ -96,6 +118,7 @@ export const Route = createFileRoute("/api/launch/run")({
                   projectName,
                   preferredPlan,
                   origin,
+                  mode,
                   signal: abort.signal,
                 },
                 {

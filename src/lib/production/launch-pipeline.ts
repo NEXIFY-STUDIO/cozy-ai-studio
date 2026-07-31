@@ -94,6 +94,7 @@ export async function runProductionLaunch(
   opts: {
     projectName?: string;
     preferredPlan?: "PRO" | "ENTERPRISE";
+    mode?: "full" | "redeploy";
   },
   cb: LaunchCallbacks,
 ): Promise<ProductionLaunchResult> {
@@ -111,6 +112,7 @@ export async function runProductionLaunch(
     body: JSON.stringify({
       projectName: opts.projectName,
       preferredPlan: opts.preferredPlan ?? "PRO",
+      mode: opts.mode ?? "full",
     }),
     signal: cb.signal,
   });
