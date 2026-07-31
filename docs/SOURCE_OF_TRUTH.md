@@ -58,3 +58,5 @@ TanStack Start + Vite + Nitro (Vercel), TypeScript, Tailwind, Monaco, Mistral ag
 - [todo.md](../todo.md)
 - [MVP_PROMPTS.md](./MVP_PROMPTS.md)
 - [POST_MVP_PROMPTS.md](./POST_MVP_PROMPTS.md)
+- [REPAIR_BACKLOG.md](./REPAIR_BACKLOG.md)
+- [SECURITY_MODEL.md](./SECURITY_MODEL.md)

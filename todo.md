@@ -24,6 +24,9 @@
 | HitL | Accept + Share link (Shift+Enter); daily share soft-cap |
 | Persist | Open-demo cloud sync (dev-user) — hydrate + seed + debounced save |
 | Remix | `/a/:id` → Studio `?remix=` loads source + preview |
+| Docs | `docs/REPAIR_BACKLOG.md` restored from audit |
+| Mobile | Monaco desktop-only; lightweight FallbackDiff <1024px |
+| Security | `docs/SECURITY_MODEL.md` — app-layer user scoping (RLS note) |
 
 ## Next
 

@@ -79,9 +79,24 @@ export function CodeDiffViewer() {
 
   const [monacoReady, setMonacoReady] = useState(false);
   const [monacoFailed, setMonacoFailed] = useState(false);
+  const [allowMonaco, setAllowMonaco] = useState(false);
   const editorRef = useRef<editor.IStandaloneDiffEditor | null>(null);
 
+  // Option B: Monaco desktop-only (mobile uses lightweight FallbackDiff)
   useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1024px)");
+    const update = () => setAllowMonaco(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
+
+  useEffect(() => {
+    if (!allowMonaco) {
+      setMonacoReady(false);
+      setMonacoFailed(false);
+      return;
+    }
     let cancelled = false;
     loader
       .init()
@@ -94,7 +109,7 @@ export function CodeDiffViewer() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [allowMonaco]);
 
   const hasDiff = originalCode !== modifiedCode;
   const langLabel =
@@ -183,9 +198,16 @@ export function CodeDiffViewer() {
       )}
 
       <div className={cn("relative min-h-0 flex-1 bg-canvas", isPipelineRunning && "stream-caret")}>
-        {monacoFailed || (!monacoReady && typeof window === "undefined") ? (
-          <FallbackDiff original={originalCode} modified={modifiedCode} />
-        ) : monacoReady ? (
+        {!allowMonaco || monacoFailed || !monacoReady ? (
+          <>
+            {!allowMonaco && (
+              <div className="absolute top-2 right-2 z-10 rounded-md border border-border bg-card/90 px-2 py-0.5 text-[10px] text-muted-foreground">
+                Lightweight diff (mobile)
+              </div>
+            )}
+            <FallbackDiff original={originalCode} modified={modifiedCode} />
+          </>
+        ) : (
           <DiffEditor
             height="100%"
             language={language === "typescript" ? "typescript" : language}
@@ -198,8 +220,8 @@ export function CodeDiffViewer() {
                 Loading editor…
               </div>
             }
-            onMount={(editor) => {
-              editorRef.current = editor;
+            onMount={(ed) => {
+              editorRef.current = ed;
             }}
             options={{
               readOnly: true,
@@ -220,8 +242,6 @@ export function CodeDiffViewer() {
               wordWrap: "on",
             }}
           />
-        ) : (
-          <FallbackDiff original={originalCode} modified={modifiedCode} />
         )}
       </div>
     </div>
