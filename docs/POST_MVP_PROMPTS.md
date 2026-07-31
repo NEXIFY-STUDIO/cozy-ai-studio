@@ -22,6 +22,6 @@ Až keď `GET /api/mvp-status` → `mvpReady: true`.
 | P4 Telemetry | **Done** (approvals + telemetry + stats API) |
 | P5 Domain | Hold |
 | P6 RLS/security | **Partial** (app-layer + indexes; no force RLS) |
-| P7 Smoke | **Partial** (`prod-smoke` / `ship-gate`; no Stripe dry-run) |
+| P7 Smoke | **Done** (prod-smoke full spine + optional agent SSE; no Stripe dry-run) |
 
 Každý prompt = stredná dĺžka (15–40 riadkov), 1 AC checklist, žiadny redesign chrome.

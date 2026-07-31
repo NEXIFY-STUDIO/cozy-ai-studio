@@ -227,7 +227,7 @@ export async function joinWithCode(
   leaveRoom(sock);
   const code = pairCode.trim().toUpperCase();
   const s = state();
-  let roomId = s.codeToRoom.get(code);
+  const roomId = s.codeToRoom.get(code);
   let room = roomId ? s.rooms.get(roomId) : undefined;
   if (!room) {
     const fromPg = await pgFindRoomByCode(code);
