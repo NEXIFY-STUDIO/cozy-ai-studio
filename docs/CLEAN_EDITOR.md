@@ -31,4 +31,4 @@ Permanently resets the **session editor state** in Cozy AI Studio after a **2-st
 - Tracking issue: https://github.com/NEXIFY-STUDIO/cozy-ai-studio/issues/26
 
 ## Status
-Spec + issue opened. Apply the code from issue #26 body into store + AgentPanel, then close the issue.
+**IMPLEMENTED** (2026-07-31). `cleanEditor()` + Brief header button with 2-step arm (5s) landed. Quota / theme / device / production prefs preserved. Deploy will pick up on next Vercel build.
