@@ -16,6 +16,7 @@ import {
   ensureDefaultProject,
   recordUsageEvent,
 } from "@/lib/projects/server";
+import { recordActivationEvent } from "@/lib/activation/server";
 
 export const Route = createFileRoute("/api/agents/run")({
   server: {
@@ -159,6 +160,12 @@ export const Route = createFileRoute("/api/agents/run")({
           );
         }
 
+        void recordActivationEvent({
+          userId,
+          event: "brief_sent",
+          meta: { len: prompt.length },
+        });
+
         let projectId = body.projectId ?? null;
         try {
           const project = await ensureDefaultProject(userId);
@@ -210,6 +217,11 @@ export const Route = createFileRoute("/api/agents/run")({
 
               if (completed) {
                 try {
+                  await recordActivationEvent({
+                    userId,
+                    event: "pipeline_done",
+                    meta: { provider: "mistral" },
+                  });
                   await recordUsageEvent({
                     userId,
                     projectId,

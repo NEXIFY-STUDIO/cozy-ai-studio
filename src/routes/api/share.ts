@@ -5,6 +5,7 @@ import {
   createSharedPreview,
   getSharedPreview,
 } from "@/lib/share/server";
+import { recordActivationEvent } from "@/lib/activation/server";
 
 /**
  * POST /api/share — create public preview link
@@ -99,6 +100,11 @@ export const Route = createFileRoute("/api/share")({
           });
           const origin = new URL(request.url).origin;
           const url = `${origin}${created.path}`;
+          await recordActivationEvent({
+            userId,
+            event: "share_created",
+            meta: { id: created.id, title: body.title ?? null },
+          });
           return Response.json({
             ok: true,
             id: created.id,

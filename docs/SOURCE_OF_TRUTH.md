@@ -15,7 +15,7 @@
 | WebContainer live runtime | **Partial** | Code present; depends on COEP + browser |
 | Mobile pair companion | **Real (HTTP+PG)** | Durable pair rooms; WS in dev, HTTP long-poll on Vercel |
 | Free prompt caps | **Real (server)** | Daily 20 + monthly 100; hard 429 on `/api/agents/run` **before** Mistral |
-| Public share `/a/:id` | **Real** | POST `/api/share` → clipboard link; iframe preview |
+| Public share `/a/:id` | **Real = free publish** | POST `/api/share` → stable public URL; og tags; Remix |
 | Cloud project files | **Real** | Open demo + signed-in: hydrate/save via DB (dev-user when auth off) |
 | Remix share → Studio | **Real** | `/studio?remix=:id` applies source + preview |
 | Stripe Pro / Enterprise | **Not live** until `STRIPE_SECRET_KEY` + price IDs + webhook | UI must not claim otherwise |

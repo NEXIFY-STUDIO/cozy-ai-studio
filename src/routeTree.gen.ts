@@ -17,6 +17,7 @@ import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as ShowcaseRouteImport } from './routes/showcase'
 import { Route as StudioRouteImport } from './routes/studio'
 import { Route as AIdRouteImport } from './routes/a.$id'
+import { Route as ApiActivationStatsRouteImport } from './routes/api/activation-stats'
 import { Route as ApiAiStatusRouteImport } from './routes/api/ai-status'
 import { Route as ApiEnvStatusRouteImport } from './routes/api/env-status'
 import { Route as ApiMvpStatusRouteImport } from './routes/api/mvp-status'
@@ -68,6 +69,11 @@ const StudioRoute = StudioRouteImport.update({
 const AIdRoute = AIdRouteImport.update({
   id: '/a/$id',
   path: '/a/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiActivationStatsRoute = ApiActivationStatsRouteImport.update({
+  id: '/api/activation-stats',
+  path: '/api/activation-stats',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAiStatusRoute = ApiAiStatusRouteImport.update({
@@ -140,6 +146,7 @@ export interface FileRoutesByFullPath {
   '/showcase': typeof ShowcaseRoute
   '/studio': typeof StudioRoute
   '/a/$id': typeof AIdRoute
+  '/api/activation-stats': typeof ApiActivationStatsRoute
   '/api/ai-status': typeof ApiAiStatusRoute
   '/api/env-status': typeof ApiEnvStatusRoute
   '/api/mvp-status': typeof ApiMvpStatusRoute
@@ -162,6 +169,7 @@ export interface FileRoutesByTo {
   '/showcase': typeof ShowcaseRoute
   '/studio': typeof StudioRoute
   '/a/$id': typeof AIdRoute
+  '/api/activation-stats': typeof ApiActivationStatsRoute
   '/api/ai-status': typeof ApiAiStatusRoute
   '/api/env-status': typeof ApiEnvStatusRoute
   '/api/mvp-status': typeof ApiMvpStatusRoute
@@ -185,6 +193,7 @@ export interface FileRoutesById {
   '/showcase': typeof ShowcaseRoute
   '/studio': typeof StudioRoute
   '/a/$id': typeof AIdRoute
+  '/api/activation-stats': typeof ApiActivationStatsRoute
   '/api/ai-status': typeof ApiAiStatusRoute
   '/api/env-status': typeof ApiEnvStatusRoute
   '/api/mvp-status': typeof ApiMvpStatusRoute
@@ -209,6 +218,7 @@ export interface FileRouteTypes {
     | '/showcase'
     | '/studio'
     | '/a/$id'
+    | '/api/activation-stats'
     | '/api/ai-status'
     | '/api/env-status'
     | '/api/mvp-status'
@@ -231,6 +241,7 @@ export interface FileRouteTypes {
     | '/showcase'
     | '/studio'
     | '/a/$id'
+    | '/api/activation-stats'
     | '/api/ai-status'
     | '/api/env-status'
     | '/api/mvp-status'
@@ -253,6 +264,7 @@ export interface FileRouteTypes {
     | '/showcase'
     | '/studio'
     | '/a/$id'
+    | '/api/activation-stats'
     | '/api/ai-status'
     | '/api/env-status'
     | '/api/mvp-status'
@@ -276,6 +288,7 @@ export interface RootRouteChildren {
   ShowcaseRoute: typeof ShowcaseRoute
   StudioRoute: typeof StudioRoute
   AIdRoute: typeof AIdRoute
+  ApiActivationStatsRoute: typeof ApiActivationStatsRoute
   ApiAiStatusRoute: typeof ApiAiStatusRoute
   ApiEnvStatusRoute: typeof ApiEnvStatusRoute
   ApiMvpStatusRoute: typeof ApiMvpStatusRoute
@@ -346,6 +359,13 @@ declare module '@tanstack/react-router' {
       path: '/a/$id'
       fullPath: '/a/$id'
       preLoaderRoute: typeof AIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/activation-stats': {
+      id: '/api/activation-stats'
+      path: '/api/activation-stats'
+      fullPath: '/api/activation-stats'
+      preLoaderRoute: typeof ApiActivationStatsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/ai-status': {
@@ -444,6 +464,7 @@ const rootRouteChildren: RootRouteChildren = {
   ShowcaseRoute: ShowcaseRoute,
   StudioRoute: StudioRoute,
   AIdRoute: AIdRoute,
+  ApiActivationStatsRoute: ApiActivationStatsRoute,
   ApiAiStatusRoute: ApiAiStatusRoute,
   ApiEnvStatusRoute: ApiEnvStatusRoute,
   ApiMvpStatusRoute: ApiMvpStatusRoute,

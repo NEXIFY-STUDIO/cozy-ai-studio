@@ -130,6 +130,9 @@ interface StudioState {
   preflightReport: PreflightReportState | null;
   showRejectionPoll: boolean;
   lastPrompt: string;
+  lastShareUrl: string | null;
+  lastShareId: string | null;
+  lastShareAt: number;
   previewHtml: string;
   previewKey: number;
   commandOpen: boolean;
@@ -460,6 +463,9 @@ export const useStudioStore = create<StudioState>()(
       preflightReport: null,
       showRejectionPoll: false,
       lastPrompt: "",
+      lastShareUrl: null,
+      lastShareId: null,
+      lastShareAt: 0,
       previewHtml: STARTER_PREVIEW,
       previewKey: 0,
       commandOpen: false,

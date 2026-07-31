@@ -11,6 +11,7 @@ import {
 } from "@/hooks/useProjectSync";
 import { saveMyProjectFiles } from "@/lib/db/functions";
 import { sharePreviewHtml } from "@/lib/share-preview";
+import { trackActivation } from "@/lib/activation/client";
 
 export function HitLApprovalCard() {
   const pending = useStudioStore((s) => s.pendingApproval);
@@ -27,6 +28,7 @@ export function HitLApprovalCard() {
 
   const finishApprove = useCallback(async () => {
     approvePending();
+    void trackActivation("accept");
     void pushAcceptedFilesToWebContainer().then(() => {
       toast.success("Changes applied", {
         description: "Preview updated · Share when ready",

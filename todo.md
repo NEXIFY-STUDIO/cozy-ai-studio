@@ -30,6 +30,8 @@
 | Deploy fix | Removed tracked `.vercel/output` (was causing prod 500) |
 | Mobile pair | Postgres durable rooms (0007) for Vercel multi-instance |
 | Prod smoke | `npm run prod-smoke` |
+| Publish A | `/a/:id` og tags + Studio free-publish CTAs |
+| Activation B | events + `/api/activation-stats` |
 
 ## Next
 

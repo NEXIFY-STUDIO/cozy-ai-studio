@@ -62,6 +62,8 @@ export function AgentPanel() {
   const activeFile = useStudioStore((s) => s.activeFile);
   const setActiveFile = useStudioStore((s) => s.setActiveFile);
   const isPipelineRunning = useStudioStore((s) => s.isPipelineRunning);
+  const lastShareUrl = useStudioStore((s) => s.lastShareUrl);
+  const lastShareId = useStudioStore((s) => s.lastShareId);
   const cancelPipeline = useStudioStore((s) => s.cancelPipeline);
   const pendingApproval = useStudioStore((s) => s.pendingApproval);
   const setMobilePanel = useStudioStore((s) => s.setMobilePanel);
@@ -208,6 +210,37 @@ export function AgentPanel() {
                 >
                   <Share2 className="h-3 w-3" />
                   Náhľad + Share
+                </button>
+              </div>
+            </div>
+          )}
+
+          {lastShareUrl && !pendingApproval && (
+            <div className="rounded-xl border border-choco/30 bg-choco/10 px-3 py-2.5 text-xs leading-relaxed space-y-2">
+              <p className="font-semibold text-foreground flex items-center gap-1.5">
+                <Share2 className="h-3.5 w-3.5 text-choco shrink-0" />
+                Free publish ready
+              </p>
+              <p className="text-muted-foreground font-mono text-[11px] truncate">
+                {lastShareId ? `/a/${lastShareId}` : lastShareUrl}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <a
+                  href={lastShareUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 rounded-lg border border-choco/40 bg-background px-2.5 py-1.5 text-[11px] font-medium hover:border-choco"
+                >
+                  Open public link
+                </a>
+                <button
+                  type="button"
+                  onClick={() => {
+                    void navigator.clipboard.writeText(lastShareUrl);
+                  }}
+                  className="inline-flex items-center gap-1 rounded-lg border border-border bg-background px-2.5 py-1.5 text-[11px] font-medium"
+                >
+                  Copy link
                 </button>
               </div>
             </div>
