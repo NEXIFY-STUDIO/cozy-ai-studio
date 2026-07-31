@@ -15,6 +15,9 @@ import { PipelineError } from "./errors";
 import type { TaskNode, PipelinePhase } from "./types";
 import type { AgentId } from "@/stores/studio-store";
 import type { SseDonePayload, SseEventType, SsePayloadMap } from "./sse-protocol";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { transformWithOxc } from "vite";
 
 export type PipelineEvent =
   | { type: "phase"; data: SsePayloadMap["phase"] }
@@ -52,37 +55,147 @@ function extractJsonObject(text: string): unknown {
   return JSON.parse(raw.slice(start, end + 1));
 }
 
-function buildPreviewHtml(title: string, code: string): string {
-  const safeTitle = title.replace(/[<>&]/g, "");
-  const escaped = code
-    .replace(/&/g, "&")
-    .replace(/</g, "<")
-    .replace(/>/g, ">");
-  return `<!DOCTYPE html>
+/**
+ * Turn G1 TSX into a real Live Preview document (rendered UI), NOT a source dump.
+ * Old bug: wrapped code in <pre> ("CAI PREVIEW") — production looked like a code
+ * viewer while Studio design preview expected the actual landing page.
+ *
+ * srcDoc has an opaque origin → external CDN scripts are CORS-blocked.
+ * We transpile TSX with Vite/Oxc on the server and inline React 18 UMD.
+ */
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+let umdReact = "";
+let umdReactDom = "";
+
+function loadPreviewRuntimeUmd(): void {
+  if (umdReact && umdReactDom) return;
+  const base = join(process.cwd(), "public", "preview-runtime");
+  umdReact = readFileSync(join(base, "react.production.min.js"), "utf8");
+  umdReactDom = readFileSync(join(base, "react-dom.production.min.js"), "utf8");
+}
+
+async function transpileTsxToIife(code: string): Promise<string> {
+  const { code: js } = await transformWithOxc(code, "App.tsx", {
+    lang: "tsx",
+    jsx: { runtime: "classic" },
+  });
+  let out = js.replace(/^\uFEFF/, "");
+  out = out.replace(/^\s*import\s+[\s\S]*?from\s+["'][^"']+["']\s*;?\s*$/gm, "");
+  out = out.replace(/^\s*import\s+["'][^"']+["']\s*;?\s*$/gm, "");
+  out = out.replace(
+    /\bexport\s+default\s+function\s+([A-Za-z_$][\w$]*)/g,
+    "function $1",
+  );
+  out = out.replace(/\bexport\s+default\s+/g, "var __CosyDefault = ");
+  out = out.replace(/\bexport\s+(async\s+)?function\s+/g, "$1function ");
+  out = out.replace(/\bexport\s+(const|let|var)\s+/g, "$1 ");
+  out = out.replace(/^\s*export\s*\{[^}]*\}\s*;?\s*$/gm, "");
+  const prelude =
+    "var useState = React.useState, useEffect = React.useEffect, useMemo = React.useMemo, useRef = React.useRef, useCallback = React.useCallback, useContext = React.useContext, useReducer = React.useReducer, useId = React.useId, Fragment = React.Fragment;\n";
+  return prelude + out;
+}
+
+async function buildPreviewHtml(title: string, code: string): Promise<string> {
+  const safeTitle = escapeHtml(title || "Preview");
+  const trimmed = code.trim();
+  if (
+    /^<!DOCTYPE html>/i.test(trimmed) ||
+    (/^<html[\s>]/i.test(trimmed) && /<\/html>/i.test(trimmed))
+  ) {
+    return trimmed;
+  }
+
+  try {
+    loadPreviewRuntimeUmd();
+    const js = await transpileTsxToIife(code);
+    const jsPayload = JSON.stringify(js);
+
+    return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
 <title>${safeTitle}</title>
 <style>
-  :root { color-scheme: light dark; }
-  body { margin:0; font-family: Inter, system-ui, sans-serif; background:#141414; color:#f2f3f5; }
-  header { padding:14px 18px; border-bottom:1px solid rgba(255,255,255,.08); background:#1a1a1a; }
-  header strong { color:#c48a5a; letter-spacing:.12em; font-size:12px; }
-  h1 { margin:6px 0 0; font-size:18px; font-weight:600; }
-  pre { margin:0; padding:18px; overflow:auto; font:12.5px/1.55 ui-monospace, SFMono-Regular, Menlo, monospace; white-space:pre-wrap; word-break:break-word; }
-  .hint { padding:10px 18px; font-size:12px; color:#b8bcc4; border-bottom:1px solid rgba(255,255,255,.06); }
+  html, body, #root { margin: 0; min-height: 100%; }
+  body {
+    font-family: Inter, system-ui, sans-serif;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+  }
+  #cosy-boot-error {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12px;
+    line-height: 1.5;
+    padding: 20px;
+    margin: 0;
+    color: #7f1d1d;
+    background: #fef2f2;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
 </style>
+<script>${umdReact}<\/script>
+<script>${umdReactDom}<\/script>
 </head>
 <body>
-  <header>
-    <strong>CAI PREVIEW</strong>
-    <h1>${safeTitle}</h1>
-  </header>
-  <p class="hint">Generated component source (WebContainer runtime ships in a later sprint).</p>
-  <pre>${escaped}</pre>
+<div id="root"></div>
+<script>
+window.__COSY_APP_JS__ = ${jsPayload};
+(function () {
+  function fail(err) {
+    var el = document.getElementById("root");
+    var pre = document.createElement("pre");
+    pre.id = "cosy-boot-error";
+    pre.textContent = "Live Preview failed to boot:\\n" + (err && err.message ? err.message : String(err));
+    el.innerHTML = "";
+    el.appendChild(pre);
+    console.error("[cosy-preview]", err);
+  }
+  try {
+    if (!window.React || !window.ReactDOM) throw new Error("React UMD missing");
+    var src = window.__COSY_APP_JS__ || "";
+    var runner = new Function(
+      "React",
+      "ReactDOM",
+      src +
+        ";\\n" +
+        "var Comp = (typeof App !== 'undefined' ? App : (typeof __CosyDefault !== 'undefined' ? __CosyDefault : null));" +
+        "if (!Comp) throw new Error('No default App component in generated code.');" +
+        "var root = ReactDOM.createRoot(document.getElementById('root'));" +
+        "root.render(React.createElement(Comp));"
+    );
+    runner(window.React, window.ReactDOM);
+  } catch (e) {
+    fail(e);
+  }
+})();
+<\/script>
 </body>
 </html>`;
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return `<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<title>${safeTitle}</title>
+</head><body>
+<pre id="cosy-boot-error" style="padding:20px;color:#7f1d1d;background:#fef2f2;white-space:pre-wrap">Live Preview transform failed:
+${escapeHtml(msg)}
+
+Fix: G1 must output a self-contained default-export React component with <style> (no Tailwind-only classes).</pre>
+</body></html>`;
+  }
 }
 
 function mapMistralError(err: MistralHttpError): PipelineError {
@@ -690,7 +803,14 @@ Focus on security (XSS, eval), a11y, and React correctness. Be concise.`,
 
     const finalTitle = codeJson.title?.trim() || title;
     const finalDescription = codeJson.description?.trim() || description;
-    const previewHtml = buildPreviewHtml(finalTitle, code);
+    const modelHtml =
+      typeof (codeJson as { previewHtml?: unknown }).previewHtml === "string"
+        ? String((codeJson as { previewHtml?: string }).previewHtml).trim()
+        : "";
+    const previewHtml =
+      modelHtml.startsWith("<!DOCTYPE") || modelHtml.startsWith("<html")
+        ? modelHtml
+        : await buildPreviewHtml(finalTitle, code);
 
     yield { type: "phase", data: { phase: "completed" } };
     yield { type: "progress", data: { pct: 100, label: "Pipeline complete" } };

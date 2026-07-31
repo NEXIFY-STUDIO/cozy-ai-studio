@@ -334,6 +334,10 @@ export async function runStudioPipeline(
             language: p.language,
           })),
         });
+        // Live Preview must show the NEW UI immediately (not wait for Accept)
+        if (result.previewHtml) {
+          store.setPreviewHtml(result.previewHtml);
+        }
 
         try {
           const project = await ensureMyProject();

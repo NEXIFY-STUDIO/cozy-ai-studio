@@ -88,6 +88,10 @@ export function LivePreview() {
   const deviceRaw = useStudioStore((s) => s.device);
   const setDevice = useStudioStore((s) => s.setDevice);
   const previewHtml = useStudioStore((s) => s.previewHtml);
+  const pendingApproval = useStudioStore((s) => s.pendingApproval);
+  // Prefer HitL pending preview (new G1 output) over stale store html
+  const activePreviewHtml =
+    pendingApproval?.previewHtml?.trim() || previewHtml;
   const previewKey = useStudioStore((s) => s.previewKey);
   const lastShareUrl = useStudioStore((s) => s.lastShareUrl);
   const lastShareId = useStudioStore((s) => s.lastShareId);
@@ -119,17 +123,17 @@ export function LivePreview() {
     const chrome = current.chrome ?? "none";
     const shellReserves =
       current.family !== "desktop" && chrome !== "none";
-    return injectSafeAreaIntoHtml(previewHtml, current, {
+    return injectSafeAreaIntoHtml(activePreviewHtml, current, {
       shellReservesBands: shellReserves,
     });
-  }, [previewHtml, current]);
+  }, [activePreviewHtml, current]);
 
   const pipelinePhase = useStudioStore((s) => s.pipelinePhase);
-  const pendingApproval = useStudioStore((s) => s.pendingApproval);
+  // pendingApproval already read above for activePreviewHtml
 
   const sharePreview = useCallback(async () => {
-    await sharePreviewHtml(previewHtml);
-  }, [previewHtml]);
+    await sharePreviewHtml(activePreviewHtml);
+  }, [activePreviewHtml]);
 
   const shareHighlight =
     pipelinePhase === "completed" || Boolean(pendingApproval);
