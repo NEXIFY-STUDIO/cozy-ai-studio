@@ -476,16 +476,28 @@ export function safeAreaCssVars(device: DevicePreset): string {
 }
 
 /**
- * Inject viewport-fit=cover + simulated safe-area env() into srcDoc HTML
- * so generated previews respect the camera housing on iPhone 17 Air etc.
+ * Inject viewport-fit=cover + simulated safe-area into srcDoc HTML so
+ * generated previews respect camera / Dynamic Island.
+ *
+ * shellReservesBands: Live Preview frame already carves top/bottom bands
+ * outside the iframe — only set CSS vars + sticky fixes, do NOT double-pad body.
  */
 export function injectSafeAreaIntoHtml(
   html: string,
   device: DevicePreset,
+  options?: { shellReservesBands?: boolean },
 ): string {
   if (!html || device.family === "desktop") return html;
   const sa = getSafeArea(device);
   if (sa.top === 0 && sa.bottom === 0) return html;
+
+  const shell = Boolean(options?.shellReservesBands);
+  // When shell owns the bands, body pad is 0 (iframe origin is already below island).
+  // Standalone (share / raw srcDoc without bands): pad body + push sticky below island.
+  const bodyTop = shell ? 0 : sa.top;
+  const bodyBottom = shell ? 0 : sa.bottom;
+  // Sticky/fixed top:0 must never sit under the island overlay.
+  const stickyTop = shell ? 0 : sa.top;
 
   const inject = `<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <style data-cosy-safe-area>
@@ -499,12 +511,22 @@ html {
 }
 /* Touch / content must start BELOW camera (Dynamic Island) */
 body {
-  padding-top: max(0px, ${sa.top}px) !important;
-  padding-bottom: max(0px, ${sa.bottom}px) !important;
+  padding-top: max(0px, ${bodyTop}px) !important;
+  padding-bottom: max(0px, ${bodyBottom}px) !important;
   padding-left: max(0px, ${sa.left}px) !important;
   padding-right: max(0px, ${sa.right}px) !important;
   box-sizing: border-box;
   min-height: 100%;
+}
+/*
+ * Sticky / fixed headers with top:0 paint UNDER the island chrome.
+ * Force them to stick at the safe-top edge (or 0 when shell already reserved bands).
+ */
+header, .topbar, .app-header, .site-header, .navbar,
+header.sticky, header[class*="sticky"], nav.sticky, nav[class*="sticky"],
+.sticky.top-0, .fixed.top-0, [class*="sticky"][class*="top-0"],
+header.fixed, nav.fixed {
+  top: ${stickyTop}px !important;
 }
 /* Prefer explicit safe helpers if authors use them */
 .safe-top, .pt-safe { padding-top: ${sa.top}px !important; }

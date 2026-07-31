@@ -395,6 +395,18 @@ CRITICAL — Live Preview runtime (WebContainer) has NO Tailwind CSS build:
 - Mobile-first: use CSS media queries in <style>, not Tailwind breakpoints.
 - No new npm dependencies (no recharts/chart.js) — use CSS/SVG for charts if needed.
 
+CRITICAL — iPhone Dynamic Island / safe-area (iPhone 17 Air: top 68px / bottom 34px):
+- Never put logo, nav, or CTAs under the camera. Touch targets start BELOW the island.
+- Every page must use viewport-fit=cover (preview injects this) and respect safe areas.
+- Sticky/fixed headers MUST use: top: 0; padding-top: env(safe-area-inset-top, 68px);
+  (padding is INSIDE the sticky bar so title/nav sit under the island, not behind it).
+- body or main: padding-bottom: env(safe-area-inset-bottom, 34px) for home indicator.
+- Do NOT use position:sticky; top:0 without padding-top for the island.
+- Example header CSS:
+  .topbar { position: sticky; top: 0; z-index: 40;
+    padding: env(safe-area-inset-top, 68px) 16px 12px;
+    background: rgba(244,241,234,0.95); backdrop-filter: blur(12px); }
+
 Output a single JSON object (you may stream it) with shape:
 {
   "title": string,

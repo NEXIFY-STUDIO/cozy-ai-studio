@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   ArrowLeft,
   Check,
@@ -14,6 +14,7 @@ import { CozyLogo } from "@/components/brand/CozyLogo";
 import { getSharedPreview } from "@/lib/share/server";
 import { recordActivationEvent } from "@/lib/activation/server";
 import { toast } from "sonner";
+import { getDevice, injectSafeAreaIntoHtml } from "@/lib/devices";
 
 export const Route = createFileRoute("/a/$id")({
   loader: async ({ params }) => {
@@ -72,6 +73,14 @@ export const Route = createFileRoute("/a/$id")({
 function PublicSharePage() {
   const data = Route.useLoaderData();
   const [copied, setCopied] = useState(false);
+
+  const safeHtml = useMemo(() => {
+    if (data.notFound || !("html" in data) || !data.html) return "";
+    // Standalone share: pad body + sticky under island for mobile viewports
+    return injectSafeAreaIntoHtml(data.html, getDevice("iphone-17-air"), {
+      shellReservesBands: false,
+    });
+  }, [data]);
 
   if (data.notFound) {
     return (
@@ -185,7 +194,7 @@ function PublicSharePage() {
       <div className="min-h-0 flex-1 bg-canvas p-2 sm:p-3">
         <iframe
           title={data.title}
-          srcDoc={data.html}
+          srcDoc={safeHtml}
           sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
           className="h-full w-full rounded-xl border border-border bg-white shadow-[var(--shadow-glass)]"
         />

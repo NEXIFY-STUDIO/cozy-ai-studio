@@ -96,8 +96,12 @@ must(landing.includes("420×912") || landing.includes("420x912"), "landing mock 
 must(!landing.includes("375×667"), "landing no longer SE 375×667");
 
 // ─── 2) Unit: inject uses padding-top under camera ─
-const injectFn = devicesSrc.includes("padding-top: max(0px, ${sa.top}px)");
+const injectFn =
+  devicesSrc.includes("padding-top: max(0px, ${bodyTop}px)") ||
+  devicesSrc.includes("padding-top: max(0px, ${sa.top}px)");
 must(injectFn, "inject uses padding-top under camera");
+must(devicesSrc.includes("shellReservesBands"), "inject supports shellReservesBands");
+must(devicesSrc.includes("stickyTop"), "inject sticky headers below island");
 
 // ─── 3) Browser: 420×912 Studio + Live Preview ───────────────────────
 const BASE = (process.argv[2] || process.env.SHIP_GATE_BASE || "http://127.0.0.1:8080").replace(
@@ -209,13 +213,36 @@ async function browserPart() {
       must(Boolean(srcDoc && srcDoc.includes("data-cosy-safe-area")), "srcDoc has cosy safe-area style");
       must(Boolean(srcDoc && srcDoc.includes("68px")), "srcDoc simulates top 68px under camera");
       must(Boolean(srcDoc && /viewport-fit=cover/.test(srcDoc)), "srcDoc viewport-fit=cover");
-      // Touch content must use padding-top under camera
+      // Shell bands reserve top; inject still carries --sat: 68px
       must(
-        Boolean(srcDoc && /padding-top:\s*max\(0px,\s*68px\)/.test(srcDoc)),
-        "srcDoc body padding-top 68 under camera",
+        Boolean(srcDoc && /--sat:\s*68px/.test(srcDoc)),
+        "srcDoc --sat 68px under camera",
       );
     } else {
       notes.push("iframe data-safe-preview not found (may still be loading)");
+    }
+
+    // Layout bands: touch content starts BELOW island (not under camera)
+    const topBand = page.locator('[data-safe-band="top"]');
+    const contentBand = page.locator('[data-safe-content="1"]');
+    if ((await topBand.count()) > 0 && (await contentBand.count()) > 0) {
+      const tb = await topBand.boundingBox();
+      const cb = await contentBand.boundingBox();
+      if (tb && cb) {
+        must(
+          Math.abs(tb.height - 68) <= 4 || tb.height >= 60,
+          `top safe band ~68px (got ${tb.height.toFixed(0)})`,
+        );
+        must(
+          cb.y >= tb.y + tb.height - 2,
+          `content band below island (content.y=${cb.y.toFixed(0)} band.bottom=${(tb.y + tb.height).toFixed(0)})`,
+        );
+        notes.push(
+          `safe bands: top H=${Math.round(tb.height)} content y=${Math.round(cb.y)}`,
+        );
+      }
+    } else {
+      notes.push("data-safe-band layout not found (fallback inject-only mode)");
     }
 
     // Tab bar marker + min touch height

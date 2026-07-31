@@ -114,11 +114,15 @@ export function LivePreview() {
     return map;
   }, []);
 
-  /** srcDoc with safe-area injection so content sits below camera housing */
-  const safePreviewHtml = useMemo(
-    () => injectSafeAreaIntoHtml(previewHtml, current),
-    [previewHtml, current],
-  );
+  /** srcDoc: shell reserves safe bands — inject vars + sticky fix, no double body pad */
+  const safePreviewHtml = useMemo(() => {
+    const chrome = current.chrome ?? "none";
+    const shellReserves =
+      current.family !== "desktop" && chrome !== "none";
+    return injectSafeAreaIntoHtml(previewHtml, current, {
+      shellReservesBands: shellReserves,
+    });
+  }, [previewHtml, current]);
 
   const pipelinePhase = useStudioStore((s) => s.pipelinePhase);
   const pendingApproval = useStudioStore((s) => s.pendingApproval);
@@ -470,47 +474,72 @@ export function LivePreview() {
             "relative transition-all duration-300 ease-out bg-white dark:bg-canvas-elevated overflow-hidden shadow-[var(--shadow-elevated)]",
             isDesktop
               ? "h-full w-full rounded-xl border border-border"
-              : "border-[5px] border-charcoal/20 dark:border-zinc-600",
+              : "flex flex-col border-[5px] border-charcoal/20 dark:border-zinc-600",
           )}
           style={frameStyle}
           data-device-frame={current.id}
+          data-safe-layout={showChrome ? "bands" : "none"}
         >
-          {showChrome && <DeviceChrome device={current} />}
-
-          {useWcFrame && wcSrc ? (
-            <iframe
-              key={`wc-${previewKey}-${wcUrlBust}`}
-              ref={iframeEl}
-              title="CAI WebContainer Preview"
-              src={wcSrc}
-              onLoad={onIframeLoad}
-              allow="cross-origin-isolated"
-              className={cn("w-full border-0 bg-white", "h-full")}
-            />
-          ) : (
-            <iframe
-              key={`doc-${previewKey}-${current.id}`}
-              ref={iframeEl}
-              title="CAI srcDoc Preview"
-              srcDoc={safePreviewHtml}
-              onLoad={onIframeLoad}
-              sandbox="allow-scripts allow-same-origin allow-forms"
-              className={cn("w-full border-0 bg-white", "h-full")}
-              data-safe-preview="1"
-            />
+          {/* TOP SAFE BAND — island/notch lives here; touch content never paints under camera */}
+          {showChrome && safeArea.top > 0 && (
+            <div
+              className="relative z-20 w-full shrink-0 bg-[#F4F1EA] dark:bg-canvas-elevated"
+              style={{ height: safeArea.top }}
+              data-safe-band="top"
+              aria-hidden
+            >
+              <DeviceChrome device={current} />
+            </div>
           )}
 
-          {/* Home indicator for island phones */}
-          {(current.chrome === "dynamic-island" || current.chrome === "notch") &&
-            safeArea.bottom > 0 && (
-              <div
-                className="pointer-events-none absolute bottom-1.5 left-0 right-0 z-20 flex justify-center"
-                aria-hidden
-                data-home-indicator
-              >
-                <div className="h-[5px] w-[134px] rounded-full bg-black/80 dark:bg-white/70" />
-              </div>
+          {/* TOUCH CONTENT — iframe only; starts BELOW Dynamic Island */}
+          <div
+            className="relative min-h-0 w-full flex-1"
+            data-safe-content="1"
+            style={
+              showChrome
+                ? undefined
+                : { height: "100%" }
+            }
+          >
+            {useWcFrame && wcSrc ? (
+              <iframe
+                key={`wc-${previewKey}-${wcUrlBust}`}
+                ref={iframeEl}
+                title="CAI WebContainer Preview"
+                src={wcSrc}
+                onLoad={onIframeLoad}
+                allow="cross-origin-isolated"
+                className="absolute inset-0 h-full w-full border-0 bg-white"
+              />
+            ) : (
+              <iframe
+                key={`doc-${previewKey}-${current.id}`}
+                ref={iframeEl}
+                title="CAI srcDoc Preview"
+                srcDoc={safePreviewHtml}
+                onLoad={onIframeLoad}
+                sandbox="allow-scripts allow-same-origin allow-forms"
+                className="absolute inset-0 h-full w-full border-0 bg-white"
+                data-safe-preview="1"
+              />
             )}
+          </div>
+
+          {/* BOTTOM SAFE BAND — home indicator; not part of touch canvas */}
+          {showChrome && safeArea.bottom > 0 && (
+            <div
+              className="relative z-20 flex w-full shrink-0 items-center justify-center bg-[#F4F1EA] dark:bg-canvas-elevated"
+              style={{ height: safeArea.bottom }}
+              data-safe-band="bottom"
+              aria-hidden
+            >
+              <div
+                className="h-[5px] w-[134px] rounded-full bg-black/80 dark:bg-white/70"
+                data-home-indicator
+              />
+            </div>
+          )}
         </div>
 
         <div className="absolute bottom-3 right-3 flex flex-col items-end gap-1 z-10">

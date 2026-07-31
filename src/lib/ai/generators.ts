@@ -327,7 +327,7 @@ export default function App() {
           align-items: center;
           justify-content: space-between;
           gap: 12px;
-          padding: 14px 16px;
+          padding: env(safe-area-inset-top, 68px) 16px 14px;
           border-bottom: 1px solid rgba(28,29,33,0.1);
           background: rgba(244,241,234,0.98);
           position: sticky;
@@ -1079,7 +1079,8 @@ export default function App() {
   const [open, setOpen] = useState(false);
   return (
     <main className="min-h-screen bg-[#F4F1EA] text-[#1C1D21]">
-      <header className="sticky top-0 z-40 border-b border-black/10 bg-[#F4F1EA]/80 backdrop-blur-xl">
+      <header className="sticky top-0 z-40 border-b border-black/10 bg-[#F4F1EA]/80 backdrop-blur-xl" style={{ paddingTop: "max(12px, env(safe-area-inset-top, 68px))" }}>
+
         <div className="mx-auto flex max-w-5xl items-center justify-between px-5 py-3">
           <span className="font-serif text-xl font-bold">Aurora</span>
           <nav className="hidden md:flex items-center gap-8 text-sm text-black/60">
