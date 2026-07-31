@@ -211,6 +211,7 @@ interface StudioState {
   setFiles: (files: Record<string, ProjectFile>) => void;
   setPipelineLatency: (ms: number) => void;
   resetAgents: () => void;
+  cleanEditor: () => void;
   setPipelineError: (err: PipelineErrorState | null) => void;
   clearPipelineError: () => void;
   setRetryState: (patch: {
@@ -939,6 +940,63 @@ export const useStudioStore = create<StudioState>()(
           pipelineProgressLabel: "",
           pipelinePhase: "idle",
         }),
+      cleanEditor: () => {
+        get()._abort?.abort();
+        set({
+          _abort: null,
+          activeFile: "src/App.tsx",
+          files: {
+            "src/App.tsx": {
+              path: "src/App.tsx",
+              language: "typescript",
+              content: STARTER_APP,
+            },
+            "src/styles.css": {
+              path: "src/styles.css",
+              language: "css",
+              content: STARTER_STYLES,
+            },
+            "package.json": { ...initialFiles["package.json"] },
+          },
+          originalCode: STARTER_APP,
+          modifiedCode: STARTER_APP,
+          language: "typescript",
+          diffChunks: [],
+          agents: initialAgents.map((a) => ({ ...a })),
+          isPipelineRunning: false,
+          pipelinePhase: "idle",
+          pipelineProgress: 0,
+          pipelineProgressLabel: "",
+          taskGraph: [],
+          chat: [
+            {
+              id: `welcome-${Date.now()}`,
+              role: "system",
+              content:
+                "Speed Studio ready. Describe a UI change — G0 plans, G1 codes, G2 audits.",
+              timestamp: Date.now(),
+            },
+          ],
+          pendingApproval: null,
+          preflightReport: null,
+          showRejectionPoll: false,
+          lastPrompt: "",
+          lastShareUrl: null,
+          lastShareId: null,
+          lastShareAt: 0,
+          previewHtml: STARTER_PREVIEW,
+          previewKey: get().previewKey + 1,
+          publishUrl: null,
+          telemetry: [],
+          pipelineLatencyMs: 0,
+          lastPipelineError: null,
+          retryAttempt: 0,
+          retryMaxAttempts: 0,
+          retryCountdownMs: 0,
+          isAutoRetrying: false,
+          mobilePanel: "chat",
+        });
+      },
       setPipelineError: (err) => set({ lastPipelineError: err }),
       clearPipelineError: () => set({ lastPipelineError: null }),
       setRetryState: (patch) => set(patch),

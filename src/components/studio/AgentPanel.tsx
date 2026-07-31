@@ -13,6 +13,7 @@ import {
   Share2,
   ImagePlus,
   X,
+  Eraser,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -71,6 +72,7 @@ export function AgentPanel() {
   const [showErrorDemos, setShowErrorDemos] = useState(false);
   const [pendingMedia, setPendingMedia] = useState<ChatAttachment[]>([]);
   const [dragOver, setDragOver] = useState(false);
+  const [cleanArmed, setCleanArmed] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chat = useStudioStore((s) => s.chat);
   const files = useStudioStore((s) => s.files);
@@ -88,6 +90,7 @@ export function AgentPanel() {
   const dailyUsed = useStudioStore((s) => s.dailyUsed);
   const dailyLimit = useStudioStore((s) => s.dailyLimit);
   const lastError = useStudioStore((s) => s.lastPipelineError);
+  const cleanEditor = useStudioStore((s) => s.cleanEditor);
   const scrollRef = useRef<HTMLDivElement>(null);
   const consumedLanding = useRef(false);
 
@@ -116,6 +119,35 @@ export function AgentPanel() {
       /* ignore */
     }
   }, []);
+
+  // Clean editor: 2nd click must come within 5s
+  useEffect(() => {
+    if (!cleanArmed) return;
+    const t = window.setTimeout(() => setCleanArmed(false), 5000);
+    return () => window.clearTimeout(t);
+  }, [cleanArmed]);
+
+  const onCleanEditor = () => {
+    if (isPipelineRunning) {
+      toast.message("Najprv zastav pipeline");
+      return;
+    }
+    if (!cleanArmed) {
+      setCleanArmed(true);
+      toast.message("Ešte jeden klik", {
+        description: "Celá história sa vymaže natrvalo.",
+      });
+      return;
+    }
+    cleanEditor();
+    setCleanArmed(false);
+    setInput("");
+    setPendingMedia([]);
+    setFilesOpen(false);
+    toast.success("Editor je čistý", {
+      description: "Chat, súbory, diff a zdieľanie sú preč.",
+    });
+  };
 
   const addMediaFiles = useCallback(
     async (fileList: FileList | File[] | null | undefined) => {
@@ -177,13 +209,31 @@ export function AgentPanel() {
                 Multi-agent pipeline
               </p>
             </div>
-            <span
-              className="text-[11px] text-muted-foreground tabular-nums shrink-0 font-mono pt-0.5"
-              title="Server-enforced free caps"
-            >
-              {planTier}
-              {dailyLeft != null ? ` · ${dailyLeft}d` : ""} · {monthlyLeft} left
-            </span>
+            <div className="flex flex-col items-end gap-1.5 shrink-0">
+              <span
+                className="text-[11px] text-muted-foreground tabular-nums font-mono pt-0.5"
+                title="Server-enforced free caps"
+              >
+                {planTier}
+                {dailyLeft != null ? ` · ${dailyLeft}d` : ""} · {monthlyLeft} left
+              </span>
+              <button
+                type="button"
+                onClick={onCleanEditor}
+                disabled={isPipelineRunning}
+                className={cn(
+                  "inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-[11px] font-medium transition-colors",
+                  cleanArmed
+                    ? "border-destructive/50 bg-destructive/15 text-destructive"
+                    : "border-border bg-background text-muted-foreground hover:text-foreground hover:border-choco/40",
+                )}
+                title="Vymazať celú históriu editora natrvalo"
+                aria-label={cleanArmed ? "Potvrdiť vymazanie" : "Vyčistiť editor"}
+              >
+                <Eraser className="h-3 w-3" />
+                {cleanArmed ? "Naozaj vymazať" : "Vyčistiť"}
+              </button>
+            </div>
           </div>
 
           {showEmpty && (
