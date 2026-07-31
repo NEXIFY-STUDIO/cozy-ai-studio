@@ -1,6 +1,6 @@
 import { toast } from "sonner";
 import { sharePreviewHtml } from "@/lib/share-preview";
-import { useStudioStore } from "@/stores/studio-store";
+import { useStudioStore, type ChatAttachment } from "@/stores/studio-store";
 import {
   runMultiAgentPipeline,
   type PipelineCallbacks,
@@ -32,11 +32,35 @@ import type { FilePatch } from "./patch-contract";
 export type RunPipelineOptions = {
   autoRetry?: boolean;
   forceDemo?: boolean;
+  attachments?: ChatAttachment[];
 };
 
 function shouldUseDemo(forceDemo?: boolean): boolean {
   if (forceDemo) return true;
   return isClientDemoPipeline();
+}
+
+function buildPromptWithMedia(
+  prompt: string,
+  attachments?: ChatAttachment[],
+): string {
+  const base = prompt.trim();
+  if (!attachments?.length) return base;
+  const lines = attachments.map((a, i) => {
+    const dim =
+      a.width && a.height ? `${a.width}×${a.height}` : "unknown size";
+    return `${i + 1}. ${a.name} (${a.mime}, ${dim}, ${Math.round(a.size / 1024)}KB)`;
+  });
+  const mediaBlock = [
+    "",
+    "[Attached media — visual reference]",
+    ...lines,
+    "Use attached image(s) as style / layout / palette reference for the UI change. Prefer matching colors, spacing and composition from the media when the brief is vague.",
+  ].join("\n");
+  if (!base) {
+    return `Match the attached reference image(s) for UI style and layout.${mediaBlock}`;
+  }
+  return `${base}${mediaBlock}`;
 }
 
 /**
@@ -47,12 +71,13 @@ export async function runStudioPipeline(
   options: RunPipelineOptions = {},
 ): Promise<boolean> {
   const autoRetry = options.autoRetry !== false;
-  const trimmed = prompt.trim();
+  const attachments = options.attachments?.slice(0, 4) ?? [];
+  const trimmed = buildPromptWithMedia(prompt, attachments);
   const store = useStudioStore.getState();
 
   if (!trimmed) {
     toast.error("Prompt cannot be empty", {
-      description: "Describe a UI change, or pick an error-handling example.",
+      description: "Describe a UI change, attach an image, or pick a template.",
     });
     store.setPipelineError({
       code: "EMPTY_PROMPT",
@@ -94,7 +119,11 @@ export async function runStudioPipeline(
   store.setPreflightReport(null);
   const signal = store.beginPipeline();
   store.incrementPrompts();
-  store.addChat({ role: "user", content: trimmed });
+  store.addChat({
+    role: "user",
+    content: prompt.trim() || (attachments.length ? "Attached media" : trimmed),
+    attachments: attachments.length ? attachments : undefined,
+  });
   useStudioStore.setState({ lastPrompt: trimmed });
 
   const original = store.files[store.activeFile]?.content ?? store.originalCode;

@@ -40,12 +40,23 @@ export interface ProjectFile {
   content: string;
 }
 
+export interface ChatAttachment {
+  id: string;
+  name: string;
+  mime: string;
+  size: number;
+  dataUrl: string;
+  width?: number;
+  height?: number;
+}
+
 export interface ChatMessage {
   id: string;
   role: "user" | "assistant" | "system";
   content: string;
   timestamp: number;
   agent?: AgentId;
+  attachments?: ChatAttachment[];
 }
 
 export interface PendingApproval {
