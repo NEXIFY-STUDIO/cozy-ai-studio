@@ -4,6 +4,7 @@ import { ArrowLeft, Check, Copy, ExternalLink, Link2, Sparkles } from "lucide-re
 import { Button } from "@/components/ui/button";
 import { CozyLogo } from "@/components/brand/CozyLogo";
 import { getSharedPreview } from "@/lib/share/server";
+import { recordActivationEvent } from "@/lib/activation/server";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/a/$id")({
@@ -11,6 +12,10 @@ export const Route = createFileRoute("/a/$id")({
     try {
       const row = await getSharedPreview(params.id);
       if (!row) return { notFound: true as const, id: params.id };
+      void recordActivationEvent({
+        event: "share_viewed",
+        meta: { id: row.id },
+      });
       return {
         notFound: false as const,
         id: row.id,

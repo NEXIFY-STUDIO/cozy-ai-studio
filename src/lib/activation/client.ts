@@ -4,7 +4,8 @@ export type ClientActivationEvent =
   | "pipeline_done"
   | "accept"
   | "share_created"
-  | "remix_opened";
+  | "remix_opened"
+  | "share_viewed";
 
 export async function trackActivation(
   event: ClientActivationEvent,
@@ -19,5 +20,27 @@ export async function trackActivation(
     });
   } catch {
     /* ignore */
+  }
+}
+
+export type ActivationCounts = Record<ClientActivationEvent, number>;
+
+export async function fetchActivationStats(hours = 24): Promise<{
+  ok: boolean;
+  counts: ActivationCounts;
+  totals: number;
+  windowHours: number;
+} | null> {
+  try {
+    const res = await fetch(`/api/activation-stats?hours=${hours}`);
+    if (!res.ok) return null;
+    return (await res.json()) as {
+      ok: boolean;
+      counts: ActivationCounts;
+      totals: number;
+      windowHours: number;
+    };
+  } catch {
+    return null;
   }
 }

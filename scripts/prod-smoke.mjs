@@ -50,6 +50,7 @@ async function main() {
 
   const act = await fetch(`${BASE}/api/activation-stats?hours=24`).then((r) => r.json());
   must(act.ok === true && act.counts, "activation-stats ok");
+  must("share_viewed" in (act.counts || {}), "share_viewed metric present");
 
   // pair open (does not require two peers)
   const pairOpen = await fetch(`${BASE}/api/ws/http`, {

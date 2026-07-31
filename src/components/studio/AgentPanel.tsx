@@ -23,6 +23,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { MobilePairPanel } from "./MobilePairPanel";
+import { ActivationFunnelCard } from "@/components/studio/ActivationFunnelCard";
 
 const TEMPLATES: {
   icon: typeof Coffee;
@@ -245,6 +246,8 @@ export function AgentPanel() {
               </div>
             </div>
           )}
+
+          <ActivationFunnelCard />
 
           <div className="space-y-2 min-w-0">
             {chat.map((m) => (
