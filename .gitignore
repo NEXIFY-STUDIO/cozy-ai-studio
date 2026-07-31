@@ -5,3 +5,7 @@ node_modules/
 .env.*
 .vercel
 .env*
+
+# Never commit Vercel prebuilt output (breaks Git deploys)
+.vercel/
+.vercel/output/
