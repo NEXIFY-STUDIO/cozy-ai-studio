@@ -35,12 +35,15 @@
 | Funnel UI | Studio 24h funnel + share_viewed |
 | Funnel polish | conversion %, drop callout, refresh |
 | Prompt C | Honest Vercel redeploy mode (no fake Deployed); env keys on Vercel |
+| Telemetry P4 | HitL approve/reject → DB; reject activation; /api/telemetry-stats |
+| P6 security | 0009 indexes + SECURITY_MODEL (no force RLS) |
 
 ## Next
 
 | # | Item |
 |---|---|
-| ~~P4 Stripe~~ | hold until activation |
+| ~~P4 Stripe~~ | hold until real activation (brief→share) |
+| Post-MVP P5 | custom domain (later) |
 | Optional | full launch with Stripe checkout |
 
 ## Check

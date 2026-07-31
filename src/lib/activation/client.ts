@@ -5,7 +5,8 @@ export type ClientActivationEvent =
   | "accept"
   | "share_created"
   | "remix_opened"
-  | "share_viewed";
+  | "share_viewed"
+  | "reject";
 
 export async function trackActivation(
   event: ClientActivationEvent,

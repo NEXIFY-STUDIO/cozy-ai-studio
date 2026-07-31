@@ -37,3 +37,11 @@ This app talks to Postgres via **server-side** `DATABASE_URL` (node-postgres / p
 
 - Never commit `.env`. Vercel holds `DATABASE_URL`, `MISTRAL_API_KEY`, Supabase keys.
 - Stripe keys only after P4 activation.
+
+## Post-MVP P6 (2026-07-31)
+
+- App SQL always filters by `user_id` (approvals, telemetry, projects, usage).
+- Migration `0009_rls_app_tables.sql`: indexes + comments only — **no FORCE RLS**
+  (pooler owner role would break without `set_config('app.user_id')`).
+- HitL reject/approve persists via `createMyApproval` / `resolveMyApproval` / `recordMyTelemetry`.
+- Aggregates: `GET /api/telemetry-stats`, `GET /api/activation-stats` (no PII dumps).

@@ -102,7 +102,8 @@ export function HitLApprovalCard() {
 
   const onReject = useCallback(() => {
     rejectPending();
-    void resolveServerApproval("rejected");
+    // Keep session approval id until RejectionPoll records reason + resolve
+    void trackActivation("reject");
   }, [rejectPending]);
 
   useEffect(() => {
