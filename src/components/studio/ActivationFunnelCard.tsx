@@ -8,12 +8,12 @@ import {
 import { cn } from "@/lib/utils";
 
 const STEPS: { key: keyof ActivationCounts; label: string; hint: string }[] = [
-  { key: "brief_sent", label: "Brief", hint: "Prompt odoslaný" },
-  { key: "pipeline_done", label: "Done", hint: "Pipeline OK" },
-  { key: "accept", label: "Accept", hint: "HitL accept" },
-  { key: "share_created", label: "Share", hint: "Public /a/…" },
-  { key: "share_viewed", label: "View", hint: "Niekto otvoril link" },
-  { key: "remix_opened", label: "Remix", hint: "Remix do Studio" },
+  { key: "brief_sent", label: "Brief", hint: "Brief odoslaný" },
+  { key: "pipeline_done", label: "Done", hint: "Pipeline dokončená" },
+  { key: "accept", label: "Accept", hint: "Schválenie (Accept)" },
+  { key: "share_created", label: "Share", hint: "Verejný odkaz /a/…" },
+  { key: "share_viewed", label: "View", hint: "Niekto otvoril odkaz" },
+  { key: "remix_opened", label: "Remix", hint: "Remix do Studia" },
 ];
 
 function pct(from: number, to: number): string | null {
@@ -92,7 +92,7 @@ export function ActivationFunnelCard({ className }: { className?: string }) {
           className,
         )}
       >
-        Loading funnel…
+        Načítavam funnel…
       </div>
     );
   }
@@ -105,7 +105,7 @@ export function ActivationFunnelCard({ className }: { className?: string }) {
           className,
         )}
       >
-        <span>Funnel unavailable</span>
+        <span>Funnel nie je dostupný</span>
         <button
           type="button"
           onClick={load}
@@ -133,7 +133,7 @@ export function ActivationFunnelCard({ className }: { className?: string }) {
       <div className="flex items-center justify-between gap-2">
         <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
           <Activity className="h-3 w-3 text-choco" />
-          Funnel (real)
+          Funnel (reálne)
         </p>
         <div className="flex items-center gap-1.5">
           {[24, 168].map((h) => (
@@ -152,7 +152,7 @@ export function ActivationFunnelCard({ className }: { className?: string }) {
             </button>
           ))}
           <span className="text-[10px] text-muted-foreground tabular-nums">
-            {totals} real
+            {totals} reálnych
             {smokeTotals > 0 ? ` · ${smokeTotals} smoke` : ""}
           </span>
           <button
@@ -183,7 +183,7 @@ export function ActivationFunnelCard({ className }: { className?: string }) {
           )}
           <div className="min-w-0">
             <p className="font-medium text-foreground">
-              Stripe gate: {gate.ready ? "ready" : "hold"}
+              Stripe: {gate.ready ? "pripravené" : "zatiaľ nie"}
             </p>
             <p className="mt-0.5">{gate.reason}</p>
           </div>
@@ -194,7 +194,7 @@ export function ActivationFunnelCard({ className }: { className?: string }) {
         <p className="text-[11px] text-muted-foreground leading-relaxed">
           Zatiaľ prázdne. Spusti brief → Accept + Share → otvor{" "}
           <span className="font-mono">/a/…</span> — tu uvidíš reálnu konverziu
-          (smoke sa odpočítava).
+          (testovacie smoke eventy sa odpočítavajú).
         </p>
       ) : (
         <>
@@ -259,8 +259,8 @@ export function ActivationFunnelCard({ className }: { className?: string }) {
       )}
 
       <p className="text-[10px] text-muted-foreground leading-snug">
-        Free publish = public <span className="font-mono">/a/…</span>. Stripe
-        až keď gate = ready (reálni useri, nie smoke).
+        Free publish = verejný <span className="font-mono">/a/…</span>. Stripe
+        až keď je brána pripravená (reálni používatelia, nie smoke testy).
       </p>
     </div>
   );

@@ -166,7 +166,7 @@ export function TopBar() {
           className="hidden sm:inline-flex h-9 w-9"
           onClick={toggleTheme}
           aria-label={theme === "dark" ? "Switch to cream theme" : "Switch to silver theme"}
-          title={theme === "dark" ? "Cream theme" : "Silver theme"}
+          title={theme === "dark" ? "Svetlý motív" : "Tmavý motív"}
         >
           {theme === "dark" ? (
             <Sun className="h-4 w-4" />
