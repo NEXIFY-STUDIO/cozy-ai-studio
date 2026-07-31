@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 /**
  * One-shot GO-LIVE ops: bind canvas.h4ck3d.me → Production project.
  * DELETE after successful go-live. Gated by X-Ops-Key.
+ * rev 3: multi-team domain hunt + detach + verify + redeploy
  */
 
 const DOMAIN = "canvas.h4ck3d.me";
@@ -16,7 +17,7 @@ async function vercel(
   opts: {
     method?: string;
     token: string;
-    teamId?: string;
+    teamId?: string | null;
     body?: unknown;
   },
 ): Promise<{ status: number; json: VercelJson; text: string }> {
@@ -51,9 +52,10 @@ export const Route = createFileRoute("/api/ops/go-live-canvas")({
         Response.json({
           ok: true,
           endpoint: "POST /api/ops/go-live-canvas",
-          purpose: "Bind canvas.h4ck3d.me to Production + force verify + redeploy",
+          purpose:
+            "Bind canvas.h4ck3d.me to Production across teams + force verify + redeploy",
           requires: "X-Ops-Key header",
-          rev: 2,
+          rev: 3,
         }),
       POST: async ({ request }) => {
         const key = request.headers.get("x-ops-key")?.trim() || "";
@@ -61,10 +63,18 @@ export const Route = createFileRoute("/api/ops/go-live-canvas")({
           return Response.json({ ok: false, error: "FORBIDDEN" }, { status: 403 });
         }
 
+        let body: { action?: string } = {};
+        try {
+          body = (await request.json()) as typeof body;
+        } catch {
+          body = {};
+        }
+        const action = body.action || "go-live";
+
         const token = envVal("VERCEL_TOKEN");
         const projectId =
           envVal("VERCEL_PROJECT_ID") || envVal("VERCEL_PROJECT_NAME");
-        const teamId = envVal("VERCEL_TEAM_ID") || undefined;
+        const defaultTeamId = envVal("VERCEL_TEAM_ID") || null;
 
         if (!token || !projectId) {
           return Response.json(
@@ -80,77 +90,102 @@ export const Route = createFileRoute("/api/ops/go-live-canvas")({
 
         const steps: { step: string; status: number; detail: unknown }[] = [];
 
-        // 0) List team projects — find who owns canvas
-        const projects = await vercel(`/v9/projects`, { token, teamId });
-        const plist = (
-          (projects.json as { projects?: { id: string; name: string }[] })
-            .projects ?? []
+        // Teams accessible by this token
+        const teamsRes = await vercel(`/v2/teams`, { token });
+        const teams = (
+          (teamsRes.json as { teams?: { id: string; name: string; slug: string }[] })
+            .teams ?? []
         );
         steps.push({
-          step: "list-projects",
-          status: projects.status,
-          detail: plist.map((p) => ({ id: p.id, name: p.name })),
+          step: "list-teams",
+          status: teamsRes.status,
+          detail: teams.map((t) => ({ id: t.id, name: t.name, slug: t.slug })),
         });
 
-        for (const p of plist) {
-          const d = await vercel(
-            `/v9/projects/${encodeURIComponent(p.id)}/domains`,
-            { token, teamId },
+        // Also include personal account (no teamId)
+        const scopes: { label: string; teamId: string | null }[] = [
+          { label: "personal", teamId: null },
+          ...teams.map((t) => ({ label: t.slug, teamId: t.id })),
+        ];
+
+        type Hit = {
+          scope: string;
+          teamId: string | null;
+          projectId: string;
+          projectName: string;
+          verified?: boolean;
+        };
+        const hits: Hit[] = [];
+
+        for (const sc of scopes) {
+          const projects = await vercel(`/v9/projects?limit=100`, {
+            token,
+            teamId: sc.teamId,
+          });
+          const plist = (
+            (projects.json as { projects?: { id: string; name: string }[] })
+              .projects ?? []
           );
-          const names = (
-            (d.json as { domains?: { name: string; verified?: boolean }[] })
-              .domains ?? []
-          ).map((x) => ({ name: x.name, verified: x.verified }));
-          if (names.some((n) => n.name === DOMAIN || n.name.endsWith(DOMAIN))) {
-            steps.push({
-              step: `domain-on-${p.name}`,
-              status: d.status,
-              detail: { projectId: p.id, domains: names },
-            });
-            // If wrong project — detach
-            if (p.id !== projectId) {
-              const rem = await vercel(
-                `/v9/projects/${encodeURIComponent(p.id)}/domains/${DOMAIN}`,
-                { method: "DELETE", token, teamId },
-              );
-              steps.push({
-                step: `detach-${p.name}`,
-                status: rem.status,
-                detail: rem.json.error || rem.json || rem.text.slice(0, 200),
+          for (const p of plist) {
+            const d = await vercel(
+              `/v9/projects/${encodeURIComponent(p.id)}/domains`,
+              { token, teamId: sc.teamId },
+            );
+            const domains = (
+              (d.json as { domains?: { name: string; verified?: boolean }[] })
+                .domains ?? []
+            );
+            const match = domains.find((x) => x.name === DOMAIN);
+            if (match) {
+              hits.push({
+                scope: sc.label,
+                teamId: sc.teamId,
+                projectId: p.id,
+                projectName: p.name,
+                verified: match.verified,
               });
             }
           }
         }
 
-        // 1) Domain config (account-level)
-        const dinfo = await vercel(`/v5/domains/${DOMAIN}`, { token, teamId });
-        steps.push({
-          step: "domain-v5",
-          status: dinfo.status,
-          detail: {
-            name: dinfo.json.name,
-            projectId: dinfo.json.projectId,
-            verified: dinfo.json.verified,
-            serviceType: dinfo.json.serviceType,
-            error: dinfo.json.error,
-          },
-        });
+        steps.push({ step: "domain-hits", status: 200, detail: hits });
 
-        // 2) Ensure on target project
+        if (action === "scan") {
+          return Response.json({
+            ok: true,
+            action: "scan",
+            domain: DOMAIN,
+            targetProjectId: projectId,
+            defaultTeamId,
+            hits,
+            steps,
+            rev: 3,
+          });
+        }
+
+        // Detach from every project that is NOT the target
+        for (const h of hits) {
+          if (h.projectId === projectId) continue;
+          const rem = await vercel(
+            `/v9/projects/${encodeURIComponent(h.projectId)}/domains/${DOMAIN}`,
+            { method: "DELETE", token, teamId: h.teamId },
+          );
+          steps.push({
+            step: `detach-${h.projectName}`,
+            status: rem.status,
+            detail: rem.json.error || rem.json || rem.text.slice(0, 200),
+          });
+        }
+
+        // Ensure on target project (default team)
         const domains = await vercel(
           `/v9/projects/${encodeURIComponent(projectId)}/domains`,
-          { token, teamId },
+          { token, teamId: defaultTeamId },
         );
         const domainList = (
           (domains.json as { domains?: { name: string; verified: boolean }[] })
             .domains ?? []
         );
-        steps.push({
-          step: "list-domains-target",
-          status: domains.status,
-          detail: domainList,
-        });
-
         let onTarget = domainList.some((d) => d.name === DOMAIN);
         if (!onTarget) {
           const add = await vercel(
@@ -158,7 +193,7 @@ export const Route = createFileRoute("/api/ops/go-live-canvas")({
             {
               method: "POST",
               token,
-              teamId,
+              teamId: defaultTeamId,
               body: { name: DOMAIN },
             },
           );
@@ -168,27 +203,31 @@ export const Route = createFileRoute("/api/ops/go-live-canvas")({
             detail: add.json.error || add.json,
           });
           onTarget = add.status === 200 || add.status === 201;
+        } else {
+          steps.push({
+            step: "add-domain",
+            status: 200,
+            detail: "already present",
+          });
         }
 
-        // 3) Force verify
+        // Force verify
         const verify = await vercel(
           `/v9/projects/${encodeURIComponent(projectId)}/domains/${DOMAIN}/verify`,
-          { method: "POST", token, teamId },
+          { method: "POST", token, teamId: defaultTeamId },
         );
         steps.push({
           step: "verify-domain",
           status: verify.status,
           detail: verify.json.error || {
             verified: verify.json.verified,
-            name: verify.json.name,
             verification: verify.json.verification,
           },
         });
 
-        // 4) Re-fetch domain state
         const after = await vercel(
           `/v9/projects/${encodeURIComponent(projectId)}/domains/${DOMAIN}`,
-          { token, teamId },
+          { token, teamId: defaultTeamId },
         );
         steps.push({
           step: "domain-after",
@@ -196,41 +235,34 @@ export const Route = createFileRoute("/api/ops/go-live-canvas")({
           detail: {
             name: after.json.name,
             verified: after.json.verified,
-            gitBranch: after.json.gitBranch,
-            redirect: after.json.redirect,
             verification: after.json.verification,
+            gitBranch: after.json.gitBranch,
           },
         });
 
-        // 5) Update SITE_URL via delete+create (sensitive vars block PATCH type)
+        // SITE_URL + open-demo flags (delete+create for sensitive vars)
         const envList = await vercel(
           `/v9/projects/${encodeURIComponent(projectId)}/env`,
-          { token, teamId },
+          { token, teamId: defaultTeamId },
         );
         const envs = (
           (envList.json as {
-            envs?: {
-              id: string;
-              key: string;
-              target?: string[];
-              type?: string;
-            }[];
+            envs?: { id: string; key: string; target?: string[] }[];
           }).envs ?? []
         );
 
-        const ensureEnv = async (key: string, value: string) => {
-          const matches = envs.filter(
-            (e) => e.key === key && (e.target ?? []).includes("production"),
-          );
-          for (const m of matches) {
+        const ensureEnv = async (ek: string, value: string) => {
+          for (const m of envs.filter(
+            (e) => e.key === ek && (e.target ?? []).includes("production"),
+          )) {
             const del = await vercel(
               `/v9/projects/${encodeURIComponent(projectId)}/env/${m.id}`,
-              { method: "DELETE", token, teamId },
+              { method: "DELETE", token, teamId: defaultTeamId },
             );
             steps.push({
-              step: `env-del-${key}`,
+              step: `env-del-${ek}`,
               status: del.status,
-              detail: del.status < 300 ? "deleted" : del.json.error || del.text.slice(0, 80),
+              detail: del.status < 300 ? "deleted" : del.json.error,
             });
           }
           const create = await vercel(
@@ -238,9 +270,9 @@ export const Route = createFileRoute("/api/ops/go-live-canvas")({
             {
               method: "POST",
               token,
-              teamId,
+              teamId: defaultTeamId,
               body: {
-                key,
+                key: ek,
                 value,
                 type: "encrypted",
                 target: ["production"],
@@ -248,27 +280,22 @@ export const Route = createFileRoute("/api/ops/go-live-canvas")({
             },
           );
           steps.push({
-            step: `env-set-${key}`,
+            step: `env-set-${ek}`,
             status: create.status,
-            detail:
-              create.status < 300
-                ? "set"
-                : create.json.error || create.text.slice(0, 120),
+            detail: create.status < 300 ? "set" : create.json.error,
           });
         };
 
-        // Only SITE_URL needs update for canvas primary; auth/demo already correct on this project
         await ensureEnv("SITE_URL", SITE);
         await ensureEnv("AUTH_PROVIDER", "none");
         await ensureEnv("VITE_AUTH_PROVIDER", "none");
         await ensureEnv("VITE_AUTH_ENABLED", "false");
         await ensureEnv("DEMO_PIPELINE", "false");
 
-        // Remove VITE_DEMO_PIPELINE if present
         for (const bad of envs.filter((e) => e.key === "VITE_DEMO_PIPELINE")) {
           const del = await vercel(
             `/v9/projects/${encodeURIComponent(projectId)}/env/${bad.id}`,
-            { method: "DELETE", token, teamId },
+            { method: "DELETE", token, teamId: defaultTeamId },
           );
           steps.push({
             step: "delete-VITE_DEMO_PIPELINE",
@@ -277,14 +304,14 @@ export const Route = createFileRoute("/api/ops/go-live-canvas")({
           });
         }
 
-        // 6) Redeploy production
+        // Redeploy
         const gitOrg = envVal("VERCEL_GIT_ORG") || "NEXIFY-STUDIO";
         const gitRepo = envVal("VERCEL_GIT_REPO") || "cozy-ai-studio";
         const gitRef = envVal("VERCEL_GIT_REF") || "main";
         const deploy = await vercel(`/v13/deployments`, {
           method: "POST",
           token,
-          teamId,
+          teamId: defaultTeamId,
           body: {
             name: envVal("VERCEL_PROJECT_NAME") || "cozy-ai-studio",
             project: projectId,
@@ -295,7 +322,7 @@ export const Route = createFileRoute("/api/ops/go-live-canvas")({
               repo: gitRepo,
               ref: gitRef,
             },
-            meta: { goLiveCanvas: "2" },
+            meta: { goLiveCanvas: "3" },
           },
         });
         steps.push({
@@ -313,21 +340,33 @@ export const Route = createFileRoute("/api/ops/go-live-canvas")({
             (verify.json as { verified?: boolean }).verified,
         );
 
+        const verification =
+          after.json.verification || verify.json.verification || null;
+
         return Response.json({
           ok: onTarget && deploy.status < 300,
+          rev: 3,
           domain: DOMAIN,
           site: SITE,
           onTarget,
           verified,
+          hitsBefore: hits,
           projectId,
-          teamId: teamId ?? null,
+          teamId: defaultTeamId,
           redeployId: (deploy.json as { id?: string }).id ?? null,
-          verification: after.json.verification || verify.json.verification,
+          verification,
           steps,
-          dnsHint:
-            verified
-              ? "Domain verified — wait for deploy propagation"
-              : "If still unverified, add TXT _vercel.h4ck3d.me = value from verification[], then re-POST",
+          dnsRequired: !verified
+            ? {
+                type: "TXT",
+                name: "_vercel.h4ck3d.me",
+                value:
+                  Array.isArray(verification) && verification[0]
+                    ? (verification[0] as { value?: string }).value
+                    : "vc-domain-verify=canvas.h4ck3d.me,…",
+                note: "Websupport DNS: replace existing _vercel TXT with this value, wait 60s, re-POST",
+              }
+            : null,
         });
       },
     },
