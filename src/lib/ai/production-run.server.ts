@@ -14,9 +14,10 @@ import { auditCode, autoHealCode, type AuditReport } from "./auditor";
 import { PipelineError } from "./errors";
 import type { TaskNode, PipelinePhase } from "./types";
 import type { SseDonePayload, SseEventType, SsePayloadMap } from "./sse-protocol";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { transformWithOxc } from "vite";
+// Bundle UMD into the server function — Vercel /var/task has no public/ on disk
+import umdReactSrc from "../../../public/preview-runtime/react.production.min.js?raw";
+import umdReactDomSrc from "../../../public/preview-runtime/react-dom.production.min.js?raw";
 
 export type PipelineEvent =
   | { type: "phase"; data: SsePayloadMap["phase"] }
@@ -75,13 +76,29 @@ let umdReactDom = "";
 
 function loadPreviewRuntimeUmd(): void {
   if (umdReact && umdReactDom) return;
-  const base = join(process.cwd(), "public", "preview-runtime");
-  umdReact = readFileSync(join(base, "react.production.min.js"), "utf8");
-  umdReactDom = readFileSync(join(base, "react-dom.production.min.js"), "utf8");
+  // Prefer bundler-inlined UMD (production Vercel). Fallback to empty → clear error.
+  umdReact = typeof umdReactSrc === "string" ? umdReactSrc : "";
+  umdReactDom = typeof umdReactDomSrc === "string" ? umdReactDomSrc : "";
+  if (!umdReact || !umdReactDom) {
+    throw new Error(
+      "Preview runtime UMD missing (react.production.min.js). Rebuild so ?raw imports are bundled.",
+    );
+  }
 }
 
 async function transpileTsxToIife(code: string): Promise<string> {
-  const { code: js } = await transformWithOxc(code, "App.tsx", {
+  // G1 often emits <style>{\`...\`}</style> with nested/broken backticks — soften before oxc
+  let src = code;
+  // Convert CSS-in-JS style tags to plain <style>...</style> when template is simple
+  src = src.replace(
+    /<style>\{\s*`([\s\S]*?)`\s*\}<\/style>/g,
+    (_m, css) => `<style>${String(css).replace(/<\/style>/gi, "<\\/style>")}</style>`,
+  );
+  // Strip Tailwind-only import noise that oxc can't resolve
+  src = src.replace(/^\s*import\s+.*?from\s+['"]react['"];?\s*$/gm, "");
+  src = src.replace(/^\s*import\s+.*?from\s+['"]react-dom.*['"];?\s*$/gm, "");
+
+  const { code: js } = await transformWithOxc(src, "App.tsx", {
     lang: "tsx",
     jsx: { runtime: "classic" },
   });

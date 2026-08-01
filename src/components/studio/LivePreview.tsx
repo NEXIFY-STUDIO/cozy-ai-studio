@@ -98,7 +98,16 @@ export function LivePreview() {
   const refreshPreview = useStudioStore((s) => s.refreshPreview);
 
   const wc = useWebContainerPreview();
-  const useWcFrame = wc.mode === "webcontainer" && Boolean(wc.url);
+  // HitL: always show server-built previewHtml (srcDoc). WC only has OLD files until Accept.
+  // Also fall back to srcDoc when WC is error/fallback so Babel overlays never hide a good preview.
+  const preferSrcDoc =
+    Boolean(activePreviewHtml?.trim()) &&
+    (Boolean(pendingApproval) ||
+      wc.status === "error" ||
+      wc.status === "fallback" ||
+      wc.mode === "srcdoc");
+  const useWcFrame =
+    !preferSrcDoc && wc.mode === "webcontainer" && Boolean(wc.url);
 
   const deviceId = resolveDeviceId(deviceRaw);
   const current = getDevice(deviceId);
