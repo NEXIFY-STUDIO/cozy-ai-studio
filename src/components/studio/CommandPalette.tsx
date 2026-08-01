@@ -17,9 +17,11 @@ import {
   Timer,
   WifiOff,
   FlaskConical,
+  Download,
 } from "lucide-react";
 import { useStudioStore } from "@/stores/studio-store";
 import { runStudioPipeline } from "@/lib/ai/run-studio-pipeline";
+import { usePwaInstall } from "@/hooks/usePwaInstall";
 import { toast } from "sonner";
 
 export function CommandPalette() {
@@ -32,6 +34,7 @@ export function CommandPalette() {
   const refreshPreview = useStudioStore((s) => s.refreshPreview);
   const setProductionLaunchOpen = useStudioStore((s) => s.setProductionLaunchOpen);
   const navigate = useNavigate();
+  const { canInstall, showIosHint, promptInstall } = usePwaInstall();
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -82,6 +85,16 @@ export function CommandPalette() {
             heading="Actions"
             className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-2 py-1.5"
           >
+            {(canInstall || showIosHint) && (
+              <Item
+                icon={Download}
+                label="Inštalovať COSY"
+                onSelect={() => {
+                  void promptInstall();
+                  setCommandOpen(false);
+                }}
+              />
+            )}
             <Item
               icon={Rocket}
               label="Deploy / limits"
