@@ -1,5 +1,6 @@
 import { useEffect, type ReactNode } from "react";
 import { installSafeAreaListener } from "@/lib/safe-area";
+import { registerServiceWorker } from "@/hooks/usePwaInstall";
 import {
   Outlet,
   createRootRoute,
@@ -79,7 +80,10 @@ export const Route = createRootRoute({
 });
 
 function RootComponent() {
-  useEffect(() => installSafeAreaListener(), []);
+  useEffect(() => {
+    installSafeAreaListener();
+    registerServiceWorker();
+  }, []);
   return (
     <RootDocument>
       <Outlet />
