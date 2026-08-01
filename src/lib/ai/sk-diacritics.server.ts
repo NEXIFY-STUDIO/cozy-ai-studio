@@ -10,11 +10,11 @@ const DIACRITICS_SYSTEM = `You restore Slovak diacritics ONLY.
 
 Rules:
 - Output ONLY the corrected text (no quotes, no markdown, no preamble).
-- Add missing diacritics: a→á/ä, c→č, d→ď, e→é, i→í, l→ĺ/ľ, n→ň, o→ó/ô, r→ŕ, s→š, t→ť, u→ú, y→ý, z→ž where correct in Slovak.
-- Do NOT rewrite, reorder, summarize, or add words.
-- Do NOT translate. Do NOT switch to Czech.
-- Keep punctuation, numbers, brand codes (e.g. D1G1C3RT), English product words, URLs unchanged.
-- Keep line breaks and spacing shape as close as possible.
+- Add missing diacritics: aáä, cč, dď, eé, ií, lĺľ, nň, oóô, rŕ, sš, tť, uú, yý, zž where correct in Slovak.
+- Do NOT rewrite, reorder, summarize, translate, or add/remove words.
+- Do NOT switch to Czech.
+- Keep punctuation, numbers, Latin brand codes, English product terms, URLs unchanged.
+- Preserve approximate length and word count (±1 word max).
 - If already correct, return the text unchanged.`;
 
 function skeleton(s: string): string {
@@ -26,40 +26,47 @@ function skeleton(s: string): string {
     .trim();
 }
 
+function wordCount(s: string): number {
+  return s.trim().split(/\s+/).filter(Boolean).length;
+}
+
 function looksLikeNeedsDiacritics(text: string): boolean {
-  // SK-ish bare forms without diacritics
-  if (/[áäčďéíĺľňóôŕšťúýžÁÄČĎÉÍĹĽŇÓÔŔŠŤÚÝŽ]/.test(text)) {
-    // already has some diacritics — still may miss more
-    return /\b(kaviaren|kosice|tlacidlo|objednat|hlavicka|galeria|cennik|stranka|aplikacia|mobilny|responzivny|terakotovy|kremovy)\b/i.test(
+  if (
+    /\b(kaviaren|kosice|tlacidlo|tlacidlom|objednat|hlavicka|galeria|cennik|stranka|aplikacia|mobilny|responzivny|terakotovy|kremovy|kremovou|krevovou)\b/i.test(
       text,
-    );
+    )
+  ) {
+    return true;
   }
-  return /\b(kaviaren|kosice|tlacidlo|objednat|hlavicka|galeria|cennik|stranka|nastavenia|aplikacia|pre|moju|kavu|ponuka)\b/i.test(
-    text,
-  );
+  // SK text without any diacritics
+  if (
+    !/[áäčďéíĺľňóôŕšťúýžÁÄČĎÉÍĹĽŇÓÔŔŠŤÚÝŽ]/.test(text) &&
+    /\b(pre|moju|kavu|ponuka|stranka|farba|tlacidlo)\b/i.test(text)
+  ) {
+    return true;
+  }
+  return false;
 }
 
 function acceptDiacriticsResult(input: string, output: string): boolean {
   const a = input.trim();
   const b = output.trim();
   if (!b || b.length < 2) return false;
-  // length must stay in same ballpark (no rewrite/expansion)
-  if (b.length > a.length * 1.35 + 12) return false;
-  if (b.length < a.length * 0.55 - 8) return false;
-  // same letter skeleton (diacritics stripped)
-  const sa = skeleton(a);
-  const sb = skeleton(b);
+  if (b.length > a.length * 1.25 + 10) return false;
+  if (b.length < a.length * 0.7 - 6) return false;
+  // word count must stay almost identical (no rewrite)
+  const wa = wordCount(a);
+  const wb = wordCount(b);
+  if (Math.abs(wa - wb) > 1) return false;
+
+  const sa = skeleton(a).replace(/[^\p{L}\p{N}]+/gu, "");
+  const sb = skeleton(b).replace(/[^\p{L}\p{N}]+/gu, "");
   if (sa === sb) return true;
-  // allow tiny punctuation drift
-  const sa2 = sa.replace(/[^\p{L}\p{N}]+/gu, "");
-  const sb2 = sb.replace(/[^\p{L}\p{N}]+/gu, "");
-  if (sa2 === sb2) return true;
-  // levenshtein-ish cheap: shared prefix/suffix ratio
-  if (sa2.length > 8 && sb2.length > 8) {
+  if (sa.length > 6 && sb.length > 6) {
     let same = 0;
-    const n = Math.min(sa2.length, sb2.length);
-    for (let i = 0; i < n; i++) if (sa2[i] === sb2[i]) same++;
-    if (same / Math.max(sa2.length, sb2.length) >= 0.88) return true;
+    const n = Math.min(sa.length, sb.length);
+    for (let i = 0; i < n; i++) if (sa[i] === sb[i]) same++;
+    if (same / Math.max(sa.length, sb.length) >= 0.9) return true;
   }
   return false;
 }
@@ -73,12 +80,12 @@ export type DiacriticsResult = {
 
 /**
  * Restore Slovak diacritics without semantic rewrite.
- * Pipeline: local glossary first → optional cheap Mistral pass when lang=sk.
+ * Prefer cheap Mistral small on original text; glossary as polish/fallback.
  */
 export async function restoreSlovakDiacritics(opts: {
   text: string;
   signal?: AbortSignal;
-  /** force Mistral even if glossary fully fixed */
+  /** force Mistral even if text looks fine */
   forceModel?: boolean;
 }): Promise<DiacriticsResult> {
   const input = (opts.text || "").trim();
@@ -86,28 +93,22 @@ export async function restoreSlovakDiacritics(opts: {
     return { text: "", provider: "noop", changed: false };
   }
 
-  // 1) free local glossary / multiword
-  const local = postprocessStudioBrief(input);
-  let text = local.text;
-  let provider: DiacriticsResult["provider"] =
-    local.fixes > 0 ? "glossary" : "noop";
-
-  const lang = local.lang;
+  const lang = postprocessStudioBrief(input).lang;
   const needs =
     opts.forceModel ||
-    (lang === "sk" && looksLikeNeedsDiacritics(text)) ||
-    (lang === "sk" && !/[áäčďéíĺľňóôŕšťúýž]/i.test(text) && /[a-z]{4,}/i.test(text));
+    (lang === "sk" && looksLikeNeedsDiacritics(input)) ||
+    (lang === "sk" &&
+      !/[áäčďéíĺľňóôŕšťúýž]/i.test(input) &&
+      /[a-z]{4,}/i.test(input));
 
+  // EN or nothing to do → glossary polish only
   if (!needs || lang === "en") {
+    const local = postprocessStudioBrief(input);
     return {
-      text,
-      provider,
-      changed: text !== input,
+      text: local.text,
+      provider: local.fixes > 0 ? "glossary" : "noop",
+      changed: local.text !== input,
     };
-  }
-
-  if (!getMistralApiKey()) {
-    return { text, provider, changed: text !== input };
   }
 
   const model =
@@ -115,38 +116,48 @@ export async function restoreSlovakDiacritics(opts: {
     process.env.MISTRAL_MODEL_PLAN ??
     "mistral-small-latest";
 
-  try {
-    const raw = await mistralChat({
-      signal: opts.signal,
-      model,
-      temperature: 0.05,
-      maxTokens: Math.min(600, Math.max(120, Math.ceil(text.length * 1.4))),
-      messages: [
-        { role: "system", content: DIACRITICS_SYSTEM },
-        {
-          role: "user",
-          content: `Restore Slovak diacritics only:\n\n${text}`,
-        },
-      ],
-    });
-    let out = raw.trim();
-    out = out.replace(/^```[\w]*\n?|\n?```$/g, "").trim();
-    out = out.replace(/^["'“”]+|["'“”]+$/g, "").trim();
-
-    if (acceptDiacriticsResult(text, out)) {
-      // final local polish
-      const polished = postprocessStudioBrief(out);
-      return {
-        text: polished.text,
-        provider: "mistral",
-        changed: polished.text !== input,
+  if (getMistralApiKey()) {
+    try {
+      const raw = await mistralChat({
+        signal: opts.signal,
         model,
-      };
+        temperature: 0.05,
+        maxTokens: Math.min(600, Math.max(80, Math.ceil(input.length * 1.5))),
+        messages: [
+          { role: "system", content: DIACRITICS_SYSTEM },
+          {
+            role: "user",
+            content: `Restore Slovak diacritics only (same words):\n\n${input}`,
+          },
+        ],
+      });
+      let out = raw.trim();
+      out = out.replace(/^```[\w]*\n?|\n?```$/g, "").trim();
+      out = out.replace(/^["'“”]+|["'“”]+$/g, "").trim();
+      // strip accidental "Here is" prefixes
+      out = out.replace(/^(here(?:'s| is)|opraven[yý] text)\s*:\s*/i, "").trim();
+
+      if (acceptDiacriticsResult(input, out)) {
+        const polished = postprocessStudioBrief(out);
+        return {
+          text: polished.text,
+          provider: "mistral",
+          changed: polished.text !== input,
+          model,
+        };
+      }
+    } catch (e) {
+      if (e instanceof MistralHttpError && e.status === 429) throw e;
+      // fall through to glossary
     }
-    // reject rewrite — keep local
-    return { text, provider, changed: text !== input, model };
-  } catch (e) {
-    if (e instanceof MistralHttpError && e.status === 429) throw e;
-    return { text, provider, changed: text !== input };
   }
+
+  // Fallback: local glossary only
+  const local = postprocessStudioBrief(input);
+  return {
+    text: local.text,
+    provider: local.fixes > 0 ? "glossary" : "noop",
+    changed: local.text !== input,
+    model,
+  };
 }
