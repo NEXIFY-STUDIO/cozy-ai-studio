@@ -7,13 +7,14 @@
  * 3) whole-phrase multiword fixes
  * 4) case-preserving token glossary (domain + diacritics)
  * 5) soft length clamp
+ * 6) collect unknown tokens (P1 → weekly glossary)
  *
  * Not a full spellchecker (no Hunspell/ByT5). Domain glossary covers
  * ~80% of brief typos users type on phone without diacritics.
  */
 
 /** High-value SK domain terms users type without diacritics / with typos */
-const SK_TOKEN_MAP: Record<string, string> = {
+export const SK_TOKEN_MAP: Record<string, string> = {
   // cities / brands common in our demos
   kosice: "Košice",
   kosiciach: "Košiciach",
@@ -61,7 +62,7 @@ const SK_TOKEN_MAP: Record<string, string> = {
 };
 
 /** EN / product-English typos that appear even in SK briefs */
-const EN_TOKEN_MAP: Record<string, string> = {
+export const EN_TOKEN_MAP: Record<string, string> = {
   landig: "landing",
   landng: "landing",
   promt: "prompt",
@@ -86,6 +87,184 @@ const EN_TOKEN_MAP: Record<string, string> = {
   contianed: "contained",
   mobil: "mobile", // only as whole token; "mobil first" etc.
 };
+
+/** Common words we never log as "unknown" (not glossary candidates) */
+const STOPWORDS = new Set(
+  [
+    // EN
+    "the",
+    "and",
+    "for",
+    "with",
+    "from",
+    "that",
+    "this",
+    "your",
+    "you",
+    "our",
+    "are",
+    "was",
+    "were",
+    "will",
+    "can",
+    "has",
+    "have",
+    "not",
+    "but",
+    "all",
+    "any",
+    "one",
+    "two",
+    "new",
+    "page",
+    "app",
+    "web",
+    "css",
+    "react",
+    "hero",
+    "cta",
+    "nav",
+    "menu",
+    "dark",
+    "light",
+    "mode",
+    "first",
+    "self",
+    "contained",
+    "warm",
+    "cream",
+    "sticky",
+    "header",
+    "footer",
+    "mobile",
+    "landing",
+    "prompt",
+    "studio",
+    "brief",
+    "section",
+    "sections",
+    "layout",
+    "simple",
+    "clean",
+    "modern",
+    "build",
+    "create",
+    "make",
+    "add",
+    "use",
+    "using",
+    "only",
+    "into",
+    "over",
+    "under",
+    "about",
+    "after",
+    "before",
+    "when",
+    "where",
+    "which",
+    "what",
+    "how",
+    // SK function words
+    "pre",
+    "pri",
+    "na",
+    "do",
+    "od",
+    "zo",
+    "za",
+    "po",
+    "ku",
+    "so",
+    "aj",
+    "ale",
+    "ako",
+    "aby",
+    "nie",
+    "ano",
+    "áno",
+    "toto",
+    "toho",
+    "tejto",
+    "ktorý",
+    "ktora",
+    "ktore",
+    "ktorá",
+    "ktoré",
+    "je",
+    "su",
+    "sú",
+    "bol",
+    "bola",
+    "sme",
+    "ste",
+    "ma",
+    "má",
+    "mam",
+    "mám",
+    "teraz",
+    "iba",
+    "este",
+    "ešte",
+    "uz",
+    "už",
+    "velmi",
+    "veľmi",
+    "stranka",
+    "stránka",
+    "aplikacia",
+    "aplikácia",
+    // common correct SK content words (not typos)
+    "moju",
+    "moja",
+    "moje",
+    "moj",
+    "môj",
+    "tvoj",
+    "tvoja",
+    "tvoje",
+    "nas",
+    "náš",
+    "nasa",
+    "naša",
+    "vase",
+    "vaše",
+    "vela",
+    "veľa",
+    "malo",
+    "málo",
+    "dalsi",
+    "ďalší",
+    "dalsia",
+    "ďalšia",
+    "novy",
+    "nový",
+    "nova",
+    "nová",
+    "rychly",
+    "rýchly",
+    "pekny",
+    "pekný",
+    "velky",
+    "veľký",
+    "maly",
+    "malý",
+    "miestna",
+    "miestny",
+    "obchod",
+    "obchodu",
+    "sluzby",
+    "služby",
+    "kontakt",
+    "kontakty",
+    "adresa",
+    "otvaracie",
+    "otváracie",
+    "hodiny",
+    "ponuka",
+    "ponuku",
+  ].map((w) => w.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase()),
+);
 
 /** Word edge that works with Slovak diacritics (JS \\b is ASCII-only). */
 const WB = String.raw`(?:^|(?<=[\s,;:!?("„«]))`;
@@ -124,7 +303,6 @@ const SK_HINT =
 
 function looksSlovak(text: string): boolean {
   if (SK_HINT.test(text)) return true;
-  // bare forms without diacritics that still signal SK
   return /\b(kaviaren|kosice|tlacidlo|objednat|hlavicka|galeria|cennik|nastavenia)\b/i.test(
     text,
   );
@@ -141,44 +319,76 @@ function applyCase(sample: string, replacement: string): string {
   return replacement;
 }
 
-function mapToken(raw: string, dict: Record<string, string>): string {
-  // keep punctuation glued: "kaviaren," → fix stem
+function stripKey(core: string): string {
+  return core
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "");
+}
+
+function mapToken(
+  raw: string,
+  dict: Record<string, string>,
+): { out: string; core: string | null; hit: boolean } {
   const m = raw.match(/^([("'„«]*)(.*?)([)\]"'“».,;:!?…]*)$/);
-  if (!m) return raw;
+  if (!m) return { out: raw, core: null, hit: true };
   const [, pre, core, post] = m;
-  if (!core || core.length < 2) return raw;
-  // skip URLs, paths, @handles, ALLCAPS brands longer codes
+  if (!core || core.length < 2) return { out: raw, core: null, hit: true };
   if (/^https?:\/\//i.test(core) || core.includes("/") || core.startsWith("@")) {
-    return raw;
+    return { out: raw, core: null, hit: true };
   }
-  if (/^[A-Z0-9]{2,}[-_][A-Z0-9-]+$/.test(core)) return raw; // D1G1C3RT-ish
-  const key = core.toLowerCase().normalize("NFD").replace(/\p{M}/gu, "");
-  // Prefer exact lower key first, then stripped diacritics key
-  const hit =
-    dict[core.toLowerCase()] ??
-    dict[key] ??
-    null;
-  if (!hit) return raw;
-  return `${pre}${applyCase(core, hit)}${post}`;
+  if (/^[A-Z0-9]{2,}[-_][A-Z0-9-]+$/.test(core)) {
+    return { out: raw, core: null, hit: true };
+  }
+  const key = stripKey(core);
+  const hitVal = dict[core.toLowerCase()] ?? dict[key] ?? null;
+  if (!hitVal) return { out: raw, core, hit: false };
+  return {
+    out: `${pre}${applyCase(core, hitVal)}${post}`,
+    core,
+    hit: true,
+  };
+}
+
+/** Candidate for glossary: unknown, not stopword, looks like content word */
+export function isGlossaryCandidate(token: string): boolean {
+  const key = stripKey(token);
+  if (key.length < 3 || key.length > 32) return false;
+  if (!/^[a-z]+(?:-[a-z]+)*$/i.test(key)) return false;
+  if (STOPWORDS.has(key)) return false;
+  if (SK_TOKEN_MAP[key] || EN_TOKEN_MAP[key]) return false;
+  // skip pure brand ALLCAPS leftovers already filtered
+  return true;
+}
+
+export function knownGlossaryKeys(): string[] {
+  return [
+    ...Object.keys(SK_TOKEN_MAP),
+    ...Object.keys(EN_TOKEN_MAP),
+  ].sort();
 }
 
 export type SkPostprocessResult = {
   text: string;
   lang: "sk" | "en" | "mixed";
   fixes: number;
+  /** Unique unknown content tokens (for P1 glossary learning) */
+  unknownTokens: string[];
 };
 
 export function postprocessStudioBrief(input: string): SkPostprocessResult {
   let t = input.trim();
-  if (!t) return { text: t, lang: "en", fixes: 0 };
+  if (!t) return { text: t, lang: "en", fixes: 0, unknownTokens: [] };
   const before = t;
 
   t = t.replace(/^```[\w]*\n?|\n?```$/g, "").trim();
   t = t.replace(/^["'“”„«]+|["'“”»]+$/g, "").trim();
-  t = t.replace(
-    /^(here(?:'s| is)|improved brief|brief|vylepšený brief)\s*:\s*/i,
-    "",
-  ).trim();
+  t = t
+    .replace(
+      /^(here(?:'s| is)|improved brief|brief|vylepšený brief)\s*:\s*/i,
+      "",
+    )
+    .trim();
 
   for (const [re, to] of MULTIWORD) t = t.replace(re, to);
 
@@ -188,19 +398,25 @@ export function postprocessStudioBrief(input: string): SkPostprocessResult {
   }
 
   const dict = { ...EN_TOKEN_MAP, ...(sk ? SK_TOKEN_MAP : {}) };
+  const unknown = new Set<string>();
   t = t
     .split(/(\s+)/)
-    .map((part) => (/^\s+$/.test(part) ? part : mapToken(part, dict)))
+    .map((part) => {
+      if (/^\s+$/.test(part)) return part;
+      const { out, core, hit } = mapToken(part, dict);
+      if (!hit && core && isGlossaryCandidate(core)) {
+        unknown.add(stripKey(core));
+      }
+      return out;
+    })
     .join("");
 
-  // Soft clamp — keep complete last word when possible
   if (t.length > 600) {
     const cut = t.slice(0, 597);
     const sp = cut.lastIndexOf(" ");
     t = (sp > 400 ? cut.slice(0, sp) : cut).trimEnd() + "…";
   }
 
-  // crude fix count
   const fixes =
     before === t
       ? 0
@@ -214,10 +430,24 @@ export function postprocessStudioBrief(input: string): SkPostprocessResult {
     text: t,
     lang: sk ? "sk" : "en",
     fixes,
+    unknownTokens: [...unknown],
   };
 }
 
 /** Back-compat helper used by brief-assist */
 export function cleanBrief(text: string): string {
   return postprocessStudioBrief(text).text;
+}
+
+/**
+ * Scan raw user brief for unknown tokens before Mistral rewrite.
+ * Most valuable for learning real typos.
+ */
+export function collectUnknownFromRaw(
+  text: string,
+  langHint?: "sk" | "en" | "mixed",
+): { lang: "sk" | "en" | "mixed"; tokens: string[] } {
+  const pp = postprocessStudioBrief(text || "");
+  const lang = langHint && langHint !== "mixed" ? langHint : pp.lang;
+  return { lang, tokens: pp.unknownTokens };
 }

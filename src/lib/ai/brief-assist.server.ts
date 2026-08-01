@@ -4,7 +4,12 @@
  */
 
 import { getMistralApiKey, mistralChat, MistralHttpError } from "./mistral.server";
-import { cleanBrief, postprocessStudioBrief } from "./sk-brief-postprocess";
+import {
+  cleanBrief,
+  collectUnknownFromRaw,
+  postprocessStudioBrief,
+} from "./sk-brief-postprocess";
+import { logUnknownGlossaryTokens } from "./glossary-learn.server";
 
 export type BriefAssistMode = "inspire" | "improve";
 
@@ -51,6 +56,49 @@ function pickFallback(seed?: string): string {
   return FALLBACK_INSPIRE[i]!;
 }
 
+/** Fire-and-forget: raw user typos + residual unknown after postprocess */
+function scheduleGlossaryLearn(opts: {
+  mode: BriefAssistMode;
+  input: string;
+  output: string;
+  lang: "sk" | "en" | "mixed";
+  unknownFromOutput: string[];
+}) {
+  void (async () => {
+    try {
+      const hits: {
+        token: string;
+        lang: "sk" | "en" | "mixed";
+        context?: string;
+        source: string;
+      }[] = [];
+      const raw = collectUnknownFromRaw(opts.input, opts.lang);
+      for (const t of raw.tokens) {
+        hits.push({
+          token: t,
+          lang: raw.lang,
+          context: opts.input.slice(0, 160),
+          source: `brief-${opts.mode}-input`,
+        });
+      }
+      for (const t of opts.unknownFromOutput) {
+        hits.push({
+          token: t,
+          lang: opts.lang,
+          context: opts.output.slice(0, 160),
+          source: `brief-${opts.mode}-output`,
+        });
+      }
+      if (hits.length) await logUnknownGlossaryTokens(hits);
+    } catch (e) {
+      console.info(
+        "[glossary-learn] schedule failed",
+        e instanceof Error ? e.message : e,
+      );
+    }
+  })();
+}
+
 export async function runBriefAssist(opts: {
   mode: BriefAssistMode;
   text?: string;
@@ -62,6 +110,7 @@ export async function runBriefAssist(opts: {
   provider: "mistral" | "fallback";
   lang?: "sk" | "en" | "mixed";
   postFixes?: number;
+  unknownLogged?: number;
 }> {
   const mode = opts.mode;
   const input = (opts.text || "").trim();
@@ -70,6 +119,30 @@ export async function runBriefAssist(opts: {
     throw new Error("EMPTY_TEXT");
   }
 
+  const finish = (
+    result: {
+      ok: true;
+      mode: BriefAssistMode;
+      text: string;
+      provider: "mistral" | "fallback";
+      lang?: "sk" | "en" | "mixed";
+      postFixes?: number;
+    },
+    unknownFromOutput: string[],
+  ) => {
+    scheduleGlossaryLearn({
+      mode,
+      input,
+      output: result.text,
+      lang: result.lang || "en",
+      unknownFromOutput,
+    });
+    return {
+      ...result,
+      unknownLogged: unknownFromOutput.length,
+    };
+  };
+
   const key = getMistralApiKey();
   if (!key) {
     const raw =
@@ -77,14 +150,17 @@ export async function runBriefAssist(opts: {
         ? `${input} — mobile-first, sticky header, warm cream + terracotta CTA, self-contained CSS React App.`
         : pickFallback(input);
     const pp = postprocessStudioBrief(raw);
-    return {
-      ok: true,
-      mode,
-      text: pp.text,
-      provider: "fallback",
-      lang: pp.lang,
-      postFixes: pp.fixes,
-    };
+    return finish(
+      {
+        ok: true,
+        mode,
+        text: pp.text,
+        provider: "fallback",
+        lang: pp.lang,
+        postFixes: pp.fixes,
+      },
+      pp.unknownTokens,
+    );
   }
 
   try {
@@ -117,23 +193,29 @@ export async function runBriefAssist(opts: {
     if (!pp.text || pp.text.length < 12) {
       const fb = mode === "improve" ? input : pickFallback(input);
       const fpp = postprocessStudioBrief(fb);
-      return {
+      return finish(
+        {
+          ok: true,
+          mode,
+          text: fpp.text,
+          provider: "fallback",
+          lang: fpp.lang,
+          postFixes: fpp.fixes,
+        },
+        fpp.unknownTokens,
+      );
+    }
+    return finish(
+      {
         ok: true,
         mode,
-        text: fpp.text,
-        provider: "fallback",
-        lang: fpp.lang,
-        postFixes: fpp.fixes,
-      };
-    }
-    return {
-      ok: true,
-      mode,
-      text: pp.text,
-      provider: "mistral",
-      lang: pp.lang,
-      postFixes: pp.fixes,
-    };
+        text: pp.text,
+        provider: "mistral",
+        lang: pp.lang,
+        postFixes: pp.fixes,
+      },
+      pp.unknownTokens,
+    );
   } catch (e) {
     if (e instanceof MistralHttpError && e.status === 429) {
       throw e;
@@ -143,14 +225,17 @@ export async function runBriefAssist(opts: {
         ? `${input} — clarify sections, CTA, mobile-first, self-contained styles.`
         : pickFallback(input);
     const pp = postprocessStudioBrief(raw);
-    return {
-      ok: true,
-      mode,
-      text: pp.text,
-      provider: "fallback",
-      lang: pp.lang,
-      postFixes: pp.fixes,
-    };
+    return finish(
+      {
+        ok: true,
+        mode,
+        text: pp.text,
+        provider: "fallback",
+        lang: pp.lang,
+        postFixes: pp.fixes,
+      },
+      pp.unknownTokens,
+    );
   }
 }
 

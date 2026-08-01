@@ -17,6 +17,8 @@ import {
   recordUsageEvent,
 } from "@/lib/projects/server";
 import { recordActivationEvent } from "@/lib/activation/server";
+import { collectUnknownFromRaw } from "@/lib/ai/sk-brief-postprocess";
+import { logUnknownGlossaryTokens } from "@/lib/ai/glossary-learn.server";
 
 export const Route = createFileRoute("/api/agents/run")({
   server: {
@@ -113,6 +115,25 @@ export const Route = createFileRoute("/api/agents/run")({
             { status: 400 },
           );
         }
+
+        // P1: learn unknown tokens from real Send brief prompts
+        void (async () => {
+          try {
+            const { lang, tokens } = collectUnknownFromRaw(prompt);
+            if (tokens.length) {
+              await logUnknownGlossaryTokens(
+                tokens.map((token) => ({
+                  token,
+                  lang,
+                  context: prompt.slice(0, 160),
+                  source: "agents-run-prompt",
+                })),
+              );
+            }
+          } catch {
+            /* ignore */
+          }
+        })();
 
         if (isDemoPipelineEnv()) {
           return Response.json(

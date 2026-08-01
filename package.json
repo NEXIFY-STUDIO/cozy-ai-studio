@@ -22,6 +22,7 @@
     "test:iphone-17-air": "node scripts/iphone-17-air-contract.mjs",
     "verify": "npm run typecheck && npm run lint && npm run build && npm run ship-gate && npm run test:dashboard-preview && npm run test:visual && npm run test:iphone-17-air",
     "prod-smoke": "node scripts/prod-smoke.mjs",
+    "glossary:weekly": "node scripts/glossary-weekly.mjs",
     "test:wp-cct": "node scripts/wp-cct-contract.mjs"
   },
   "dependencies": {

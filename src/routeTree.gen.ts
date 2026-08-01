@@ -23,6 +23,7 @@ import { Route as ApiActivationStatsRouteImport } from './routes/api/activation-
 import { Route as ApiAiStatusRouteImport } from './routes/api/ai-status'
 import { Route as ApiBriefAssistRouteImport } from './routes/api/brief-assist'
 import { Route as ApiEnvStatusRouteImport } from './routes/api/env-status'
+import { Route as ApiGlossaryUnknownRouteImport } from './routes/api/glossary-unknown'
 import { Route as ApiMvpStatusRouteImport } from './routes/api/mvp-status'
 import { Route as ApiRtcRouteImport } from './routes/api/rtc'
 import { Route as ApiRuntimeStatusRouteImport } from './routes/api/runtime-status'
@@ -106,6 +107,11 @@ const ApiEnvStatusRoute = ApiEnvStatusRouteImport.update({
   path: '/api/env-status',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiGlossaryUnknownRoute = ApiGlossaryUnknownRouteImport.update({
+  id: '/api/glossary-unknown',
+  path: '/api/glossary-unknown',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiMvpStatusRoute = ApiMvpStatusRouteImport.update({
   id: '/api/mvp-status',
   path: '/api/mvp-status',
@@ -182,6 +188,7 @@ export interface FileRoutesByFullPath {
   '/api/ai-status': typeof ApiAiStatusRoute
   '/api/brief-assist': typeof ApiBriefAssistRoute
   '/api/env-status': typeof ApiEnvStatusRoute
+  '/api/glossary-unknown': typeof ApiGlossaryUnknownRoute
   '/api/mvp-status': typeof ApiMvpStatusRoute
   '/api/rtc': typeof ApiRtcRoute
   '/api/runtime-status': typeof ApiRuntimeStatusRoute
@@ -210,6 +217,7 @@ export interface FileRoutesByTo {
   '/api/ai-status': typeof ApiAiStatusRoute
   '/api/brief-assist': typeof ApiBriefAssistRoute
   '/api/env-status': typeof ApiEnvStatusRoute
+  '/api/glossary-unknown': typeof ApiGlossaryUnknownRoute
   '/api/mvp-status': typeof ApiMvpStatusRoute
   '/api/rtc': typeof ApiRtcRoute
   '/api/runtime-status': typeof ApiRuntimeStatusRoute
@@ -239,6 +247,7 @@ export interface FileRoutesById {
   '/api/ai-status': typeof ApiAiStatusRoute
   '/api/brief-assist': typeof ApiBriefAssistRoute
   '/api/env-status': typeof ApiEnvStatusRoute
+  '/api/glossary-unknown': typeof ApiGlossaryUnknownRoute
   '/api/mvp-status': typeof ApiMvpStatusRoute
   '/api/rtc': typeof ApiRtcRoute
   '/api/runtime-status': typeof ApiRuntimeStatusRoute
@@ -269,6 +278,7 @@ export interface FileRouteTypes {
     | '/api/ai-status'
     | '/api/brief-assist'
     | '/api/env-status'
+    | '/api/glossary-unknown'
     | '/api/mvp-status'
     | '/api/rtc'
     | '/api/runtime-status'
@@ -297,6 +307,7 @@ export interface FileRouteTypes {
     | '/api/ai-status'
     | '/api/brief-assist'
     | '/api/env-status'
+    | '/api/glossary-unknown'
     | '/api/mvp-status'
     | '/api/rtc'
     | '/api/runtime-status'
@@ -325,6 +336,7 @@ export interface FileRouteTypes {
     | '/api/ai-status'
     | '/api/brief-assist'
     | '/api/env-status'
+    | '/api/glossary-unknown'
     | '/api/mvp-status'
     | '/api/rtc'
     | '/api/runtime-status'
@@ -354,6 +366,7 @@ export interface RootRouteChildren {
   ApiAiStatusRoute: typeof ApiAiStatusRoute
   ApiBriefAssistRoute: typeof ApiBriefAssistRoute
   ApiEnvStatusRoute: typeof ApiEnvStatusRoute
+  ApiGlossaryUnknownRoute: typeof ApiGlossaryUnknownRoute
   ApiMvpStatusRoute: typeof ApiMvpStatusRoute
   ApiRtcRoute: typeof ApiRtcRoute
   ApiRuntimeStatusRoute: typeof ApiRuntimeStatusRoute
@@ -468,6 +481,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiEnvStatusRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/glossary-unknown': {
+      id: '/api/glossary-unknown'
+      path: '/api/glossary-unknown'
+      fullPath: '/api/glossary-unknown'
+      preLoaderRoute: typeof ApiGlossaryUnknownRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/mvp-status': {
       id: '/api/mvp-status'
       path: '/api/mvp-status'
@@ -570,6 +590,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAiStatusRoute: ApiAiStatusRoute,
   ApiBriefAssistRoute: ApiBriefAssistRoute,
   ApiEnvStatusRoute: ApiEnvStatusRoute,
+  ApiGlossaryUnknownRoute: ApiGlossaryUnknownRoute,
   ApiMvpStatusRoute: ApiMvpStatusRoute,
   ApiRtcRoute: ApiRtcRoute,
   ApiRuntimeStatusRoute: ApiRuntimeStatusRoute,
