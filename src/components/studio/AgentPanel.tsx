@@ -14,6 +14,9 @@ import {
   ImagePlus,
   X,
   Eraser,
+  Wand2,
+  Loader2,
+  Dices,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -73,6 +76,9 @@ export function AgentPanel() {
   const [pendingMedia, setPendingMedia] = useState<ChatAttachment[]>([]);
   const [dragOver, setDragOver] = useState(false);
   const [cleanArmed, setCleanArmed] = useState(false);
+  const [assistBusy, setAssistBusy] = useState<"inspire" | "improve" | null>(
+    null,
+  );
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chat = useStudioStore((s) => s.chat);
   const files = useStudioStore((s) => s.files);
@@ -148,6 +154,58 @@ export function AgentPanel() {
       description: "Chat, súbory, diff a zdieľanie sú preč.",
     });
   };
+
+  const runBriefAssist = useCallback(
+    async (mode: "inspire" | "improve") => {
+      if (isPipelineRunning || assistBusy) return;
+      if (mode === "improve" && !input.trim()) {
+        toast.message("Najprv niečo napíš", {
+          description: "Improve vylepší tvoj text podľa Mistral odporúčaní.",
+        });
+        return;
+      }
+      setAssistBusy(mode);
+      try {
+        const res = await fetch("/api/brief-assist", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ mode, text: input.trim() || undefined }),
+        });
+        const data = (await res.json().catch(() => ({}))) as {
+          ok?: boolean;
+          text?: string;
+          provider?: string;
+          error?: string;
+          message?: string;
+        };
+        if (!res.ok || !data.text) {
+          toast.error(data.message || "Brief assist zlyhal");
+          return;
+        }
+        setInput(data.text);
+        toast.success(
+          mode === "inspire" ? "Náhodný brief pripravený" : "Brief vylepšený",
+          {
+            description:
+              data.provider === "mistral"
+                ? "Mistral · môžeš hneď Send brief"
+                : "Lokálny fallback · skontroluj a odošli",
+          },
+        );
+        // Focus composer
+        requestAnimationFrame(() => {
+          document
+            .getElementById("studio-brief-prompt")
+            ?.focus();
+        });
+      } catch {
+        toast.error("Sieťová chyba pri brief assist");
+      } finally {
+        setAssistBusy(null);
+      }
+    },
+    [assistBusy, input, isPipelineRunning],
+  );
 
   const addMediaFiles = useCallback(
     async (fileList: FileList | File[] | null | undefined) => {
@@ -510,43 +568,88 @@ export function AgentPanel() {
           >
             <ImagePlus className="h-4 w-4" />
           </Button>
-          <textarea
-            id="studio-brief-prompt"
-            name="studio-brief-prompt"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onPaste={(e) => {
-              const items = e.clipboardData?.items;
-              if (!items) return;
-              const files: File[] = [];
-              for (const item of items) {
-                if (item.kind === "file" && item.type.startsWith("image/")) {
-                  const f = item.getAsFile();
-                  if (f) files.push(f);
+          <div className="flex min-w-0 flex-1 flex-col gap-1">
+            <div className="flex items-center gap-1 px-0.5">
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className="h-7 gap-1 rounded-lg px-2 text-[11px] text-muted-foreground hover:text-foreground"
+                disabled={isPipelineRunning || assistBusy !== null}
+                onClick={() => void runBriefAssist("inspire")}
+                aria-label="Náhodný brief (magic dice)"
+                title="Mistral vymyslí náhodný brief — hneď môžeš generovať"
+              >
+                {assistBusy === "inspire" ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Dices className="h-3.5 w-3.5 text-choco" />
+                )}
+                <span className="hidden xs:inline sm:inline">Inspire</span>
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className="h-7 gap-1 rounded-lg px-2 text-[11px] text-muted-foreground hover:text-foreground"
+                disabled={
+                  isPipelineRunning ||
+                  assistBusy !== null ||
+                  !input.trim()
                 }
+                onClick={() => void runBriefAssist("improve")}
+                aria-label="Vylepši brief (magic wand)"
+                title="Mistral prepíše brief podľa best-practice system promptu"
+              >
+                {assistBusy === "improve" ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Wand2 className="h-3.5 w-3.5 text-terracotta" />
+                )}
+                <span className="hidden sm:inline">Improve</span>
+              </Button>
+              <span className="ml-auto hidden text-[10px] text-muted-foreground sm:inline">
+                ✨ Mistral
+              </span>
+            </div>
+            <textarea
+              id="studio-brief-prompt"
+              name="studio-brief-prompt"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onPaste={(e) => {
+                const items = e.clipboardData?.items;
+                if (!items) return;
+                const files: File[] = [];
+                for (const item of items) {
+                  if (item.kind === "file" && item.type.startsWith("image/")) {
+                    const f = item.getAsFile();
+                    if (f) files.push(f);
+                  }
+                }
+                if (files.length) {
+                  e.preventDefault();
+                  void addMediaFiles(files);
+                }
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey && canSend) {
+                  e.preventDefault();
+                  void run(input.trim());
+                }
+              }}
+              disabled={isPipelineRunning}
+              rows={2}
+              autoComplete="off"
+              placeholder={
+                isPipelineRunning
+                  ? "Agenti pracujú… Stop vpravo"
+                  : "e.g. Warm hero for a pottery studio with terracotta CTA…"
               }
-              if (files.length) {
-                e.preventDefault();
-                void addMediaFiles(files);
-              }
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey && canSend) {
-                e.preventDefault();
-                void run(input.trim());
-              }
-            }}
-            disabled={isPipelineRunning}
-            rows={2}
-            autoComplete="off"
-            placeholder={
-              isPipelineRunning
-                ? "Agenti pracujú… Stop vpravo"
-                : "e.g. Warm hero for a pottery studio with terracotta CTA…"
-            }
-            className="min-h-[2.75rem] max-h-28 min-w-0 flex-1 resize-none rounded-xl border border-border bg-background px-3 py-2.5 text-sm leading-snug outline-none focus:border-choco focus:ring-1 focus:ring-choco/30 disabled:opacity-60 break-words"
-            aria-label="Prompt"
-          />
+              className="min-h-[2.75rem] max-h-28 min-w-0 w-full resize-none rounded-xl border border-border bg-background px-3 py-2.5 text-sm leading-snug outline-none focus:border-choco focus:ring-1 focus:ring-choco/30 disabled:opacity-60 break-words"
+              aria-label="Prompt"
+            />
+          </div>
           {isPipelineRunning ? (
             <Button
               size="icon"
@@ -562,7 +665,7 @@ export function AgentPanel() {
             <Button
               size="sm"
               className="h-11 shrink-0 gap-1.5 rounded-xl bg-[#D96B43] px-3.5 text-xs font-semibold text-white hover:bg-[#C85A32] shadow-none"
-              disabled={!canSend}
+              disabled={!canSend || assistBusy !== null}
               onClick={() => void run(input.trim())}
               aria-label="Send brief"
             >
@@ -573,6 +676,7 @@ export function AgentPanel() {
         </div>
         <p className="mt-1.5 text-[10px] text-muted-foreground">
           Media: PNG · JPEG · WebP · GIF · max {MAX_ATTACHMENTS} · paste or drop
+          · 🎲 Inspire · 🪄 Improve
         </p>
       </div>
     </div>

@@ -21,6 +21,7 @@ import { Route as StudioRouteImport } from './routes/studio'
 import { Route as AIdRouteImport } from './routes/a.$id'
 import { Route as ApiActivationStatsRouteImport } from './routes/api/activation-stats'
 import { Route as ApiAiStatusRouteImport } from './routes/api/ai-status'
+import { Route as ApiBriefAssistRouteImport } from './routes/api/brief-assist'
 import { Route as ApiEnvStatusRouteImport } from './routes/api/env-status'
 import { Route as ApiMvpStatusRouteImport } from './routes/api/mvp-status'
 import { Route as ApiRtcRouteImport } from './routes/api/rtc'
@@ -93,6 +94,11 @@ const ApiActivationStatsRoute = ApiActivationStatsRouteImport.update({
 const ApiAiStatusRoute = ApiAiStatusRouteImport.update({
   id: '/api/ai-status',
   path: '/api/ai-status',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiBriefAssistRoute = ApiBriefAssistRouteImport.update({
+  id: '/api/brief-assist',
+  path: '/api/brief-assist',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiEnvStatusRoute = ApiEnvStatusRouteImport.update({
@@ -174,6 +180,7 @@ export interface FileRoutesByFullPath {
   '/a/$id': typeof AIdRoute
   '/api/activation-stats': typeof ApiActivationStatsRoute
   '/api/ai-status': typeof ApiAiStatusRoute
+  '/api/brief-assist': typeof ApiBriefAssistRoute
   '/api/env-status': typeof ApiEnvStatusRoute
   '/api/mvp-status': typeof ApiMvpStatusRoute
   '/api/rtc': typeof ApiRtcRoute
@@ -201,6 +208,7 @@ export interface FileRoutesByTo {
   '/a/$id': typeof AIdRoute
   '/api/activation-stats': typeof ApiActivationStatsRoute
   '/api/ai-status': typeof ApiAiStatusRoute
+  '/api/brief-assist': typeof ApiBriefAssistRoute
   '/api/env-status': typeof ApiEnvStatusRoute
   '/api/mvp-status': typeof ApiMvpStatusRoute
   '/api/rtc': typeof ApiRtcRoute
@@ -229,6 +237,7 @@ export interface FileRoutesById {
   '/a/$id': typeof AIdRoute
   '/api/activation-stats': typeof ApiActivationStatsRoute
   '/api/ai-status': typeof ApiAiStatusRoute
+  '/api/brief-assist': typeof ApiBriefAssistRoute
   '/api/env-status': typeof ApiEnvStatusRoute
   '/api/mvp-status': typeof ApiMvpStatusRoute
   '/api/rtc': typeof ApiRtcRoute
@@ -258,6 +267,7 @@ export interface FileRouteTypes {
     | '/a/$id'
     | '/api/activation-stats'
     | '/api/ai-status'
+    | '/api/brief-assist'
     | '/api/env-status'
     | '/api/mvp-status'
     | '/api/rtc'
@@ -285,6 +295,7 @@ export interface FileRouteTypes {
     | '/a/$id'
     | '/api/activation-stats'
     | '/api/ai-status'
+    | '/api/brief-assist'
     | '/api/env-status'
     | '/api/mvp-status'
     | '/api/rtc'
@@ -312,6 +323,7 @@ export interface FileRouteTypes {
     | '/a/$id'
     | '/api/activation-stats'
     | '/api/ai-status'
+    | '/api/brief-assist'
     | '/api/env-status'
     | '/api/mvp-status'
     | '/api/rtc'
@@ -340,6 +352,7 @@ export interface RootRouteChildren {
   AIdRoute: typeof AIdRoute
   ApiActivationStatsRoute: typeof ApiActivationStatsRoute
   ApiAiStatusRoute: typeof ApiAiStatusRoute
+  ApiBriefAssistRoute: typeof ApiBriefAssistRoute
   ApiEnvStatusRoute: typeof ApiEnvStatusRoute
   ApiMvpStatusRoute: typeof ApiMvpStatusRoute
   ApiRtcRoute: typeof ApiRtcRoute
@@ -439,6 +452,13 @@ declare module '@tanstack/react-router' {
       path: '/api/ai-status'
       fullPath: '/api/ai-status'
       preLoaderRoute: typeof ApiAiStatusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/brief-assist': {
+      id: '/api/brief-assist'
+      path: '/api/brief-assist'
+      fullPath: '/api/brief-assist'
+      preLoaderRoute: typeof ApiBriefAssistRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/env-status': {
@@ -548,6 +568,7 @@ const rootRouteChildren: RootRouteChildren = {
   AIdRoute: AIdRoute,
   ApiActivationStatsRoute: ApiActivationStatsRoute,
   ApiAiStatusRoute: ApiAiStatusRoute,
+  ApiBriefAssistRoute: ApiBriefAssistRoute,
   ApiEnvStatusRoute: ApiEnvStatusRoute,
   ApiMvpStatusRoute: ApiMvpStatusRoute,
   ApiRtcRoute: ApiRtcRoute,
