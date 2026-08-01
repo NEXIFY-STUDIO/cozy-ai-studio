@@ -141,6 +141,7 @@ function LandingPage() {
             {[
               { href: "#funkcie", label: "Funkcie" },
               { href: "#ako", label: "Ako to funguje" },
+              { to: "/connect" as const, label: "WP CCT" },
               { to: "/pricing" as const, label: "Limity" },
               { to: "/showcase" as const, label: "Galéria" },
             ].map((item) =>
@@ -518,6 +519,12 @@ function LandingPage() {
           <div className="flex flex-wrap justify-center gap-4">
             <Link to="/studio" className="hover:text-foreground transition-colors">
               Studio
+            </Link>
+            <Link to="/connect" className="hover:text-foreground transition-colors">
+              WP Connect
+            </Link>
+            <Link to="/cct" className="hover:text-foreground transition-colors">
+              CCT Diff
             </Link>
             <Link to="/pricing" search={{}} className="hover:text-foreground transition-colors">
               Limity

@@ -10,6 +10,8 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as CctRouteImport } from './routes/cct'
+import { Route as ConnectRouteImport } from './routes/connect'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as MobileRouteImport } from './routes/mobile'
 import { Route as PlaygroundRouteImport } from './routes/playground'
@@ -30,11 +32,22 @@ import { Route as ApiAgentsRunRouteImport } from './routes/api/agents/run'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiLaunchRunRouteImport } from './routes/api/launch/run'
 import { Route as ApiStripeWebhookRouteImport } from './routes/api/stripe/webhook'
+import { Route as ApiWpCctRouteImport } from './routes/api/wp/cct'
 import { Route as ApiWsHttpRouteImport } from './routes/api/ws/http'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CctRoute = CctRouteImport.update({
+  id: '/cct',
+  path: '/cct',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConnectRoute = ConnectRouteImport.update({
+  id: '/connect',
+  path: '/connect',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -137,6 +150,11 @@ const ApiStripeWebhookRoute = ApiStripeWebhookRouteImport.update({
   path: '/api/stripe/webhook',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiWpCctRoute = ApiWpCctRouteImport.update({
+  id: '/api/wp/cct',
+  path: '/api/wp/cct',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiWsHttpRoute = ApiWsHttpRouteImport.update({
   id: '/api/ws/http',
   path: '/api/ws/http',
@@ -145,6 +163,8 @@ const ApiWsHttpRoute = ApiWsHttpRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/cct': typeof CctRoute
+  '/connect': typeof ConnectRoute
   '/login': typeof LoginRoute
   '/mobile': typeof MobileRoute
   '/playground': typeof PlaygroundRoute
@@ -165,10 +185,13 @@ export interface FileRoutesByFullPath {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/launch/run': typeof ApiLaunchRunRoute
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
+  '/api/wp/cct': typeof ApiWpCctRoute
   '/api/ws/http': typeof ApiWsHttpRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/cct': typeof CctRoute
+  '/connect': typeof ConnectRoute
   '/login': typeof LoginRoute
   '/mobile': typeof MobileRoute
   '/playground': typeof PlaygroundRoute
@@ -189,11 +212,14 @@ export interface FileRoutesByTo {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/launch/run': typeof ApiLaunchRunRoute
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
+  '/api/wp/cct': typeof ApiWpCctRoute
   '/api/ws/http': typeof ApiWsHttpRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/cct': typeof CctRoute
+  '/connect': typeof ConnectRoute
   '/login': typeof LoginRoute
   '/mobile': typeof MobileRoute
   '/playground': typeof PlaygroundRoute
@@ -214,12 +240,15 @@ export interface FileRoutesById {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/launch/run': typeof ApiLaunchRunRoute
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
+  '/api/wp/cct': typeof ApiWpCctRoute
   '/api/ws/http': typeof ApiWsHttpRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/cct'
+    | '/connect'
     | '/login'
     | '/mobile'
     | '/playground'
@@ -240,10 +269,13 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/api/launch/run'
     | '/api/stripe/webhook'
+    | '/api/wp/cct'
     | '/api/ws/http'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/cct'
+    | '/connect'
     | '/login'
     | '/mobile'
     | '/playground'
@@ -264,10 +296,13 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/api/launch/run'
     | '/api/stripe/webhook'
+    | '/api/wp/cct'
     | '/api/ws/http'
   id:
     | '__root__'
     | '/'
+    | '/cct'
+    | '/connect'
     | '/login'
     | '/mobile'
     | '/playground'
@@ -288,11 +323,14 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/api/launch/run'
     | '/api/stripe/webhook'
+    | '/api/wp/cct'
     | '/api/ws/http'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CctRoute: typeof CctRoute
+  ConnectRoute: typeof ConnectRoute
   LoginRoute: typeof LoginRoute
   MobileRoute: typeof MobileRoute
   PlaygroundRoute: typeof PlaygroundRoute
@@ -313,6 +351,7 @@ export interface RootRouteChildren {
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiLaunchRunRoute: typeof ApiLaunchRunRoute
   ApiStripeWebhookRoute: typeof ApiStripeWebhookRoute
+  ApiWpCctRoute: typeof ApiWpCctRoute
   ApiWsHttpRoute: typeof ApiWsHttpRoute
 }
 
@@ -323,6 +362,20 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cct': {
+      id: '/cct'
+      path: '/cct'
+      fullPath: '/cct'
+      preLoaderRoute: typeof CctRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/connect': {
+      id: '/connect'
+      path: '/connect'
+      fullPath: '/connect'
+      preLoaderRoute: typeof ConnectRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -465,6 +518,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiStripeWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/wp/cct': {
+      id: '/api/wp/cct'
+      path: '/api/wp/cct'
+      fullPath: '/api/wp/cct'
+      preLoaderRoute: typeof ApiWpCctRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/ws/http': {
       id: '/api/ws/http'
       path: '/api/ws/http'
@@ -477,6 +537,8 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CctRoute: CctRoute,
+  ConnectRoute: ConnectRoute,
   LoginRoute: LoginRoute,
   MobileRoute: MobileRoute,
   PlaygroundRoute: PlaygroundRoute,
@@ -497,6 +559,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiLaunchRunRoute: ApiLaunchRunRoute,
   ApiStripeWebhookRoute: ApiStripeWebhookRoute,
+  ApiWpCctRoute: ApiWpCctRoute,
   ApiWsHttpRoute: ApiWsHttpRoute,
 }
 export const routeTree = rootRouteImport
