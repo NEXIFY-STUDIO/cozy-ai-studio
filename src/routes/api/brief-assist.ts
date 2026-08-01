@@ -47,7 +47,7 @@ export const Route = createFileRoute("/api/brief-assist")({
             return Response.json(
               {
                 error: "EMPTY_TEXT",
-                message: "Napíš krátky brief — Improve ho potom vylepší.",
+                message: "Napíš krátky brief — Opraviť/Improve ho potom vylepší a opraví preklepy.",
               },
               { status: 400 },
             );

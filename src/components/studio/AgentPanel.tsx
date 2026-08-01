@@ -160,7 +160,7 @@ export function AgentPanel() {
       if (isPipelineRunning || assistBusy) return;
       if (mode === "improve" && !input.trim()) {
         toast.message("Najprv niečo napíš", {
-          description: "Improve vylepší tvoj text podľa Mistral odporúčaní.",
+          description: "Improve opraví preklepy a vylepší text podľa Mistral.",
         });
         return;
       }
@@ -184,7 +184,7 @@ export function AgentPanel() {
         }
         setInput(data.text);
         toast.success(
-          mode === "inspire" ? "Náhodný brief pripravený" : "Brief vylepšený",
+          mode === "inspire" ? "Náhodný brief pripravený" : "Preklepy opravené + brief vylepšený",
           {
             description:
               data.provider === "mistral"
@@ -598,15 +598,15 @@ export function AgentPanel() {
                   !input.trim()
                 }
                 onClick={() => void runBriefAssist("improve")}
-                aria-label="Vylepši brief (magic wand)"
-                title="Mistral prepíše brief podľa best-practice system promptu"
+                aria-label="Oprav preklepy a vylepši brief"
+                title="Opraví preklepy a prepíše brief podľa best-practice (Mistral)"
               >
                 {assistBusy === "improve" ? (
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 ) : (
                   <Wand2 className="h-3.5 w-3.5 text-terracotta" />
                 )}
-                <span className="hidden sm:inline">Improve</span>
+                <span className="hidden sm:inline">Opraviť</span>
               </Button>
               <span className="ml-auto hidden text-[10px] text-muted-foreground sm:inline">
                 ✨ Mistral

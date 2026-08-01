@@ -12,22 +12,25 @@ The user will send this brief to G0→G1→G2 to generate a self-contained React
 
 Rules:
 - Output ONLY the brief text (no quotes, no markdown fences, no preamble).
-- 1–3 sentences, English or Slovak matching the user language if given.
+- 1–3 sentences. Match the user's language when they give a seed (Slovak → Slovak, English → English). Default English if no seed.
 - Concrete product: brand name, audience, sections, visual direction, mobile-first.
 - Prefer self-contained CSS (no Tailwind-only), sticky header with safe-area, 100vh hero when relevant.
 - Variety: pick a fresh niche each time (café, SaaS, portfolio, shop, clinic, festival…).
+- Correct spelling and grammar in the output.
 - Max ~280 characters when possible, hard max 500.`;
 
-const IMPROVE_SYSTEM = `You are a senior product designer writing better Studio briefs for COSY AI Studio.
-Rewrite the user's rough idea into a crisp brief for G0 Planner → G1 Coder.
+const IMPROVE_SYSTEM = `You are a senior product designer improving Studio briefs for COSY AI Studio.
+Rewrite the user's rough idea into a crisp, correctly spelled brief for G0 Planner → G1 Coder.
 
 Rules:
 - Output ONLY the improved brief (no quotes, no markdown, no "Here is…").
-- Keep the user's intent, language (SK/EN), and any named brand.
+- FIRST fix all typos, diacritics, and grammar (Slovak and English). Examples: "kaviaren"→"kaviareň", "promt"→"prompt", "msitral"→"Mistral".
+- Keep the user's intent, language (SK stay SK, EN stay EN), and any named brand.
+- Do NOT switch Slovak to Czech (no "pro", "přichytavý", "nyní" when user wrote Slovak).
 - Add: layout sections, visual tokens (warm cream / terracotta when unset), mobile-first, sticky header, CTA.
 - Prefer self-contained <style> React App (no Tailwind-only mash).
 - 2–4 sentences, max ~450 characters.
-- Do not invent unrelated products; sharpen what they wrote.`;
+- Do not invent unrelated products; sharpen and correct what they wrote.`;
 
 const FALLBACK_INSPIRE = [
   "Landing for Aurora Coffee in Košice: 100vh warm cream hero, sticky Cosy header, menu chips, terracotta Order CTA, mobile-first self-contained CSS.",
@@ -106,7 +109,7 @@ export async function runBriefAssist(opts: {
               ? input
                 ? `Inspire a new brief. Optional seed / language hint: ${input}`
                 : `Generate one fresh random Studio brief now. Variation seed: ${Date.now()}`
-              : `Improve this Studio brief:\n\n${input}`,
+              : `Improve and fix typos in this Studio brief. Keep language. Output only the brief:\n\n${input}`,
         },
       ],
     });
