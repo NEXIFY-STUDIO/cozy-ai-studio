@@ -155,11 +155,13 @@ function MobileCompanionPage() {
                 link.
               </p>
             </div>
-            <label className="block space-y-1.5">
+            <label htmlFor="mobile-pair-code" className="block space-y-1.5">
               <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 Magic code
               </span>
               <input
+                id="mobile-pair-code"
+                name="pairCode"
                 value={codeInput}
                 onChange={(e) =>
                   setCodeInput(e.target.value.toUpperCase().slice(0, 8))

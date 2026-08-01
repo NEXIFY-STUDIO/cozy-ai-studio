@@ -62,9 +62,12 @@ export function CommandPalette() {
         <div className="flex items-center border-b border-border px-3">
           <Sparkles className="h-4 w-4 text-terracotta mr-2 shrink-0" />
           <Command.Input
+            id="studio-command-palette"
+            name="command-palette-query"
             placeholder="Search commands and files…"
             className="h-12 w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
             autoFocus
+            autoComplete="off"
           />
           <kbd className="hidden sm:inline text-xs font-mono text-muted-foreground border border-border rounded px-1.5 py-0.5">
             ESC

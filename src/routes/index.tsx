@@ -210,6 +210,7 @@ function LandingPage() {
                   <Sparkles className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-success pointer-events-none" />
                   <input
                     id="hero-prompt"
+                    name="hero-prompt"
                     value={prompt}
                     onChange={(e) => setPrompt(e.target.value)}
                     onFocus={() => setFocused(true)}
@@ -219,6 +220,7 @@ function LandingPage() {
                     }}
                     placeholder="Napr. „Landing pre kaviarenský brand s cenníkom“"
                     className="h-12 sm:h-14 w-full rounded-xl border-0 bg-muted/50 pl-10 pr-3 text-sm sm:text-base outline-none placeholder:text-muted-foreground/80 focus:bg-muted/70"
+                    autoComplete="off"
                   />
                 </div>
                 <Button

@@ -588,10 +588,13 @@ function AiPanel({
         <label className="block space-y-2">
           <span className="text-sm font-semibold">What should we plan?</span>
           <input
+            id="playground-plan-prompt"
+            name="playground-plan-prompt"
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
             className="h-12 w-full rounded-xl border border-border bg-background px-3.5 text-base outline-none focus:border-choco focus:ring-1 focus:ring-choco/30"
             placeholder="e.g. Pricing section with three tiers"
+            autoComplete="off"
           />
         </label>
         <div className="rounded-2xl border border-border bg-canvas min-h-[260px] p-4 sm:p-5">
@@ -939,6 +942,8 @@ function BlueprintPanel({
           </Button>
           <input
             ref={fileRef}
+            id="playground-import-json"
+            name="playground-import-json"
             type="file"
             accept="application/json,.json"
             className="hidden"
@@ -994,14 +999,19 @@ function BlueprintPanel({
           <label className="block space-y-1.5">
             <span className="text-sm font-semibold">Ako sa bude kópia volať?</span>
             <input
+              id="playground-clone-name"
+              name="cloneName"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Napr. Moja prvá appka"
               className="h-12 w-full rounded-2xl border border-border bg-background px-4 text-base outline-none focus:border-choco focus:ring-2 focus:ring-choco/25"
+              autoComplete="off"
             />
           </label>
           <label className="flex items-center gap-3 rounded-2xl border border-border bg-muted/40 px-4 py-3 cursor-pointer min-h-12 hover:border-choco/40 transition-colors">
             <input
+              id="playground-include-studio"
+              name="includeStudio"
               type="checkbox"
               checked={includeStudio}
               onChange={(e) => setIncludeStudio(e.target.checked)}

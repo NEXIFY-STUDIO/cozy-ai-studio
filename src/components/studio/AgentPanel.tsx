@@ -485,6 +485,8 @@ export function AgentPanel() {
 
         <input
           ref={fileInputRef}
+          id="studio-brief-media"
+          name="studio-brief-media"
           type="file"
           accept={ACCEPTED_IMAGE_ACCEPT}
           multiple
@@ -509,6 +511,8 @@ export function AgentPanel() {
             <ImagePlus className="h-4 w-4" />
           </Button>
           <textarea
+            id="studio-brief-prompt"
+            name="studio-brief-prompt"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onPaste={(e) => {
@@ -534,6 +538,7 @@ export function AgentPanel() {
             }}
             disabled={isPipelineRunning}
             rows={2}
+            autoComplete="off"
             placeholder={
               isPipelineRunning
                 ? "Agenti pracujú… Stop vpravo"

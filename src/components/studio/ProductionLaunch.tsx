@@ -479,15 +479,18 @@ function ConfirmStep({
         ))}
       </div>
 
-      <label className="block space-y-1.5">
+      <label htmlFor="launch-project-name" className="block space-y-1.5">
         <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Project name
         </span>
         <input
+          id="launch-project-name"
+          name="projectName"
           value={projectName}
           onChange={(e) => setProjectName(e.target.value)}
           className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm outline-none focus:border-choco focus:ring-1 focus:ring-choco/30 font-mono"
           placeholder="my-app"
+          autoComplete="organization"
         />
       </label>
 
