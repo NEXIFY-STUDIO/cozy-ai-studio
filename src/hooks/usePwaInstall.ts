@@ -43,7 +43,7 @@ export function usePwaInstall() {
     const onInstalled = () => {
       setInstalled(true);
       setDeferred(null);
-      toast.success("COSY nainštalované");
+      toast.success("Cozy nainštalované");
     };
 
     window.addEventListener("beforeinstallprompt", onBip);
@@ -99,7 +99,7 @@ export function registerServiceWorker(): void {
         if (!worker) return;
         worker.addEventListener("statechange", () => {
           if (worker.state === "installed" && navigator.serviceWorker.controller) {
-            toast.message("Nová verzia COSY je pripravená", {
+            toast.message("Nová verzia Cozy je pripravená", {
               action: {
                 label: "Obnoviť",
                 onClick: () => {

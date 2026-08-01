@@ -88,7 +88,7 @@ export function CommandPalette() {
             {(canInstall || showIosHint) && (
               <Item
                 icon={Download}
-                label="Inštalovať COSY"
+                label="Inštalovať Cozy"
                 onSelect={() => {
                   void promptInstall();
                   setCommandOpen(false);

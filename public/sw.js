@@ -1,11 +1,12 @@
-/* COSY Studio Service Worker — production shell
+/* Cozy AI Studio Service Worker — production shell (cozy-v2)
  * Strategies:
  *  - App shell (HTML/JS/CSS/fonts/icons): stale-while-revalidate
- *  - /api/* : network-first (3.5s timeout) → cache fallback
- *  - preview / blob / webcontainer : network-only (never cache)
+ *  - /api/* (except auth): network-first (3.5s) → cache fallback
+ *  - /api/auth/* : network-only (never cache session/cookies)
+ *  - preview / blob / webcontainer / ws / rtc : network-only
  *  - offline fallback → /offline.html
  */
-const CACHE_VERSION = "cosy-v1";
+const CACHE_VERSION = "cozy-v2";
 const SHELL_CACHE = `${CACHE_VERSION}-shell`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 
@@ -38,7 +39,12 @@ self.addEventListener("activate", (event) => {
       .then((keys) =>
         Promise.all(
           keys
-            .filter((k) => k.startsWith("cosy-") && k !== SHELL_CACHE && k !== API_CACHE)
+            .filter(
+              (k) =>
+                (k.startsWith("cosy-") || k.startsWith("cozy-")) &&
+                k !== SHELL_CACHE &&
+                k !== API_CACHE,
+            )
             .map((k) => caches.delete(k)),
         ),
       )
@@ -50,6 +56,10 @@ function isApi(url) {
   return url.pathname.startsWith("/api/");
 }
 
+function isAuthApi(url) {
+  return url.pathname.startsWith("/api/auth");
+}
+
 function isNeverCache(url) {
   const p = url.pathname;
   return (
@@ -57,6 +67,7 @@ function isNeverCache(url) {
     p.includes("preview-runtime") ||
     p.startsWith("/api/ws") ||
     p.startsWith("/api/rtc") ||
+    isAuthApi(url) ||
     url.protocol === "blob:" ||
     url.protocol === "data:"
   );
@@ -78,6 +89,15 @@ function isShellAsset(url) {
   );
 }
 
+function canPutInCache(response) {
+  if (!response || !response.ok) return false;
+  if (response.status === 206) return false;
+  if (response.headers.has("Set-Cookie")) return false;
+  const cc = response.headers.get("Cache-Control") || "";
+  if (/\bno-store\b/i.test(cc) || /\bprivate\b/i.test(cc)) return false;
+  return true;
+}
+
 async function networkFirst(request, cacheName, timeoutMs = 3000) {
   const cache = await caches.open(cacheName);
   try {
@@ -85,7 +105,7 @@ async function networkFirst(request, cacheName, timeoutMs = 3000) {
     const timer = setTimeout(() => controller.abort(), timeoutMs);
     const response = await fetch(request, { signal: controller.signal });
     clearTimeout(timer);
-    if (response && response.ok) {
+    if (canPutInCache(response)) {
       cache.put(request, response.clone());
     }
     return response;
@@ -101,7 +121,7 @@ async function staleWhileRevalidate(request, cacheName) {
   const cached = await cache.match(request);
   const networkPromise = fetch(request)
     .then((response) => {
-      if (response && response.ok) {
+      if (canPutInCache(response)) {
         cache.put(request, response.clone());
       }
       return response;
@@ -140,8 +160,10 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(
       fetch(request)
         .then((res) => {
-          const copy = res.clone();
-          caches.open(SHELL_CACHE).then((c) => c.put(request, copy));
+          if (canPutInCache(res)) {
+            const copy = res.clone();
+            caches.open(SHELL_CACHE).then((c) => c.put(request, copy));
+          }
           return res;
         })
         .catch(async () => {
