@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 type Props = {
   className?: string;
   size?: "sm" | "md" | "lg" | "xl";
-  /** seal = circular agency badge; word = CAI caps; stack = CAI + STUDIO */
+  /** seal = filled chocolate badge; word = CAI caps; stack = CAI + STUDIO */
   variant?: "seal" | "word" | "stack";
   tone?: "brand" | "ink" | "on-dark";
   title?: string;
@@ -31,8 +31,8 @@ const wordType = {
 } as const;
 
 /**
- * Enterprise CAI monogram — CIA / agency style lettermark.
- * CSS + HTML (reliable fonts), not a lone “C”.
+ * Cozy AI Studio monogram — solid Warm Brutalism seal.
+ * Filled chocolate disc + cream CAI (never a blank white box).
  */
 export function CaiMonogram({
   className,
@@ -41,24 +41,13 @@ export function CaiMonogram({
   tone = "brand",
   title = "CAI — Cozy AI Studio",
 }: Props) {
-  const ink =
-    tone === "on-dark"
-      ? "text-white"
-      : tone === "ink"
-        ? "text-charcoal dark:text-zinc-100"
-        : "text-choco-dark dark:text-choco";
-
-  const ring =
-    tone === "on-dark"
-      ? "border-white/50"
-      : "border-choco/55 dark:border-choco/70";
-
-  const disc =
-    tone === "on-dark"
-      ? "bg-white/10"
-      : "bg-choco/[0.08] dark:bg-choco/15";
-
   if (variant === "word") {
+    const ink =
+      tone === "on-dark"
+        ? "text-white"
+        : tone === "ink"
+          ? "text-charcoal dark:text-zinc-100"
+          : "text-choco-dark dark:text-choco";
     return (
       <span
         role="img"
@@ -89,6 +78,12 @@ export function CaiMonogram({
   }
 
   if (variant === "stack") {
+    const ink =
+      tone === "on-dark"
+        ? "text-white"
+        : tone === "ink"
+          ? "text-charcoal dark:text-zinc-100"
+          : "text-choco-dark dark:text-choco";
     return (
       <span
         role="img"
@@ -118,44 +113,38 @@ export function CaiMonogram({
             tone === "on-dark" ? "bg-white/40" : "bg-choco/45",
           )}
         />
-        <span
-          className={cn(
-            "font-sans font-semibold uppercase text-[0.65rem] sm:text-xs tracking-[0.42em] opacity-80",
-          )}
-        >
+        <span className="font-sans font-semibold uppercase text-[0.65rem] sm:text-xs tracking-[0.42em] opacity-80">
           Studio
         </span>
       </span>
     );
   }
 
-  // Circular seal — institutional badge (CIA-inspired)
+  // Solid chocolate seal — always visible on cream AND dark (no empty white box)
   return (
     <span
       role="img"
       aria-label={title}
       title={title}
       className={cn(
-        "relative inline-flex shrink-0 items-center justify-center select-none rounded-full border-2",
+        "relative inline-flex shrink-0 items-center justify-center select-none rounded-full",
         sealBox[size],
-        ring,
-        disc,
-        "shadow-[var(--shadow-brutalist-sm)]",
+        // solid fill — never translucent ghost on light theme
+        "bg-choco text-[#f3ebe3]",
+        "border-2 border-[#3d2314]/90",
+        "shadow-[2px_2px_0_0_#3d2314]",
         className,
       )}
     >
-      {/* inner ring */}
+      {/* inner cream ring */}
       <span
-        className={cn(
-          "pointer-events-none absolute inset-[3px] rounded-full border",
-          tone === "on-dark" ? "border-white/25" : "border-choco/25",
-        )}
+        className="pointer-events-none absolute inset-[3px] rounded-full border border-[#f3ebe3]/35"
+        aria-hidden
       />
       <span
         className={cn(
-          "relative font-serif font-bold uppercase leading-none",
+          "relative font-serif font-bold uppercase leading-none text-[#f3ebe3]",
           sealType[size],
-          ink,
         )}
       >
         CAI
