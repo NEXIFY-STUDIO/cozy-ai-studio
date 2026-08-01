@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   verify:
-    name: typecheck · lint · contracts · build
+    name: verify
     runs-on: ubuntu-latest
     timeout-minutes: 25
 
@@ -32,7 +32,7 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
-      - name: Lint (0 errors)
+      - name: Lint
         run: npm run lint
 
       - name: Dashboard preview contract
@@ -46,29 +46,16 @@ jobs:
 
       - name: Build
         env:
-          # Build-time: allow migrate / nitro without production secrets
           DEMO_PIPELINE: "false"
           AUTH_PROVIDER: none
           VITE_AUTH_PROVIDER: none
           VITE_AUTH_ENABLED: "false"
-          # Optional: skip hard DB if no DATABASE_URL in CI secrets
-          SKIP_DB_MIGRATE: "1"
-        run: |
-          if [ -n "${{ secrets.DATABASE_URL }}" ]; then
-            export DATABASE_URL="${{ secrets.DATABASE_URL }}"
-            export DATABASE_URL_MIGRATE="${{ secrets.DATABASE_URL_MIGRATE }}"
-            npm run build
-          else
-            # Build without migrate when no DB secret (still compiles Nitro output)
-            npx vite build
-          fi
+        run: npm run build
 
       - name: Upload contract screenshots
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: contract-screenshots
-          path: |
-            screenshots/**
-            tests/visual/baselines/**
+          path: screenshots/
           if-no-files-found: ignore
