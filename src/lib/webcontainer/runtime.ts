@@ -122,7 +122,8 @@ async function ensureBooted(): Promise<WebContainer> {
       mode: "webcontainer",
     });
     const { WebContainer } = await import("@webcontainer/api");
-    wc = await WebContainer.boot({ coep: "require-corp" });
+    // Match vercel.json COEP: credentialless (enables crossOriginIsolated in modern Chrome)
+    wc = await WebContainer.boot({ coep: "credentialless" });
     wc.on("error", (err) => {
       console.error("[webcontainer]", err);
       setState({
@@ -199,7 +200,7 @@ export async function startWebContainerPreview(
       status: "fallback",
       mode: "srcdoc",
       url: null,
-      message: "Rýchly náhľad (srcDoc)",
+      message: "Live static preview",
       error: reason,
     });
     return state;
@@ -290,7 +291,7 @@ export async function startWebContainerPreview(
       mode: "srcdoc",
       url: null,
       error: msg,
-      message: "Falling back to srcDoc",
+      message: "Live static preview",
     });
     return state;
   }
