@@ -7,8 +7,10 @@ import { MistralHttpError } from "@/lib/ai/mistral.server";
 
 /**
  * POST /api/brief-assist
- * body: { mode: "inspire" | "improve", text?: string }
- * → { ok, mode, text, provider }
+ * body: { mode: "inspire" | "improve" | "diacritics", text?: string }
+ * → { ok, mode, text, provider, diacritics? }
+ *
+ * P2 diacritics: cheap SK-only pass (mistral-small, temp≈0.05, no rewrite).
  */
 export const Route = createFileRoute("/api/brief-assist")({
   server: {
@@ -25,11 +27,15 @@ export const Route = createFileRoute("/api/brief-assist")({
         }
 
         const mode = (body.mode || "").trim() as BriefAssistMode;
-        if (mode !== "inspire" && mode !== "improve") {
+        if (
+          mode !== "inspire" &&
+          mode !== "improve" &&
+          mode !== "diacritics"
+        ) {
           return Response.json(
             {
               error: "BAD_MODE",
-              message: 'mode must be "inspire" or "improve"',
+              message: 'mode must be "inspire" | "improve" | "diacritics"',
             },
             { status: 400 },
           );
@@ -47,7 +53,8 @@ export const Route = createFileRoute("/api/brief-assist")({
             return Response.json(
               {
                 error: "EMPTY_TEXT",
-                message: "Napíš krátky brief — Opraviť/Improve ho potom vylepší a opraví preklepy.",
+                message:
+                  "Napíš krátky brief — Diakritika / Opraviť ho potom spracuje.",
               },
               { status: 400 },
             );

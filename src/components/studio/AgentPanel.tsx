@@ -17,6 +17,7 @@ import {
   Wand2,
   Loader2,
   Dices,
+  CaseSensitive,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -76,9 +77,9 @@ export function AgentPanel() {
   const [pendingMedia, setPendingMedia] = useState<ChatAttachment[]>([]);
   const [dragOver, setDragOver] = useState(false);
   const [cleanArmed, setCleanArmed] = useState(false);
-  const [assistBusy, setAssistBusy] = useState<"inspire" | "improve" | null>(
-    null,
-  );
+  const [assistBusy, setAssistBusy] = useState<
+    "inspire" | "improve" | "diacritics" | null
+  >(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chat = useStudioStore((s) => s.chat);
   const files = useStudioStore((s) => s.files);
@@ -156,11 +157,14 @@ export function AgentPanel() {
   };
 
   const runBriefAssist = useCallback(
-    async (mode: "inspire" | "improve") => {
+    async (mode: "inspire" | "improve" | "diacritics") => {
       if (isPipelineRunning || assistBusy) return;
-      if (mode === "improve" && !input.trim()) {
+      if ((mode === "improve" || mode === "diacritics") && !input.trim()) {
         toast.message("Najprv niečo napíš", {
-          description: "Improve opraví preklepy a vylepší text podľa Mistral.",
+          description:
+            mode === "diacritics"
+              ? "Diakritika doplní dĺžne/mäkkene bez prepisovania."
+              : "Opraviť opraví preklepy a vylepší text podľa Mistral.",
         });
         return;
       }
@@ -177,26 +181,33 @@ export function AgentPanel() {
           provider?: string;
           error?: string;
           message?: string;
+          diacritics?: { applied?: boolean; provider?: string };
         };
         if (!res.ok || !data.text) {
           toast.error(data.message || "Brief assist zlyhal");
           return;
         }
         setInput(data.text);
-        toast.success(
-          mode === "inspire" ? "Náhodný brief pripravený" : "Preklepy opravené + brief vylepšený",
-          {
-            description:
-              data.provider === "mistral"
+        const title =
+          mode === "inspire"
+            ? "Náhodný brief pripravený"
+            : mode === "diacritics"
+              ? data.diacritics?.applied
+                ? "Diakritika doplnená"
+                : "Bez zmeny diakritiky"
+              : "Preklepy opravené + brief vylepšený";
+        toast.success(title, {
+          description:
+            mode === "diacritics"
+              ? data.provider === "mistral"
+                ? "Mistral small · bez prepisu"
+                : "Lokálny glossary · skontroluj"
+              : data.provider === "mistral"
                 ? "Mistral · môžeš hneď Send brief"
                 : "Lokálny fallback · skontroluj a odošli",
-          },
-        );
-        // Focus composer
+        });
         requestAnimationFrame(() => {
-          document
-            .getElementById("studio-brief-prompt")
-            ?.focus();
+          document.getElementById("studio-brief-prompt")?.focus();
         });
       } catch {
         toast.error("Sieťová chyba pri brief assist");
@@ -597,6 +608,27 @@ export function AgentPanel() {
                   assistBusy !== null ||
                   !input.trim()
                 }
+                onClick={() => void runBriefAssist("diacritics")}
+                aria-label="Doplň slovenskú diakritiku"
+                title="P2: lacný Mistral pass — len diakritika, bez prepisu"
+              >
+                {assistBusy === "diacritics" ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <CaseSensitive className="h-3.5 w-3.5 text-choco" />
+                )}
+                <span className="hidden sm:inline">Diakritika</span>
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className="h-7 gap-1 rounded-lg px-2 text-[11px] text-muted-foreground hover:text-foreground"
+                disabled={
+                  isPipelineRunning ||
+                  assistBusy !== null ||
+                  !input.trim()
+                }
                 onClick={() => void runBriefAssist("improve")}
                 aria-label="Oprav preklepy a vylepši brief"
                 title="Opraví preklepy a prepíše brief podľa best-practice (Mistral)"
@@ -676,7 +708,7 @@ export function AgentPanel() {
         </div>
         <p className="mt-1.5 text-[10px] text-muted-foreground">
           Media: PNG · JPEG · WebP · GIF · max {MAX_ATTACHMENTS} · paste or drop
-          · 🎲 Inspire · 🪄 Improve
+          · 🎲 Inspire · ˇ´ Diakritika · 🪄 Opraviť
         </p>
       </div>
     </div>

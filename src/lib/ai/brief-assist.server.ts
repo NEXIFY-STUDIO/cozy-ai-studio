@@ -1,6 +1,9 @@
 /**
- * Brief assist — Mistral-powered inspire / improve for Studio composer.
+ * Brief assist — Mistral-powered inspire / improve / diacritics for Studio composer.
  * Server-only.
+ *
+ * P2: mode "diacritics" = cheap SK-only pass (small model, temp≈0.05, no rewrite).
+ *     mode "improve" runs diacritics pre-pass when lang=sk before full rewrite.
  */
 
 import { getMistralApiKey, mistralChat, MistralHttpError } from "./mistral.server";
@@ -10,8 +13,9 @@ import {
   postprocessStudioBrief,
 } from "./sk-brief-postprocess";
 import { logUnknownGlossaryTokens } from "./glossary-learn.server";
+import { restoreSlovakDiacritics } from "./sk-diacritics.server";
 
-export type BriefAssistMode = "inspire" | "improve";
+export type BriefAssistMode = "inspire" | "improve" | "diacritics";
 
 const INSPIRE_SYSTEM = `You write short Studio briefs for COSY / Cozy AI Studio (Option B speed studio).
 The user will send this brief to G0→G1→G2 to generate a self-contained React landing/UI.
@@ -56,7 +60,6 @@ function pickFallback(seed?: string): string {
   return FALLBACK_INSPIRE[i]!;
 }
 
-/** Fire-and-forget: raw user typos + residual unknown after postprocess */
 function scheduleGlossaryLearn(opts: {
   mode: BriefAssistMode;
   input: string;
@@ -107,15 +110,20 @@ export async function runBriefAssist(opts: {
   ok: true;
   mode: BriefAssistMode;
   text: string;
-  provider: "mistral" | "fallback";
+  provider: "mistral" | "fallback" | "glossary" | "noop";
   lang?: "sk" | "en" | "mixed";
   postFixes?: number;
   unknownLogged?: number;
+  diacritics?: {
+    applied: boolean;
+    provider: "mistral" | "glossary" | "noop";
+    model?: string;
+  };
 }> {
   const mode = opts.mode;
   const input = (opts.text || "").trim();
 
-  if (mode === "improve" && !input) {
+  if ((mode === "improve" || mode === "diacritics") && !input) {
     throw new Error("EMPTY_TEXT");
   }
 
@@ -124,9 +132,14 @@ export async function runBriefAssist(opts: {
       ok: true;
       mode: BriefAssistMode;
       text: string;
-      provider: "mistral" | "fallback";
+      provider: "mistral" | "fallback" | "glossary" | "noop";
       lang?: "sk" | "en" | "mixed";
       postFixes?: number;
+      diacritics?: {
+        applied: boolean;
+        provider: "mistral" | "glossary" | "noop";
+        model?: string;
+      };
     },
     unknownFromOutput: string[],
   ) => {
@@ -142,6 +155,32 @@ export async function runBriefAssist(opts: {
       unknownLogged: unknownFromOutput.length,
     };
   };
+
+  // ─── P2: diacritics-only ────────────────────────────────────────────
+  if (mode === "diacritics") {
+    const dia = await restoreSlovakDiacritics({
+      text: input,
+      signal: opts.signal,
+      forceModel: true,
+    });
+    const pp = postprocessStudioBrief(dia.text);
+    return finish(
+      {
+        ok: true,
+        mode,
+        text: pp.text,
+        provider: dia.provider === "mistral" ? "mistral" : dia.provider,
+        lang: pp.lang,
+        postFixes: pp.fixes,
+        diacritics: {
+          applied: dia.changed,
+          provider: dia.provider,
+          model: dia.model,
+        },
+      },
+      pp.unknownTokens,
+    );
+  }
 
   const key = getMistralApiKey();
   if (!key) {
@@ -165,6 +204,35 @@ export async function runBriefAssist(opts: {
 
   try {
     const langHint = postprocessStudioBrief(input || "x").lang;
+
+    // P2 pre-pass: SK improve → cheap diacritics first (no rewrite)
+    let workInput = input;
+    let diaMeta:
+      | {
+          applied: boolean;
+          provider: "mistral" | "glossary" | "noop";
+          model?: string;
+        }
+      | undefined;
+
+    if (mode === "improve" && langHint === "sk" && input) {
+      try {
+        const dia = await restoreSlovakDiacritics({
+          text: input,
+          signal: opts.signal,
+        });
+        workInput = dia.text;
+        diaMeta = {
+          applied: dia.changed,
+          provider: dia.provider,
+          model: dia.model,
+        };
+      } catch (e) {
+        if (e instanceof MistralHttpError && e.status === 429) throw e;
+        // continue with original input
+      }
+    }
+
     const raw = await mistralChat({
       signal: opts.signal,
       temperature: mode === "inspire" ? 0.95 : 0.35,
@@ -185,13 +253,13 @@ export async function runBriefAssist(opts: {
               ? input
                 ? `Inspire a new brief. Language hint: ${langHint}. Optional seed: ${input}`
                 : `Generate one fresh random Studio brief now. Variation seed: ${Date.now()}`
-              : `Improve and fix typos in this Studio brief. Detected language: ${langHint}. Keep that language. Output only the brief:\n\n${input}`,
+              : `Improve and fix typos in this Studio brief. Detected language: ${langHint}. Keep that language. Output only the brief:\n\n${workInput}`,
         },
       ],
     });
     const pp = postprocessStudioBrief(raw);
     if (!pp.text || pp.text.length < 12) {
-      const fb = mode === "improve" ? input : pickFallback(input);
+      const fb = mode === "improve" ? workInput : pickFallback(input);
       const fpp = postprocessStudioBrief(fb);
       return finish(
         {
@@ -201,6 +269,7 @@ export async function runBriefAssist(opts: {
           provider: "fallback",
           lang: fpp.lang,
           postFixes: fpp.fixes,
+          diacritics: diaMeta,
         },
         fpp.unknownTokens,
       );
@@ -213,6 +282,7 @@ export async function runBriefAssist(opts: {
         provider: "mistral",
         lang: pp.lang,
         postFixes: pp.fixes,
+        diacritics: diaMeta,
       },
       pp.unknownTokens,
     );
