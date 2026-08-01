@@ -54,6 +54,25 @@ function cleanBrief(text: string): string {
   t = t.replace(/^```[\w]*\n?|\n?```$/g, "").trim();
   t = t.replace(/^["'“”]+|["'“”]+$/g, "").trim();
   t = t.replace(/^(here(?:'s| is)|improved brief|brief)\s*:\s*/i, "").trim();
+  // Common brief typos (SK/EN) — belt after Mistral
+  const fixes: [RegExp, string][] = [
+    [/\blandig\b/gi, "landing"],
+    [/\bpromt\b/gi, "prompt"],
+    [/\bpromts\b/gi, "prompts"],
+    [/\bmsitral\b/gi, "Mistral"],
+    [/\bmistrall\b/gi, "Mistral"],
+    [/\bresolutin\b/gi, "resolution"],
+    [/\bdigtal\b/gi, "digital"],
+    [/\bmobil\b(?=\s+resol)/gi, "mobile"],
+    [/\bkaviare\s+n\b/gi, "kaviareň"],
+    [/\bkaviaren\b/gi, "kaviareň"],
+    [/\bkosice\b/gi, "Košice"],
+    [/\bterakotovym\b/gi, "terakotovým"],
+    [/\bterakotovy\b/gi, "terakotový"],
+    [/\bfullstack\b/gi, "full-stack"],
+    [/\bself contained\b/gi, "self-contained"],
+  ];
+  for (const [re, to] of fixes) t = t.replace(re, to);
   if (t.length > 600) t = t.slice(0, 597).trimEnd() + "…";
   return t;
 }
