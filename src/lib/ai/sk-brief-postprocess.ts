@@ -357,7 +357,13 @@ export function isGlossaryCandidate(token: string): boolean {
   if (!/^[a-z]+(?:-[a-z]+)*$/i.test(key)) return false;
   if (STOPWORDS.has(key)) return false;
   if (SK_TOKEN_MAP[key] || EN_TOKEN_MAP[key]) return false;
-  // skip pure brand ALLCAPS leftovers already filtered
+  // Already has diacritics → almost certainly correct SK, not a learn target
+  if (
+    /[áäčďéíĺľňóôŕšťúýžÁÄČĎÉÍĹĽŇÓÔŔŠŤÚÝŽ]/.test(token) ||
+    /\p{M}/u.test(token.normalize("NFD"))
+  ) {
+    return false;
+  }
   return true;
 }
 
