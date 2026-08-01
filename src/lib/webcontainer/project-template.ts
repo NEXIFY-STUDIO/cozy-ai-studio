@@ -48,8 +48,8 @@ export const WC_INDEX_HTML = `<!DOCTYPE html>
     <title>CAI Preview</title>
     <style>
       :root { color-scheme: light dark; font-family: Inter, system-ui, sans-serif; }
-      body { margin: 0; min-height: 100vh; background: #faf7f2; color: #1a1c20; }
-      #root { min-height: 100vh; }
+      body { margin: 0; height: 100dvh; max-height: 100dvh; overflow: hidden; background: #faf7f2; color: #1a1c20; }
+      #root { height: 100dvh; max-height: 100dvh; overflow: hidden; }
     </style>
   </head>
   <body>
@@ -74,11 +74,29 @@ if (el) {
 `;
 
 export const WC_APP_DEFAULT = `export default function App() {
+  // Locked 100vh screen — no page scroll; scale with viewport
   return (
-    <main style={{ padding: 24, fontFamily: "system-ui, sans-serif" }}>
-      <p style={{ letterSpacing: "0.2em", fontSize: 12, opacity: 0.6 }}>CAI</p>
-      <h1 style={{ marginTop: 8 }}>Live Preview</h1>
-      <p style={{ opacity: 0.75 }}>
+    <main
+      style={{
+        boxSizing: "border-box",
+        height: "100dvh",
+        maxHeight: "100dvh",
+        overflow: "hidden",
+        display: "flex",
+        flexDirection: "column",
+        padding: "clamp(12px, 2.5vh, 24px)",
+        fontFamily: "system-ui, sans-serif",
+        background: "#faf7f2",
+        color: "#1a1c20",
+      }}
+    >
+      <p style={{ letterSpacing: "0.2em", fontSize: "clamp(10px, 1.6vh, 12px)", opacity: 0.6, margin: 0 }}>
+        CAI
+      </p>
+      <h1 style={{ marginTop: "clamp(4px, 1vh, 8px)", fontSize: "clamp(1.25rem, 4vh, 2rem)", marginBottom: 0 }}>
+        Live Preview
+      </h1>
+      <p style={{ opacity: 0.75, fontSize: "clamp(0.8rem, 2vh, 1rem)", marginTop: "clamp(6px, 1.2vh, 12px)" }}>
         Run agents and Accept a diff — this WebContainer will hot-reload your app.
       </p>
     </main>
@@ -125,12 +143,10 @@ export function buildBaseProjectFiles(
   };
   if (extra) {
     for (const [path, content] of Object.entries(extra)) {
-      // Don't overwrite scaffold criticals unless it's App or under src/
       if (path === "package.json" || path === "vite.config.ts") continue;
       files[path.replace(/^\//, "")] = content;
     }
   }
-  // Ensure App entry exists at src/App.tsx
   if (extra?.["src/App.tsx"]) files["src/App.tsx"] = extra["src/App.tsx"];
   if (extra?.["App.tsx"]) files["src/App.tsx"] = extra["App.tsx"];
   return files;
