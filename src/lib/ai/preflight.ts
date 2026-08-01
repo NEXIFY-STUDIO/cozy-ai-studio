@@ -24,7 +24,45 @@ export type PreflightReport = {
   patches: FilePatch[];
   issues: PatchValidationIssue[];
   ranAt: number;
+  /** R3: true when G1 looks Tailwind-only without <style> (WC has no Tailwind build) */
+  previewStyleRisk?: boolean;
 };
+
+/**
+ * Tailwind utility mash detector (WC runtime has NO Tailwind CSS).
+ * Risk = utility className patterns present AND no <style> / style={{}} layout.
+ */
+export const TAILWIND_UTILITY_RE =
+  /\b(?:min-h-screen|flex\s+gap-|grid\s+grid-cols|p-\d|px-\d|py-\d|rounded-2xl|md:|lg:|sm:|gap-\d|space-y-\d|space-x-\d|bg-white|text-sm|w-full|h-full|items-center|justify-between)\b/;
+
+export function detectTailwindOnlyRisk(content: string): {
+  risk: boolean;
+  detail: string;
+} {
+  if (!content || !content.trim()) {
+    return { risk: false, detail: "empty" };
+  }
+  const hasStyleTag = /<style[\s>]/i.test(content);
+  const hasStyleAttr =
+    /style=\{\s*\{/.test(content) || /style=\{\s*`/.test(content);
+  const hasStyle = hasStyleTag || hasStyleAttr;
+  const hasTw =
+    TAILWIND_UTILITY_RE.test(content) ||
+    /className=["'`][^"'`]*(?:min-h-screen|flex\s|grid\s|gap-\d|p-\d|rounded-2xl|md:)/.test(
+      content,
+    );
+
+  if (hasTw && !hasStyle) {
+    return {
+      risk: true,
+      detail: "Preview may be unstyled — prefer <style> layout",
+    };
+  }
+  return {
+    risk: false,
+    detail: hasStyle ? "self-contained CSS" : "no Tailwind utilities",
+  };
+}
 
 function balancedBrackets(code: string): boolean {
   const stack: string[] = [];
@@ -124,8 +162,37 @@ export function runPreflight(
   checks.push({
     id: "entry",
     label: "App entry present",
-    status: hasApp || validated.patches.length > 0 ? (hasApp ? "pass" : "warn") : "fail",
-    detail: hasApp ? "src/App.tsx / App in patch set" : "No App.tsx in this turn (may be OK)",
+    status:
+      hasApp || validated.patches.length > 0
+        ? hasApp
+          ? "pass"
+          : "warn"
+        : "fail",
+    detail: hasApp
+      ? "src/App.tsx / App in patch set"
+      : "No App.tsx in this turn (may be OK)",
+  });
+
+  // R3 — Live Preview CSS contract (WC has no Tailwind)
+  let previewStyleRisk = false;
+  let styleDetail = "OK";
+  const stylePaths: string[] = [];
+  for (const p of validated.patches) {
+    if (!/\.(tsx?|jsx?)$/i.test(p.path) || !p.content) continue;
+    const det = detectTailwindOnlyRisk(p.content);
+    if (det.risk) {
+      previewStyleRisk = true;
+      stylePaths.push(p.path);
+      styleDetail = det.detail;
+    }
+  }
+  checks.push({
+    id: "preview-css",
+    label: "Preview CSS (WC)",
+    status: previewStyleRisk ? "warn" : "pass",
+    detail: previewStyleRisk
+      ? `${styleDetail}${stylePaths.length ? ` · ${stylePaths.join(", ")}` : ""}`
+      : styleDetail,
   });
 
   checks.push({
@@ -146,5 +213,6 @@ export function runPreflight(
     patches: validated.patches,
     issues: validated.issues,
     ranAt: Date.now(),
+    previewStyleRisk,
   };
 }

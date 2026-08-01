@@ -229,6 +229,54 @@ if (previewHtml) {
 }
 
 // ─── Report ──────────────────────────────────────────────────────────
+// R3 — Tailwind-only risk detector (mirrors src/lib/ai/preflight.ts)
+const preflightSrc = readFileSync(resolve(ROOT, "src/lib/ai/preflight.ts"), "utf8");
+must(preflightSrc.includes("detectTailwindOnlyRisk"), "preflight exports detectTailwindOnlyRisk");
+must(preflightSrc.includes("preview-css"), "preflight has preview-css check");
+must(preflightSrc.includes("Preview may be unstyled"), "preflight warn copy present");
+must(
+  preflightSrc.includes("min-h-screen") && preflightSrc.includes("rounded-2xl"),
+  "preflight scans Tailwind utility patterns",
+);
+
+// HitL shows the risk banner
+const hitl = readFileSync(resolve(ROOT, "src/components/studio/HitLApprovalCard.tsx"), "utf8");
+must(hitl.includes("data-preview-style-risk"), "HitL card has preview style risk banner");
+must(hitl.includes("Preview may be unstyled"), "HitL warns unstyled preview");
+
+function detectTailwindOnlyRiskMirror(content) {
+  const TAILWIND_UTILITY_RE =
+    /\b(?:min-h-screen|flex\s+gap-|grid\s+grid-cols|p-\d|px-\d|py-\d|rounded-2xl|md:|lg:|sm:|gap-\d|space-y-\d|space-x-\d|bg-white|text-sm|w-full|h-full|items-center|justify-between)\b/;
+  const hasStyleTag = /<style[\s>]/i.test(content);
+  const hasStyleAttr = /style=\{\s*\{/.test(content) || /style=\{\s*`/.test(content);
+  const hasStyle = hasStyleTag || hasStyleAttr;
+  const hasTw =
+    TAILWIND_UTILITY_RE.test(content) ||
+    /className=["'`][^"'`]*(?:min-h-screen|flex\s|grid\s|gap-\d|p-\d|rounded-2xl|md:)/.test(
+      content,
+    );
+  return hasTw && !hasStyle;
+}
+
+const mashApp = `export default function App() {
+  return (
+    <div className="min-h-screen flex gap-4 p-4 rounded-2xl md:grid">
+      <nav className="flex gap-2">Dashboard Analytics Settings</nav>
+    </div>
+  );
+}`;
+const styledApp = `export default function App() {
+  return (
+    <>
+      <style>{\`.nav { display: flex; gap: 16px; }\`}</style>
+      <nav className="nav">Dashboard Analytics Settings</nav>
+    </>
+  );
+}`;
+must(detectTailwindOnlyRiskMirror(mashApp) === true, "R3: Tailwind-only mash → risk true");
+must(detectTailwindOnlyRiskMirror(styledApp) === false, "R3: <style> layout → risk false");
+must(detectTailwindOnlyRiskMirror(code) === false, "R3: dashboard generator App is self-contained");
+
 const report = {
   ok: fails.length === 0,
   fails,
@@ -238,6 +286,7 @@ const report = {
     brief: "SaaS metrics dashboard with KPI cards",
     accept: "Accept writes src/App.tsx from generator / G1",
     livePreview: "nav spaced · 4 KPIs · chart · 6 activity · mobile no clip",
+    r3: "Tailwind-only without <style> → HitL warn + preflight preview-css",
   },
 };
 

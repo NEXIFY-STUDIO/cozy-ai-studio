@@ -205,6 +205,25 @@ export function HitLApprovalCard() {
             </div>
           )}
 
+          {(preflight?.previewStyleRisk ||
+            preflight?.checks?.some(
+              (c) => c.id === "preview-css" && c.status === "warn",
+            )) && (
+            <div
+              role="status"
+              data-preview-style-risk
+              className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-[11px] leading-relaxed text-foreground"
+            >
+              <span className="font-semibold text-amber-700 dark:text-amber-400">
+                Preview may be unstyled
+              </span>
+              {" — "}
+              WebContainer has no Tailwind. Prefer a self-contained{" "}
+              <code className="font-mono text-[10px]">{"<style>"}</code>{" "}
+              layout (or retry with “no Tailwind / use CSS”).
+            </div>
+          )}
+
           <div className="flex flex-col gap-2 sm:flex-row">
             <Button
               type="button"

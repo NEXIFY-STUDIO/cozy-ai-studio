@@ -124,6 +124,33 @@ function brokenMashHtml() {
 </body></html>`;
 }
 
+/**
+ * R3 negative: G1 Tailwind-only mash (utility classNames, NO real CSS).
+ * Looks like unstyled HTML with class attributes — must diverge from dashboard golden.
+ */
+function g1TailwindOnlyMashHtml() {
+  return `<!DOCTYPE html><html><head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>g1-tailwind-only-mash</title>
+</head><body>
+<div class="min-h-screen flex gap-4 p-4 md:grid grid-cols-4 rounded-2xl">
+  <header class="flex justify-between items-center w-full">
+    <div class="text-xl font-bold">Aurora</div>
+    <nav class="flex gap-4 text-sm">
+      <a class="hover:underline">Dashboard</a><a class="hover:underline">Analytics</a><a class="hover:underline">Settings</a>
+    </nav>
+  </header>
+  <div class="grid grid-cols-4 gap-4 p-4">
+    <div class="rounded-2xl bg-white p-4 shadow">Users</div>
+    <div class="rounded-2xl bg-white p-4 shadow">Revenue</div>
+    <div class="rounded-2xl bg-white p-4 shadow">Sessions</div>
+    <div class="rounded-2xl bg-white p-4 shadow">Bounce</div>
+  </div>
+</div>
+</body></html>`;
+}
+
 function loadPng(buf) {
   return PNG.sync.read(buf);
 }
@@ -203,6 +230,14 @@ const negative = {
 };
 
 fixtures.push(negative);
+
+// R3: g1-tailwind-only-mash — utility classes without CSS (must fail vs dashboard golden)
+fixtures.push({
+  name: "g1-tailwind-only-mash-375",
+  html: g1TailwindOnlyMashHtml(),
+  viewport: { width: 375, height: 667, deviceScaleFactor: 1 },
+  fullPage: true,
+});
 
 const browser = await chromium.launch({
   headless: true,
@@ -290,6 +325,22 @@ try {
       cmp.diffRatio > 0.05,
       `broken mash diverges from dashboard golden (${(cmp.diffRatio * 100).toFixed(1)}% diff)`,
     );
+  }
+
+  // R3: g1-tailwind-only-mash must FAIL visual contract vs good dashboard
+  const twMashActual = resolve(OUT, "g1-tailwind-only-mash-375-actual.png");
+  if (existsSync(dashBase) && existsSync(twMashActual)) {
+    const diffPath = resolve(OUT, "g1-tailwind-only-mash-vs-dashboard-diff.png");
+    const cmp = comparePng(readFileSync(dashBase), readFileSync(twMashActual), diffPath);
+    must(
+      cmp.diffRatio > 0.05,
+      `g1-tailwind-only-mash fails contract vs dashboard (${(cmp.diffRatio * 100).toFixed(1)}% diff) — must stay unstyled mash`,
+    );
+    notes.push(
+      `ok: g1-tailwind-only-mash negative contract (${(cmp.diffRatio * 100).toFixed(1)}% ≠ dashboard)`,
+    );
+  } else {
+    fails.push("g1-tailwind-only-mash-375 actual screenshot missing");
   }
 } finally {
   await browser.close();

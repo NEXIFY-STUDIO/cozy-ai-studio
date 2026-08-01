@@ -84,6 +84,8 @@ export interface PreflightReportState {
   issues: { path: string; code: string; message: string; severity: string }[];
   patchCount: number;
   ranAt: number;
+  /** R3: Tailwind-only without <style> — preview may mash */
+  previewStyleRisk?: boolean;
 }
 
 export interface TelemetryLog {

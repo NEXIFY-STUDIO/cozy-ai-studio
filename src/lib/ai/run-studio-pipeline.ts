@@ -257,6 +257,7 @@ export async function runStudioPipeline(
           })),
           patchCount: preflight.patches.length,
           ranAt: preflight.ranAt,
+          previewStyleRisk: preflight.previewStyleRisk,
         });
 
         if (!preflight.canAccept) {
@@ -312,6 +313,9 @@ export async function runStudioPipeline(
           preflight.ok
             ? `Preflight OK · ${preflight.patches.length} file(s).`
             : `Preflight warnings · ${preflight.patches.length} file(s).`,
+          preflight.previewStyleRisk
+            ? "Preview may be unstyled — prefer <style> layout."
+            : null,
           result.description,
         ]
           .filter(Boolean)
