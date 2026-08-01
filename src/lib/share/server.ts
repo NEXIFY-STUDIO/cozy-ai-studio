@@ -9,7 +9,7 @@ import {
   extractTsxFromStoredSource,
   healPreviewHtmlFromSource,
   isBrokenPreviewHtml,
-} from "@/lib/preview/build-preview-html.server";
+} from "@/lib/preview/build-preview-html";
 
 export type SharedPreview = {
   id: string;

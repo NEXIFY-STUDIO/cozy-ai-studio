@@ -17,7 +17,7 @@ import type { SseDonePayload, SseEventType, SsePayloadMap } from "./sse-protocol
 import {
   buildPreviewHtml,
   isBrokenPreviewHtml,
-} from "@/lib/preview/build-preview-html.server";
+} from "@/lib/preview/build-preview-html";
 
 export type PipelineEvent =
   | { type: "phase"; data: SsePayloadMap["phase"] }
