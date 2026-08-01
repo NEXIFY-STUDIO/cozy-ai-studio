@@ -4,6 +4,12 @@
 
 import { getSql } from "@/lib/db";
 import { ensureUserRow } from "@/lib/projects/server";
+import {
+  buildPreviewHtml,
+  extractTsxFromStoredSource,
+  healPreviewHtmlFromSource,
+  isBrokenPreviewHtml,
+} from "@/lib/preview/build-preview-html.server";
 
 export type SharedPreview = {
   id: string;
@@ -28,6 +34,39 @@ function newShareId() {
   return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
 }
 
+async function ensureGoodHtml(opts: {
+  html: string;
+  title?: string;
+  sourceCode?: string | Record<string, string> | null;
+}): Promise<string> {
+  let html = opts.html?.trim() || "";
+  if (!isBrokenPreviewHtml(html)) return html;
+
+  let source: string | null = null;
+  if (typeof opts.sourceCode === "string") source = opts.sourceCode;
+  else if (opts.sourceCode && typeof opts.sourceCode === "object") {
+    try {
+      source = JSON.stringify(opts.sourceCode);
+    } catch {
+      source = null;
+    }
+  }
+
+  const healed = await healPreviewHtmlFromSource({
+    title: opts.title,
+    html,
+    sourceCode: source,
+  });
+  if (healed) return healed;
+
+  const tsx = extractTsxFromStoredSource(source);
+  if (tsx) {
+    const rebuilt = await buildPreviewHtml(opts.title || "Preview", tsx);
+    if (!isBrokenPreviewHtml(rebuilt)) return rebuilt;
+  }
+  return html;
+}
+
 export async function createSharedPreview(opts: {
   userId: string;
   html: string;
@@ -38,7 +77,11 @@ export async function createSharedPreview(opts: {
   sourceLanguage?: string | null;
   sourcePath?: string | null;
 }): Promise<{ id: string; path: string }> {
-  const html = opts.html?.trim() || "";
+  const html = await ensureGoodHtml({
+    html: opts.html,
+    title: opts.title,
+    sourceCode: opts.sourceCode,
+  });
   if (!html) {
     throw new Error("EMPTY_HTML");
   }
@@ -66,7 +109,9 @@ export async function createSharedPreview(opts: {
   const promptPreview = (opts.promptPreview || "").slice(0, 280) || null;
   let sourceCode: string | null = null;
   if (typeof opts.sourceCode === "string") {
-    sourceCode = opts.sourceCode.trim() || null;
+    // Prefer pure TSX in DB when G1 JSON was stored by mistake
+    const pure = extractTsxFromStoredSource(opts.sourceCode);
+    sourceCode = pure || opts.sourceCode.trim() || null;
   } else if (opts.sourceCode && typeof opts.sourceCode === "object") {
     try {
       sourceCode = JSON.stringify(opts.sourceCode);
@@ -111,5 +156,29 @@ export async function getSharedPreview(
       and (expires_at is null or expires_at > CURRENT_TIMESTAMP)
     limit 1
   `;
-  return rows[0] ?? null;
+  const row = rows[0];
+  if (!row) return null;
+
+  // Self-heal old ENOENT shares on read (and persist once)
+  if (isBrokenPreviewHtml(row.html) && row.source_code) {
+    const healed = await healPreviewHtmlFromSource({
+      title: row.title,
+      html: row.html,
+      sourceCode: row.source_code,
+    });
+    if (healed) {
+      try {
+        await sql`
+          update shared_previews
+          set html = ${healed}
+          where id = ${row.id}
+        `;
+      } catch {
+        /* non-fatal — still serve healed */
+      }
+      return { ...row, html: healed };
+    }
+  }
+
+  return row;
 }
