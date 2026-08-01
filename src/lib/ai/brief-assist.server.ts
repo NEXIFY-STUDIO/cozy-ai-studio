@@ -4,6 +4,7 @@
  */
 
 import { getMistralApiKey, mistralChat, MistralHttpError } from "./mistral.server";
+import { cleanBrief, postprocessStudioBrief } from "./sk-brief-postprocess";
 
 export type BriefAssistMode = "inspire" | "improve";
 
@@ -16,7 +17,8 @@ Rules:
 - Concrete product: brand name, audience, sections, visual direction, mobile-first.
 - Prefer self-contained CSS (no Tailwind-only), sticky header with safe-area, 100vh hero when relevant.
 - Variety: pick a fresh niche each time (café, SaaS, portfolio, shop, clinic, festival…).
-- Correct spelling and grammar in the output.
+- Correct spelling and grammar in the output. For Slovak use proper diacritics (kaviareň, Košice, tlačidlo).
+- Never switch Slovak to Czech.
 - Max ~280 characters when possible, hard max 500.`;
 
 const IMPROVE_SYSTEM = `You are a senior product designer improving Studio briefs for COSY AI Studio.
@@ -24,9 +26,9 @@ Rewrite the user's rough idea into a crisp, correctly spelled brief for G0 Plann
 
 Rules:
 - Output ONLY the improved brief (no quotes, no markdown, no "Here is…").
-- FIRST fix all typos, diacritics, and grammar (Slovak and English). Examples: "kaviaren"→"kaviareň", "promt"→"prompt", "msitral"→"Mistral".
+- FIRST fix all typos, diacritics, and grammar (Slovak and English). Examples: "kaviaren"→"kaviareň", "promt"→"prompt", "kosice"→"Košice", "landig"→"landing".
 - Keep the user's intent, language (SK stay SK, EN stay EN), and any named brand.
-- Do NOT switch Slovak to Czech (no "pro", "přichytavý", "nyní" when user wrote Slovak).
+- Do NOT switch Slovak to Czech (no "pro", "přichytavý", "nyní", "který" when user wrote Slovak — use "pre", "teraz", "ktorý").
 - Add: layout sections, visual tokens (warm cream / terracotta when unset), mobile-first, sticky header, CTA.
 - Prefer self-contained <style> React App (no Tailwind-only mash).
 - 2–4 sentences, max ~450 characters.
@@ -49,34 +51,6 @@ function pickFallback(seed?: string): string {
   return FALLBACK_INSPIRE[i]!;
 }
 
-function cleanBrief(text: string): string {
-  let t = text.trim();
-  t = t.replace(/^```[\w]*\n?|\n?```$/g, "").trim();
-  t = t.replace(/^["'“”]+|["'“”]+$/g, "").trim();
-  t = t.replace(/^(here(?:'s| is)|improved brief|brief)\s*:\s*/i, "").trim();
-  // Common brief typos (SK/EN) — belt after Mistral
-  const fixes: [RegExp, string][] = [
-    [/\blandig\b/gi, "landing"],
-    [/\bpromt\b/gi, "prompt"],
-    [/\bpromts\b/gi, "prompts"],
-    [/\bmsitral\b/gi, "Mistral"],
-    [/\bmistrall\b/gi, "Mistral"],
-    [/\bresolutin\b/gi, "resolution"],
-    [/\bdigtal\b/gi, "digital"],
-    [/\bmobil\b(?=\s+resol)/gi, "mobile"],
-    [/\bkaviare\s+n\b/gi, "kaviareň"],
-    [/\bkaviaren\b/gi, "kaviareň"],
-    [/\bkosice\b/gi, "Košice"],
-    [/\bterakotovym\b/gi, "terakotovým"],
-    [/\bterakotovy\b/gi, "terakotový"],
-    [/\bfullstack\b/gi, "full-stack"],
-    [/\bself contained\b/gi, "self-contained"],
-  ];
-  for (const [re, to] of fixes) t = t.replace(re, to);
-  if (t.length > 600) t = t.slice(0, 597).trimEnd() + "…";
-  return t;
-}
-
 export async function runBriefAssist(opts: {
   mode: BriefAssistMode;
   text?: string;
@@ -86,6 +60,8 @@ export async function runBriefAssist(opts: {
   mode: BriefAssistMode;
   text: string;
   provider: "mistral" | "fallback";
+  lang?: "sk" | "en" | "mixed";
+  postFixes?: number;
 }> {
   const mode = opts.mode;
   const input = (opts.text || "").trim();
@@ -96,21 +72,26 @@ export async function runBriefAssist(opts: {
 
   const key = getMistralApiKey();
   if (!key) {
+    const raw =
+      mode === "improve"
+        ? `${input} — mobile-first, sticky header, warm cream + terracotta CTA, self-contained CSS React App.`
+        : pickFallback(input);
+    const pp = postprocessStudioBrief(raw);
     return {
       ok: true,
       mode,
-      text:
-        mode === "improve"
-          ? `${input} — mobile-first, sticky header, warm cream + terracotta CTA, self-contained CSS React App.`
-          : pickFallback(input),
+      text: pp.text,
       provider: "fallback",
+      lang: pp.lang,
+      postFixes: pp.fixes,
     };
   }
 
   try {
+    const langHint = postprocessStudioBrief(input || "x").lang;
     const raw = await mistralChat({
       signal: opts.signal,
-      temperature: mode === "inspire" ? 0.95 : 0.45,
+      temperature: mode === "inspire" ? 0.95 : 0.35,
       maxTokens: 400,
       model:
         process.env.MISTRAL_MODEL_PLAN ??
@@ -126,34 +107,52 @@ export async function runBriefAssist(opts: {
           content:
             mode === "inspire"
               ? input
-                ? `Inspire a new brief. Optional seed / language hint: ${input}`
+                ? `Inspire a new brief. Language hint: ${langHint}. Optional seed: ${input}`
                 : `Generate one fresh random Studio brief now. Variation seed: ${Date.now()}`
-              : `Improve and fix typos in this Studio brief. Keep language. Output only the brief:\n\n${input}`,
+              : `Improve and fix typos in this Studio brief. Detected language: ${langHint}. Keep that language. Output only the brief:\n\n${input}`,
         },
       ],
     });
-    const text = cleanBrief(raw);
-    if (!text || text.length < 12) {
+    const pp = postprocessStudioBrief(raw);
+    if (!pp.text || pp.text.length < 12) {
+      const fb = mode === "improve" ? input : pickFallback(input);
+      const fpp = postprocessStudioBrief(fb);
       return {
         ok: true,
         mode,
-        text: mode === "improve" ? input : pickFallback(input),
+        text: fpp.text,
         provider: "fallback",
+        lang: fpp.lang,
+        postFixes: fpp.fixes,
       };
-    }
-    return { ok: true, mode, text, provider: "mistral" };
-  } catch (e) {
-    if (e instanceof MistralHttpError && e.status === 429) {
-      throw e;
     }
     return {
       ok: true,
       mode,
-      text:
-        mode === "improve"
-          ? `${input} — clarify sections, CTA, mobile-first, self-contained styles.`
-          : pickFallback(input),
+      text: pp.text,
+      provider: "mistral",
+      lang: pp.lang,
+      postFixes: pp.fixes,
+    };
+  } catch (e) {
+    if (e instanceof MistralHttpError && e.status === 429) {
+      throw e;
+    }
+    const raw =
+      mode === "improve"
+        ? `${input} — clarify sections, CTA, mobile-first, self-contained styles.`
+        : pickFallback(input);
+    const pp = postprocessStudioBrief(raw);
+    return {
+      ok: true,
+      mode,
+      text: pp.text,
       provider: "fallback",
+      lang: pp.lang,
+      postFixes: pp.fixes,
     };
   }
 }
+
+// re-export for tests
+export { cleanBrief, postprocessStudioBrief };
