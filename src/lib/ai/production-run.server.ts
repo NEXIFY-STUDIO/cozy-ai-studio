@@ -13,7 +13,6 @@ import {
 import { auditCode, autoHealCode, type AuditReport } from "./auditor";
 import { PipelineError } from "./errors";
 import type { TaskNode, PipelinePhase } from "./types";
-import type { AgentId } from "@/stores/studio-store";
 import type { SseDonePayload, SseEventType, SsePayloadMap } from "./sse-protocol";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -144,8 +143,8 @@ async function buildPreviewHtml(title: string, code: string): Promise<string> {
     word-break: break-word;
   }
 </style>
-<script>${umdReact}<\/script>
-<script>${umdReactDom}<\/script>
+<script>${umdReact}</script>
+<script>${umdReactDom}</script>
 </head>
 <body>
 <div id="root"></div>
@@ -179,7 +178,7 @@ window.__COSY_APP_JS__ = ${jsPayload};
     fail(e);
   }
 })();
-<\/script>
+</script>
 </body>
 </html>`;
   } catch (e) {

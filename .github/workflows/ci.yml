@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: typecheck · lint · contracts · build
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint (0 errors)
+        run: npm run lint
+
+      - name: Dashboard preview contract
+        run: npm run test:dashboard-preview
+
+      - name: Visual regression
+        run: npm run test:visual
+
+      - name: iPhone 17 Air contract
+        run: npm run test:iphone-17-air
+
+      - name: Build
+        env:
+          # Build-time: allow migrate / nitro without production secrets
+          DEMO_PIPELINE: "false"
+          AUTH_PROVIDER: none
+          VITE_AUTH_PROVIDER: none
+          VITE_AUTH_ENABLED: "false"
+          # Optional: skip hard DB if no DATABASE_URL in CI secrets
+          SKIP_DB_MIGRATE: "1"
+        run: |
+          if [ -n "${{ secrets.DATABASE_URL }}" ]; then
+            export DATABASE_URL="${{ secrets.DATABASE_URL }}"
+            export DATABASE_URL_MIGRATE="${{ secrets.DATABASE_URL_MIGRATE }}"
+            npm run build
+          else
+            # Build without migrate when no DB secret (still compiles Nitro output)
+            npx vite build
+          fi
+
+      - name: Upload contract screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: contract-screenshots
+          path: |
+            screenshots/**
+            tests/visual/baselines/**
+          if-no-files-found: ignore

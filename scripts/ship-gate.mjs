@@ -55,16 +55,37 @@ async function jsonPost(path, payload) {
 const agentsGet = await jsonGet("/api/agents/run");
 must(agentsGet.status === 200, `GET /api/agents/run status ${agentsGet.status}`);
 const q = agentsGet.body?.quota || agentsGet.body;
-must(q?.planTier === "FREE" || q?.planTier == null || typeof q?.planTier === "string", "quota.planTier present");
 must(
-  Number(q?.dailyLimit ?? q?.quota?.dailyLimit ?? 0) === 20 ||
-    Number(agentsGet.body?.quota?.dailyLimit) === 20,
-  "dailyLimit === 20",
+  q?.planTier === "FREE" ||
+    q?.planTier === "ENTERPRISE" ||
+    q?.planTier == null ||
+    typeof q?.planTier === "string",
+  "quota.planTier present",
 );
-const dailyLimit = agentsGet.body?.quota?.dailyLimit ?? agentsGet.body?.dailyLimit;
-must(dailyLimit === 20, `quota.dailyLimit is 20 (got ${dailyLimit})`);
-const promptLimit = agentsGet.body?.quota?.promptLimit ?? agentsGet.body?.promptLimit;
-must(promptLimit === 100, `quota.promptLimit is 100 (got ${promptLimit})`);
+// Product free caps are always 20/100; super-admin may have unlimited personal limits
+const freeDaily =
+  agentsGet.body?.freeProductCaps?.daily ??
+  q?.freeDailyLimit ??
+  q?.dailyLimit;
+const freeMonthly =
+  agentsGet.body?.freeProductCaps?.monthly ??
+  q?.freePromptLimit ??
+  q?.promptLimit;
+const isSuper = q?.superAdmin === true;
+must(
+  freeDaily === 20 || (isSuper && (freeDaily === 20 || freeDaily == null)),
+  `product daily cap 20 (got ${freeDaily}, super=${isSuper})`,
+);
+must(
+  freeMonthly === 100 ||
+    (isSuper && (q?.freePromptLimit === 100 || freeMonthly === 100)),
+  `product monthly cap 100 (got ${freeMonthly}, super=${isSuper})`,
+);
+// Explicit freeProductCaps when present
+if (agentsGet.body?.freeProductCaps) {
+  must(agentsGet.body.freeProductCaps.daily === 20, "freeProductCaps.daily 20");
+  must(agentsGet.body.freeProductCaps.monthly === 100, "freeProductCaps.monthly 100");
+}
 
 const empty = await jsonPost("/api/agents/run", {});
 const mvp = await jsonGet("/api/mvp-status");

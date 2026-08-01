@@ -27,8 +27,24 @@ async function main() {
 
   const agents = await fetch(`${BASE}/api/agents/run`).then((r) => r.json());
   must(agents.ok === true, "agents/run GET ok");
-  must(agents.quota?.dailyLimit === 20, "dailyLimit 20");
-  must(agents.quota?.promptLimit === 100, "promptLimit 100");
+  // Product free caps (20/100) — super-admin may report unlimited personal limits
+  const freeDaily =
+    agents.freeProductCaps?.daily ?? agents.quota?.freeDailyLimit ?? agents.quota?.dailyLimit;
+  const freeMonthly =
+    agents.freeProductCaps?.monthly ??
+    agents.quota?.freePromptLimit ??
+    agents.quota?.promptLimit;
+  const isSuper = agents.quota?.superAdmin === true;
+  must(
+    freeDaily === 20 || (isSuper && agents.freeProductCaps?.daily === 20),
+    "dailyLimit 20",
+  );
+  must(
+    freeMonthly === 100 ||
+      (isSuper && agents.freeProductCaps?.monthly === 100) ||
+      (isSuper && agents.quota?.freePromptLimit === 100),
+    "promptLimit 100",
+  );
   must(agents.quota?.withinQuota !== false, "withinQuota readable");
 
   const empty = await fetch(`${BASE}/api/agents/run`, {

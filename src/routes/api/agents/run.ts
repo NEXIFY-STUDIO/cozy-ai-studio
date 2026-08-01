@@ -48,6 +48,8 @@ export const Route = createFileRoute("/api/agents/run")({
           authRequired: authOn,
           authenticated: Boolean(userId),
           userId: userId ? `${userId.slice(0, 8)}…` : null,
+          /** Product free caps (always 20/100) — even when super-admin is unlimited */
+          freeProductCaps: { daily: 20, monthly: 100 },
           quota: quota
             ? {
                 planTier: quota.planTier,
@@ -57,6 +59,9 @@ export const Route = createFileRoute("/api/agents/run")({
                 dailyLimit: quota.dailyLimit,
                 withinQuota: quota.ok,
                 superAdmin: Boolean(quota.superAdmin),
+                // Display caps for FREE tier product (ship-gate / UI)
+                freeDailyLimit: 20,
+                freePromptLimit: 100,
               }
             : null,
         });

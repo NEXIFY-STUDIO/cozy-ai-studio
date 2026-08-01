@@ -76,8 +76,8 @@ if (code) {
   must(code.includes("export default function App"), "export default App");
   must(!/\bmin-h-screen\b/.test(code), "no Tailwind min-h-screen utility");
   must(!/\b(sm|md|lg|xl):[a-z]/.test(code), "no Tailwind responsive prefixes as styling");
-  must(!/from\s+['\"]recharts['\"]/.test(code), "no recharts import");
-  must(!/from\s+['\"]chart\.js['\"]/.test(code), "no chart.js import");
+  must(!/from\s+['"]recharts['"]/.test(code), "no recharts import");
+  must(!/from\s+['"]chart\.js['"]/.test(code), "no chart.js import");
   must(code.includes("#F4F1EA") && code.includes("#D96B43") && code.includes("#1C1D21"), "warm palette tokens");
   must(code.includes("padding-bottom: 24px"), "mobile padding-bottom 24px");
   must(code.includes("overflow: visible") || code.includes("overflow:visible"), "overflow visible");
