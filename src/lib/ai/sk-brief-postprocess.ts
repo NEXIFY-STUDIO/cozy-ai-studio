@@ -87,32 +87,36 @@ const EN_TOKEN_MAP: Record<string, string> = {
   mobil: "mobile", // only as whole token; "mobil first" etc.
 };
 
+/** Word edge that works with Slovak diacritics (JS \\b is ASCII-only). */
+const WB = String.raw`(?:^|(?<=[\s,;:!?("„«]))`;
+const WE = String.raw`(?:$|(?=[\s,;:!?)"“»]))`;
+
 const MULTIWORD: [RegExp, string][] = [
-  [/\bkaviare\s+n\b/gi, "kaviareň"],
-  [/\bv\s+kosiciach\b/gi, "v Košiciach"],
-  [/\bv\s+kosice\b/gi, "v Košiciach"],
-  [/\bself\s+contained\b/gi, "self-contained"],
-  [/\bmobile\s+frist\b/gi, "mobile-first"],
-  [/\bmobil\s+first\b/gi, "mobile-first"],
-  [/\bmobil-first\b/gi, "mobile-first"],
-  [/\bsticky\s+heder\b/gi, "sticky header"],
-  [/\bcall\s+to\s+acton\b/gi, "call to action"],
-  [/\bfull\s+stack\b/gi, "full-stack"],
+  [new RegExp(`${WB}kaviare\\s+n${WE}`, "gi"), "kaviareň"],
+  [new RegExp(`${WB}v\\s+kosiciach${WE}`, "gi"), "v Košiciach"],
+  [new RegExp(`${WB}v\\s+kosice${WE}`, "gi"), "v Košiciach"],
+  [new RegExp(`${WB}self\\s+contained${WE}`, "gi"), "self-contained"],
+  [new RegExp(`${WB}mobile\\s+frist${WE}`, "gi"), "mobile-first"],
+  [new RegExp(`${WB}mobil\\s+first${WE}`, "gi"), "mobile-first"],
+  [new RegExp(`${WB}mobil-first${WE}`, "gi"), "mobile-first"],
+  [new RegExp(`${WB}sticky\\s+heder${WE}`, "gi"), "sticky header"],
+  [new RegExp(`${WB}call\\s+to\\s+acton${WE}`, "gi"), "call to action"],
+  [new RegExp(`${WB}full\\s+stack${WE}`, "gi"), "full-stack"],
 ];
 
 /** Czech bleed → Slovak (when text is SK) */
 const CZ_TO_SK: [RegExp, string][] = [
-  [/\bpro\s+moderní\b/gi, "pre modernú"],
-  [/\bpro\s+modernu\b/gi, "pre modernú"],
-  [/\bpro\s+/gi, "pre "],
-  [/\bpřichytav/gi, "priľnav"],
-  [/\bnyn[ií]\b/gi, "teraz"],
-  [/\btlačítk/gi, "tlačidl"],
-  [/\btlacitk/gi, "tlačidl"],
-  [/\bobjednat\s+nyn[ií]\b/gi, "objednať teraz"],
-  [/\bkter[yýáaéé]\b/gi, "ktorý"],
-  [/\bjenom\b/gi, "iba"],
-  [/\bmoderní\b/gi, "modernú"],
+  [new RegExp(`${WB}pro\\s+modern[ií]${WE}`, "gi"), "pre modernú"],
+  [new RegExp(`${WB}pro\\s+modernu${WE}`, "gi"), "pre modernú"],
+  [new RegExp(`${WB}pro\\s+`, "gi"), "pre "],
+  [/přichytav/gi, "priľnav"],
+  [new RegExp(`${WB}nyn[ií]${WE}`, "gi"), "teraz"],
+  [/tlačítk/gi, "tlačidl"],
+  [/tlacitk/gi, "tlačidl"],
+  [new RegExp(`${WB}objednat\\s+nyn[ií]${WE}`, "gi"), "objednať teraz"],
+  [new RegExp(`${WB}kter[yýáaéé]${WE}`, "gi"), "ktorý"],
+  [new RegExp(`${WB}jenom${WE}`, "gi"), "iba"],
+  [new RegExp(`${WB}modern[ií]${WE}`, "gi"), "modernú"],
 ];
 
 const SK_HINT =
