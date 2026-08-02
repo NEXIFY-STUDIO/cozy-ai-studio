@@ -51,33 +51,42 @@ export const Route = createFileRoute("/api/agents/run")({
             snapshot = null;
           }
         }
-        return Response.json({
-          ok: true,
-          provider: key && !demo ? "mistral" : "demo",
-          mistralKeyPresent: key,
-          demoPipeline: demo,
-          buildMarker: "mistral-agent-g2-1",
-          authRequired: authOn,
-          authenticated: Boolean(userId),
-          userId: userId ? `${userId.slice(0, 8)}…` : null,
-          freeProductCaps: {
-            daily: FREE_PRODUCT_CAPS.daily,
-            monthly: FREE_PRODUCT_CAPS.monthly,
+        const getHeaders = snapshot
+          ? quotaHeaders(snapshot)
+          : {
+              "X-CAI-Free-Product-Daily": String(FREE_PRODUCT_CAPS.daily),
+              "X-CAI-Free-Product-Monthly": String(FREE_PRODUCT_CAPS.monthly),
+            };
+        return Response.json(
+          {
+            ok: true,
+            provider: key && !demo ? "mistral" : "demo",
+            mistralKeyPresent: key,
+            demoPipeline: demo,
+            buildMarker: "mistral-agent-g2-1",
+            authRequired: authOn,
+            authenticated: Boolean(userId),
+            userId: userId ? `${userId.slice(0, 8)}…` : null,
+            freeProductCaps: {
+              daily: FREE_PRODUCT_CAPS.daily,
+              monthly: FREE_PRODUCT_CAPS.monthly,
+            },
+            quota: snapshot
+              ? {
+                  planTier: snapshot.planTier,
+                  promptsUsed: snapshot.promptsUsed,
+                  promptLimit: snapshot.promptLimit,
+                  dailyUsed: snapshot.dailyUsed,
+                  dailyLimit: snapshot.dailyLimit,
+                  withinQuota: snapshot.ok,
+                  superAdmin: Boolean(snapshot.superAdmin),
+                  freeDailyLimit: FREE_PRODUCT_CAPS.daily,
+                  freePromptLimit: FREE_PRODUCT_CAPS.monthly,
+                }
+              : null,
           },
-          quota: snapshot
-            ? {
-                planTier: snapshot.planTier,
-                promptsUsed: snapshot.promptsUsed,
-                promptLimit: snapshot.promptLimit,
-                dailyUsed: snapshot.dailyUsed,
-                dailyLimit: snapshot.dailyLimit,
-                withinQuota: snapshot.ok,
-                superAdmin: Boolean(snapshot.superAdmin),
-                freeDailyLimit: FREE_PRODUCT_CAPS.daily,
-                freePromptLimit: FREE_PRODUCT_CAPS.monthly,
-              }
-            : null,
-        });
+          { headers: getHeaders },
+        );
       },
       POST: async ({ request }) => {
         let userId: string;
