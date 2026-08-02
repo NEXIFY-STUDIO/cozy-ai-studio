@@ -16,6 +16,7 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "ship-gate": "node scripts/ship-gate.mjs",
+    "test:gateway": "node --experimental-strip-types --test tests/gateway/quota-gateway.test.mjs",
     "test:dashboard-preview": "node scripts/dashboard-preview-contract.mjs",
     "test:visual": "node scripts/visual-regression.mjs",
     "test:visual:update": "UPDATE_BASELINES=1 node scripts/visual-regression.mjs",
