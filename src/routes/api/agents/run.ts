@@ -11,14 +11,23 @@ import {
 } from "@/lib/auth/request-user.server";
 import { UnauthorizedError } from "@/lib/auth/verify.server";
 import { authEnabledResolved } from "@/lib/auth/mode";
+import { ensureDefaultProject } from "@/lib/projects/server";
 import {
-  assertPromptQuota,
-  ensureDefaultProject,
-  recordUsageEvent,
-} from "@/lib/projects/server";
+  assertCanRunPrompt,
+  chargePromptUsage,
+  FREE_PRODUCT_CAPS,
+  getQuotaSnapshot,
+  quotaHeaders,
+} from "@/lib/gateway/quota-gateway.server";
+import { getDailyPromptCount, getMonthlyUsage } from "@/lib/projects/server";
 import { recordActivationEvent } from "@/lib/activation/server";
 import { collectUnknownFromRaw } from "@/lib/ai/sk-brief-postprocess";
 import { logUnknownGlossaryTokens } from "@/lib/ai/glossary-learn.server";
+
+/**
+ * CHARGE_CONTRACT (via @/lib/gateway/quota-gateway.server):
+ * done → chargePromptUsage (+1) · error/abort/429/fail-before-done → 0
+ */
 
 export const Route = createFileRoute("/api/agents/run")({
   server: {
@@ -33,12 +42,13 @@ export const Route = createFileRoute("/api/agents/run")({
         } catch {
           userId = null;
         }
-        let quota: Awaited<ReturnType<typeof assertPromptQuota>> | null = null;
+        let snapshot: Awaited<ReturnType<typeof getQuotaSnapshot>> | null =
+          null;
         if (userId) {
           try {
-            quota = await assertPromptQuota(userId);
+            snapshot = await getQuotaSnapshot(userId);
           } catch {
-            quota = null;
+            snapshot = null;
           }
         }
         return Response.json({
@@ -50,20 +60,21 @@ export const Route = createFileRoute("/api/agents/run")({
           authRequired: authOn,
           authenticated: Boolean(userId),
           userId: userId ? `${userId.slice(0, 8)}…` : null,
-          /** Product free caps (always 20/100) — even when super-admin is unlimited */
-          freeProductCaps: { daily: 20, monthly: 100 },
-          quota: quota
+          freeProductCaps: {
+            daily: FREE_PRODUCT_CAPS.daily,
+            monthly: FREE_PRODUCT_CAPS.monthly,
+          },
+          quota: snapshot
             ? {
-                planTier: quota.planTier,
-                promptsUsed: quota.promptsUsed,
-                promptLimit: quota.promptLimit,
-                dailyUsed: quota.dailyUsed,
-                dailyLimit: quota.dailyLimit,
-                withinQuota: quota.ok,
-                superAdmin: Boolean(quota.superAdmin),
-                // Display caps for FREE tier product (ship-gate / UI)
-                freeDailyLimit: 20,
-                freePromptLimit: 100,
+                planTier: snapshot.planTier,
+                promptsUsed: snapshot.promptsUsed,
+                promptLimit: snapshot.promptLimit,
+                dailyUsed: snapshot.dailyUsed,
+                dailyLimit: snapshot.dailyLimit,
+                withinQuota: snapshot.ok,
+                superAdmin: Boolean(snapshot.superAdmin),
+                freeDailyLimit: FREE_PRODUCT_CAPS.daily,
+                freePromptLimit: FREE_PRODUCT_CAPS.monthly,
               }
             : null,
         });
@@ -116,7 +127,6 @@ export const Route = createFileRoute("/api/agents/run")({
           );
         }
 
-        // P1: learn unknown tokens from real Send brief prompts
         void (async () => {
           try {
             const { lang, tokens } = collectUnknownFromRaw(prompt);
@@ -157,35 +167,41 @@ export const Route = createFileRoute("/api/agents/run")({
           );
         }
 
-        // Hard quota BEFORE any model call (daily + monthly)
-        let quota: Awaited<ReturnType<typeof assertPromptQuota>>;
+        let gate: Awaited<ReturnType<typeof assertCanRunPrompt>>;
         try {
-          quota = await assertPromptQuota(userId);
+          gate = await assertCanRunPrompt(userId);
         } catch (e) {
           console.error("[agents/run] quota check failed", e);
-          // Fail closed on DB errors for free-tier cost control
           return Response.json(
             {
               error: "QUOTA_UNAVAILABLE",
               message: "Could not verify prompt quota. Try again shortly.",
+              freeProductCaps: {
+                daily: FREE_PRODUCT_CAPS.daily,
+                monthly: FREE_PRODUCT_CAPS.monthly,
+              },
             },
-            { status: 503 },
-          );
-        }
-        if (!quota.ok) {
-          return Response.json(
             {
-              error: quota.code,
-              message: quota.message,
-              planTier: quota.planTier,
-              promptsUsed: quota.promptsUsed,
-              promptLimit: quota.promptLimit,
-              dailyUsed: quota.dailyUsed,
-              dailyLimit: quota.dailyLimit,
+              status: 503,
+              headers: {
+                "X-CAI-Free-Product-Daily": String(FREE_PRODUCT_CAPS.daily),
+                "X-CAI-Free-Product-Monthly": String(FREE_PRODUCT_CAPS.monthly),
+                "X-CAI-Super-Admin": "0",
+              },
             },
-            { status: 429 },
           );
         }
+
+        if (!gate.ok) {
+          return Response.json(gate.body, {
+            status: gate.status,
+            headers: gate.headers,
+          });
+        }
+
+        const snapshot = gate.snapshot;
+        const gatewayHeaders = quotaHeaders(snapshot);
+        const promptLimit = snapshot.promptLimit;
 
         void recordActivationEvent({
           userId,
@@ -202,28 +218,32 @@ export const Route = createFileRoute("/api/agents/run")({
         }
 
         const abort = new AbortController();
-        request.signal.addEventListener(
-          "abort",
-          () => {
-            abort.abort();
-          },
-          { once: true },
-        );
+        const onRequestAbort = () => {
+          abort.abort();
+        };
+        request.signal.addEventListener("abort", onRequestAbort, {
+          once: true,
+        });
 
         const stream = new ReadableStream<Uint8Array>({
           async start(controller) {
             const enc = new TextEncoder();
             const send = (chunk: string) => {
-              controller.enqueue(enc.encode(chunk));
+              try {
+                controller.enqueue(enc.encode(chunk));
+              } catch {
+                abort.abort();
+              }
             };
 
             try {
               send(
-                `: cai-agents-run user=${userId.slice(0, 8)} quota=${quota.promptsUsed}/${quota.promptLimit} daily=${quota.dailyUsed}/${quota.dailyLimit ?? "∞"}\n\n`,
+                `: cai-agents-run user=${userId.slice(0, 8)} quota=${snapshot.promptsUsed}/${snapshot.promptLimit} daily=${snapshot.dailyUsed}/${snapshot.dailyLimit ?? "∞"} remaining=${Math.max(0, snapshot.promptLimit - snapshot.promptsUsed)}\n\n`,
               );
 
               let provider: string | undefined = "mistral";
               let model: string | undefined;
+              /** CHARGE_CONTRACT: true only after SSE "done". */
               let completed = false;
 
               for await (const ev of runProductionPipeline({
@@ -233,7 +253,10 @@ export const Route = createFileRoute("/api/agents/run")({
                 files: body.files,
                 signal: abort.signal,
               })) {
-                if (abort.signal.aborted) break;
+                if (abort.signal.aborted || request.signal.aborted) {
+                  abort.abort();
+                  break;
+                }
                 if (ev.type === "done") {
                   completed = true;
                   provider = ev.data.provider;
@@ -242,42 +265,62 @@ export const Route = createFileRoute("/api/agents/run")({
                 send(encodeSse(ev.type, ev.data as never));
               }
 
-              if (completed) {
+              // CHARGE_CONTRACT: only done + client still connected
+              if (
+                completed &&
+                !abort.signal.aborted &&
+                !request.signal.aborted
+              ) {
                 try {
                   await recordActivationEvent({
                     userId,
                     event: "pipeline_done",
                     meta: { provider: "mistral" },
                   });
-                  await recordUsageEvent({
+                  await chargePromptUsage({
                     userId,
                     projectId,
-                    kind: "prompt",
-                    promptPreview: prompt,
+                    prompt,
                     provider,
                     model,
-                    agent: "G0_G1_G2",
-                    tokensIn: Math.ceil(prompt.length / 4),
-                    tokensOut: 0,
                   });
+
+                  try {
+                    const monthly = await getMonthlyUsage(userId);
+                    const daily = await getDailyPromptCount(userId);
+                    const used = monthly.promptsUsed;
+                    const remaining = Math.max(0, promptLimit - used);
+                    send(
+                      `: cai-quota-after used=${used} remaining=${remaining} daily=${daily}\n\n`,
+                    );
+                  } catch {
+                    /* best-effort */
+                  }
                 } catch (e) {
                   console.error("[agents/run] usage record failed", e);
                 }
               }
             } catch (e) {
-              const msg = e instanceof Error ? e.message : String(e);
-              send(
-                encodeSse("error", {
-                  code: "UNKNOWN",
-                  agent: "ORCHESTRATOR",
-                  userMessage: "Pipeline stream failed.",
-                  detail: msg,
-                  retryable: true,
-                  recoverable: true,
-                }),
-              );
+              if (!abort.signal.aborted) {
+                const msg = e instanceof Error ? e.message : String(e);
+                send(
+                  encodeSse("error", {
+                    code: "UNKNOWN",
+                    agent: "ORCHESTRATOR",
+                    userMessage: "Pipeline stream failed.",
+                    detail: msg,
+                    retryable: true,
+                    recoverable: true,
+                  }),
+                );
+              }
             } finally {
-              controller.close();
+              request.signal.removeEventListener("abort", onRequestAbort);
+              try {
+                controller.close();
+              } catch {
+                /* already closed */
+              }
             }
           },
           cancel() {
@@ -291,8 +334,7 @@ export const Route = createFileRoute("/api/agents/run")({
             "Cache-Control": "no-cache, no-transform",
             Connection: "keep-alive",
             "X-Accel-Buffering": "no",
-            "X-CAI-Quota-Used": String(quota.promptsUsed),
-            "X-CAI-Quota-Limit": String(quota.promptLimit),
+            ...gatewayHeaders,
           },
         });
       },
