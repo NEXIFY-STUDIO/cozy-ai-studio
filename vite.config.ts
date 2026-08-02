@@ -142,11 +142,10 @@ function authPopupPlugin(): Plugin {
   };
 }
 
-// `0.0.0.0:8080` is the live-preview contract — don't change host/port.
+// Dev: package.json uses 8090 (avoids collision with sibling COSY apps).
+// vite.config server.port stays 8080 for WC contract; npm scripts override via CLI.
 // Keep `nitro` gated to `build` (the Vercel deploy target): enabled in dev it
 // opens a second dev-server port, which breaks the single-port preview.
-// The dev server starts once `src/router.tsx` and `src/routes/` exist — see
-// AGENTS.md § "First scaffold".
 export default defineConfig(({ command }) => ({
   server: {
     host: "0.0.0.0",
@@ -171,6 +170,14 @@ export default defineConfig(({ command }) => ({
     },
   },
   resolve: { tsconfigPaths: true },
+  // Prevent Vite from pre-bundling itself / WebContainer into client chunks.
+  // Fixes: Identifier '__vite__injectQuery' has already been declared
+  optimizeDeps: {
+    exclude: ["@webcontainer/api", "vite"],
+  },
+  ssr: {
+    external: ["@webcontainer/api", "vite"],
+  },
   plugins: [
     webcontainerHeadersPlugin(),
     realtimeWsPlugin(),

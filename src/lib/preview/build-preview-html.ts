@@ -1,9 +1,12 @@
 /**
  * Server-only: turn G1 TSX into a self-contained Live Preview document.
  * UMD React is inlined from react-umd.generated.ts (never read from /var/task/public).
+ *
+ * Dynamic import("vite") — do NOT static-import vite here.
+ * Static import prebundles vite into client and triggers:
+ *   Identifier '__vite__injectQuery' has already been declared
  */
 
-import { transformWithOxc } from "vite";
 import { REACT_DOM_UMD, REACT_UMD } from "./react-umd.generated";
 
 function escapeHtml(s: string): string {
@@ -178,6 +181,8 @@ async function transpileTsxToIife(code: string): Promise<string> {
   src = src.replace(/^\s*import\s+.*?from\s+['"]react['"];?\s*$/gm, "");
   src = src.replace(/^\s*import\s+.*?from\s+['"]react-dom.*['"];?\s*$/gm, "");
 
+  // Dynamic import — server-only, avoids vite client prebundle / injectQuery clash
+  const { transformWithOxc } = await import("vite");
   const { code: js } = await transformWithOxc(src, "App.tsx", {
     lang: "tsx",
     jsx: { runtime: "classic" },
