@@ -3,7 +3,7 @@
  * Events: phase | token | file | task | chat | agent | progress | error | done
  */
 
-import type { AgentId } from "@/stores/studio-store";
+import type { AgentId } from "./types";
 import type { PipelinePhase, TaskNode } from "./types";
 import type { AuditReport } from "./auditor";
 
