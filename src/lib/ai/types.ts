@@ -1,4 +1,8 @@
-export type AgentRole = "G0_PLANNER" | "G1_CODER" | "G2_AUDITOR";
+/** Canonical agent identity for pipeline + SSE (store-free). */
+export type AgentId = "G0_PLANNER" | "G1_CODER" | "G2_AUDITOR";
+
+/** @deprecated Prefer AgentId — kept for existing TaskNode consumers. */
+export type AgentRole = AgentId;
 
 export interface TaskNode {
   id: string;
